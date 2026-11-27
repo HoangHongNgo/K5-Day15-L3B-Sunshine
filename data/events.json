@@ -1,0 +1,11 @@
+{
+  "_note": "SYNTHETIC — lịch hoạt động giả lập do nhóm Sunshine tự viết. Xem data/DATA_CARD.md.",
+  "events": [
+    {"id": "EV_WELCOME", "name": "Lễ chào đón tân sinh viên", "place": "HT_A1", "time": "Thứ Hai 08:00-10:00", "tags": ["tân sinh viên", "chào đón", "khai giảng"]},
+    {"id": "EV_CLB_AI", "name": "Ngày hội CLB AI", "place": "P_B204", "time": "Thứ Ba 17:30-19:00", "tags": ["câu lạc bộ", "ai", "clb"]},
+    {"id": "EV_PYTHON", "name": "Workshop Python nhập môn", "place": "P_A305", "time": "Thứ Tư 14:00-16:00", "tags": ["workshop", "python", "lập trình"]},
+    {"id": "EV_BONG_RO", "name": "Giao lưu bóng rổ tân sinh viên", "place": "NHA_THE_THAO", "time": "Thứ Năm 16:30-18:00", "tags": ["thể thao", "bóng rổ"]},
+    {"id": "EV_THU_VIEN", "name": "Hướng dẫn dùng thư viện", "place": "THU_VIEN", "time": "Thứ Sáu 09:00-10:00", "tags": ["thư viện", "hướng dẫn"]},
+    {"id": "EV_HOC_BONG", "name": "Tư vấn học bổng", "place": "PHONG_CTSV", "time": "Thứ Sáu 14:00-16:00", "tags": ["học bổng", "tư vấn"]}
+  ]
+}

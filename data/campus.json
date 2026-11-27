@@ -1,0 +1,30 @@
+{
+  "_note": "SYNTHETIC — khuôn viên giả lập do nhóm Sunshine tự viết, KHÔNG phải sơ đồ thật của trường nào. Xem data/DATA_CARD.md.",
+  "places": [
+    {"id": "CONG_CHINH", "name": "Cổng chính", "aliases": ["cổng", "cổng trường", "cổng chính", "bãi xe máy"], "building": "-", "floor": 0},
+    {"id": "SANH_A", "name": "Sảnh toà A", "aliases": ["sảnh a", "toà a", "tòa a", "nhà a"], "building": "A", "floor": 1},
+    {"id": "HT_A1", "name": "Hội trường A1", "aliases": ["hội trường", "hội trường lớn", "a1", "hội trường a1"], "building": "A", "floor": 1},
+    {"id": "P_A201", "name": "Phòng A201", "aliases": ["a201", "phòng a201"], "building": "A", "floor": 2},
+    {"id": "P_A305", "name": "Phòng A305 (phòng lab máy tính)", "aliases": ["a305", "phòng lab", "lab máy tính", "phòng máy"], "building": "A", "floor": 3},
+    {"id": "SANH_B", "name": "Sảnh toà B", "aliases": ["sảnh b", "toà b", "tòa b", "nhà b"], "building": "B", "floor": 1},
+    {"id": "THU_VIEN", "name": "Thư viện (toà B, tầng 2)", "aliases": ["thư viện", "library", "thư viện b"], "building": "B", "floor": 2},
+    {"id": "P_B204", "name": "Phòng B204 (phòng câu lạc bộ)", "aliases": ["b204", "phòng clb", "phòng câu lạc bộ"], "building": "B", "floor": 2},
+    {"id": "CANTEEN", "name": "Căng tin", "aliases": ["căng tin", "canteen", "nhà ăn", "chỗ ăn trưa"], "building": "C", "floor": 1},
+    {"id": "SAN_TRUNG_TAM", "name": "Sân trung tâm", "aliases": ["sân", "sân trung tâm", "quảng trường"], "building": "-", "floor": 0},
+    {"id": "NHA_THE_THAO", "name": "Nhà thể thao", "aliases": ["nhà thể thao", "gym", "sân bóng rổ", "nhà thi đấu"], "building": "D", "floor": 1},
+    {"id": "PHONG_CTSV", "name": "Phòng Công tác sinh viên (toà C, tầng 2)", "aliases": ["công tác sinh viên", "ctsv", "phòng ctsv"], "building": "C", "floor": 2}
+  ],
+  "edges": [
+    {"from": "CONG_CHINH", "to": "SAN_TRUNG_TAM", "step": "Từ cổng chính đi thẳng khoảng 80 m theo lối lát gạch đỏ tới sân trung tâm", "minutes": 2},
+    {"from": "SAN_TRUNG_TAM", "to": "SANH_A", "step": "Từ sân trung tâm rẽ trái, vào cửa kính lớn của toà A", "minutes": 1},
+    {"from": "SAN_TRUNG_TAM", "to": "SANH_B", "step": "Từ sân trung tâm rẽ phải, đi qua hàng cây tới sảnh toà B", "minutes": 2},
+    {"from": "SAN_TRUNG_TAM", "to": "CANTEEN", "step": "Từ sân trung tâm đi thẳng qua đài phun nước tới toà C, căng tin ở tầng 1", "minutes": 2},
+    {"from": "SAN_TRUNG_TAM", "to": "NHA_THE_THAO", "step": "Từ sân trung tâm đi theo lối phía sau toà C khoảng 150 m tới nhà thể thao", "minutes": 3},
+    {"from": "SANH_A", "to": "HT_A1", "step": "Trong sảnh toà A, hội trường A1 là cửa đôi bên tay phải", "minutes": 1},
+    {"from": "SANH_A", "to": "P_A201", "step": "Từ sảnh toà A lên thang bộ tới tầng 2, phòng A201 ngay đầu hành lang", "minutes": 2},
+    {"from": "P_A201", "to": "P_A305", "step": "Từ tầng 2 toà A đi thang máy lên tầng 3, rẽ phải tới cuối hành lang là A305", "minutes": 2},
+    {"from": "SANH_B", "to": "THU_VIEN", "step": "Từ sảnh toà B đi thang cuốn lên tầng 2, thư viện ở bên trái", "minutes": 1},
+    {"from": "SANH_B", "to": "P_B204", "step": "Từ sảnh toà B lên tầng 2, rẽ phải, B204 là phòng thứ tư", "minutes": 2},
+    {"from": "CANTEEN", "to": "PHONG_CTSV", "step": "Từ căng tin lên thang bộ cạnh quầy nước tới tầng 2 toà C, phòng CTSV ở bên trái", "minutes": 1}
+  ]
+}
