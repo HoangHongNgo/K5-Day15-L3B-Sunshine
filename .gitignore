@@ -35,3 +35,11 @@ evidence/**/raw-*
 # Nguyên file data BTC cấp (data/preclass, data/training-ops… của repo đề): để ở đây, không commit
 data-btc
 data-btc/
+# Wayfinder: môi trường, cache model và dữ liệu thu thập thật KHÔNG commit (repo công khai)
+vinuni-wayfinder/backend/.venv/
+vinuni-wayfinder/backend/.torch/
+vinuni-wayfinder/backend/data/
+vinuni-wayfinder/maps/
+*.npz
+*.mp4
+*.mov

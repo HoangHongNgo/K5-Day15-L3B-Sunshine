@@ -31,7 +31,7 @@
 | | |
 |---|---|
 | Dùng để làm gì | dựng đồ thị đường đi (nút: cửa, ngã rẽ, cửa phòng, thang máy, cầu thang, lối ra; cạnh: đoạn hành lang) cho `tim_lo_trinh` · danh sách phòng/địa điểm · đáp án cho bộ đo wayfinder |
-| Từ đâu | (a) **sơ đồ khuôn viên**: ảnh sơ đồ sự kiện có toà A–L, cổng chính (Main Gate), cổng San Ho (San Ho Gate), sân chính; (b) **mặt bằng tầng trệt Toà I**: ảnh chụp biển "Floor map" của VinUniversity dán trong toà, do thành viên nhóm chụp. Cả hai là ảnh, giữ ở thư mục `maps/` của dự án wayfinder **ngoài repo** (`campus-map.webp` và `toa-I-tang-tret.webp`, lưu 27/11/2026) |
+| Từ đâu | (a) **sơ đồ khuôn viên**: ảnh sơ đồ sự kiện có toà A–L, cổng chính (Main Gate), cổng San Ho (San Ho Gate), sân chính; (b) **mặt bằng tầng trệt Toà I**: ảnh chụp biển "Floor map" của VinUniversity dán trong toà, do thành viên nhóm chụp. Cả hai là ảnh, giữ ở `vinuni-wayfinder/maps/` trên máy nhóm (`campus-map.webp` và `toa-I-tang-tret.webp`, lưu 27/11/2026); thư mục này **bị `.gitignore` chặn nên không lên repo công khai** |
 | Xử lý những bước gì | chưa có. Dự kiến: neo ảnh vào bản đồ thật bằng điểm GPS, đặt phòng/cửa và vẽ hành lang bằng chế độ thu thập trên điện thoại, đi bộ kiểm lại |
 | Số dòng / số đoạn | chưa số hoá. Từ ảnh biển đọc được các khu: Trung tâm Khởi nghiệp, Vườn Thư viện, quầy cà phê, khu tự học mở, quầy tiện ích, văn phòng, phòng I109 và I119, nhà vệ sinh, thang máy, cầu thang; lối sang toà A, B, C, E và bãi xe |
 | Phiên bản / ngày lấy | 27/11/2026 |

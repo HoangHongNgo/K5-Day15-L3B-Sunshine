@@ -1,0 +1,112 @@
+# VinUni Wayfinder — CLAUDE.md
+
+App chỉ đường tới các phòng trong campus VinUniversity (Gia Lâm, Hà Nội), dự án hackathon.
+Mô phỏng cách tiếp cận của **Hound Around** (https://github.com/DxubleBTW/Hound-Around):
+định vị **trong nhà** bằng nhận diện ảnh hành lang (GPS không đủ chính xác trong nhà); **ngoài trời** dùng GPS.
+
+> Repo Hound-Around **không có LICENSE** → chỉ học theo kiến trúc/luồng màn hình, **không copy code nguyên văn**.
+> Bản clone để tham khảo nằm ngoài dự án (scratchpad của phiên làm việc, có thể đã bị dọn), không đưa vào repo này.
+> Số liệu độ chính xác của Hound Around (đo trên toà CDS ở Boston) chỉ để tham khảo, **không phải kết quả của dự án này**.
+
+## Bối cảnh nhóm (cập nhật 27/11/2026)
+
+- Đây là bài của nhóm **Sunshine** (lớp L3B, track F) trong hackathon AI20K. Repo nộp bài của nhóm là **một repo riêng, công khai**: https://github.com/HoangHongNgo/K5-Day15-L3B-Sunshine (thư mục `D:\VinAI\Hackathon\K5-Day15-L3B-Sunshine`). Thư mục `vinuni-wayfinder/` này **nằm trong chính repo đó** (không phải dự án hay repo riêng; chuyển vào ngày 27/11/2026). `.gitignore` của repo chặn `vinuni-wayfinder/maps/`, `backend/data/`, `backend/.venv/`, `backend/.torch/`, `*.npz` và video: **chỉ commit code và doc, không commit dữ liệu hay ảnh sơ đồ**.
+- **Wayfinder là ưu tiên chính. Mascot AR dẫn đường (hướng ban đầu của nhóm) hoãn lại, làm khi có thời gian**; không đưa vào bản demo wayfinder.
+- Tài liệu của nhóm đã được viết lại theo hướng này và push lên `main` (commit `47743d3`): `docs/PRD.md` (yêu cầu, user story US10–US15, rủi ro, lộ trình), `spec.md` (§3, §4, §9, changelog §10), `canvas.md`, `data/DATA_CARD.md` (dataset 3–4), `README.md`. **Khi quyết định nào ở đây thay đổi thì doc ở repo nhóm cũng phải được cập nhật** (changelog `spec.md` §10).
+- Luật của repo nhóm (`AGENTS.md`) áp dụng cả ở đây: **không bịa** số liệu, người được phỏng vấn hay trích dẫn (số không có nguồn ghi *(tự ước tính)*); không sửa chuẩn "đạt" `spec.md` §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` và các lượt đã chạy `eval/run-*.csv`, `cost/simulate-*.csv`, `traces/*`.
+- Bộ câu thử của repo nhóm hiện chỉ đo phần hiểu câu hỏi, lộ trình và từ chối (dữ liệu giả lập). **Chưa có bộ đo cho nhận diện vị trí bằng ảnh**; nếu viết thì phải loại cả video khỏi chỉ số khi thử (leave-one-video-out), và việc thêm vào bộ chính là quyết định của nhóm.
+
+## Yêu cầu đã chốt với người dùng (đừng thay đổi nếu chưa hỏi lại)
+
+| Mục | Quyết định |
+| --- | --- |
+| Nền tảng | Web app, mở trên điện thoại, không cần cài |
+| Frontend | React + Vite |
+| Backend | Python FastAPI + MegaLoc (PyTorch CUDA) chạy trên laptop |
+| Ngôn ngữ UI | **Chỉ tiếng Việt** |
+| Tòa demo | **Tòa I**, chỉ **tầng trệt** (không làm nhiều tầng, không cần chế độ thang máy) |
+| Phạm vi | Chỉ đường ngoài trời giữa các tòa + trong Tòa I tới đúng phòng + tìm kiếm phòng |
+| Chưa làm / hoãn | Mascot AR (hoãn), chế độ tiếp cận (không bậc thang), nhiều tầng, giao diện tiếng Anh |
+| Định vị ngoài trời | GPS `watchPosition`, cập nhật liên tục |
+| Định vị trong nhà | Chụp ảnh hành lang → MegaLoc kNN (kiểu Hound Around); giữa các lần chụp ước lượng bằng đếm bước + la bàn (PDR); dự phòng: gõ số phòng gần nhất |
+| Giao diện dẫn đường | **Chỉ thẻ chỉ dẫn**, KHÔNG hiển thị bản đồ/sơ đồ tòa cho người dùng |
+| Thẻ ngoài trời | Mũi tên xoay theo la bàn điện thoại + khoảng cách còn lại tới mốc tiếp theo |
+| Kết nối điện thoại | Cùng Wi-Fi với laptop, **HTTPS tự ký** (camera/cảm biến bắt buộc HTTPS). Vite proxy `/api` sang backend để tránh mixed content |
+| Lưu dữ liệu | Trên backend (thư mục `data/`, không commit), có nút xuất/nhập JSON để sao lưu |
+| Chế độ thu thập (trên điện thoại) | (1) Neo ảnh mặt bằng vào bản đồ bằng GPS ở 2–3 góc tòa; (2) đánh dấu phòng & cửa; (3) vẽ hành lang/lối vào; (4) chạm vào điểm → quay video 10–15s, backend cắt ~40 khung và tính embedding; (5) ghi vết khi đi bộ (GPS + bước chân) |
+
+## Pipeline nhận diện (theo Hound Around)
+
+1. Điện thoại thu ảnh về ~512px, vẽ lại qua canvas để xóa EXIF/metadata, rồi upload.
+2. MegaLoc: resize vuông 322×322 (squash, không giữ tỉ lệ), chuẩn hóa ImageNet mean/std → vector **8448 chiều**, L2-normalize.
+3. Top-10 khung gần nhất theo cosine → bỏ phiếu theo điểm (spot); gộp phiếu các spot cách nhau < 8 m đi bộ.
+4. Confidence = phiếu thắng (đã gộp) / 10 (hoặc / 20 khi gộp 2 ảnh), tối đa 1.
+   Phân tầng: `auto` (đủ chắc → vào chỉ đường luôn, có link "Không phải ở đây?"), `picker` (hiện top 3 bằng tên dễ hiểu, vd "Hành lang trước phòng I109"), `second` (xin chụp thêm 1 ảnh hướng khác, rồi gộp phiếu, không bao giờ xin ảnh thứ 3).
+   Chưa có dữ liệu để huấn luyện logistic regression như Hound Around → dùng ngưỡng heuristic, có thể hiệu chỉnh sau.
+5. **Sửa sai = học ngay**: người dùng chạm đúng spot → vector ảnh đó thêm vào index với `source="correction"` và trọng số cao hơn; correction là láng giềng gần nhất thì được ưu tiên.
+6. Ảnh gốc xóa ngay sau khi embed; chỉ giữ vector + nhãn.
+7. Thu thập: lấy ~40 khung/spot là đủ; quay thêm góc/thời điểm mới hiệu quả hơn quay dài.
+
+Luồng màn hình tham khảo: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai → Chỉ đường; thêm màn "Gõ số phòng" để bắt đầu thủ công.
+
+## Quy tắc chỉ dẫn từng bước
+
+- Mẫu câu bắt đầu bằng: "Đi thẳng", "Tiếp tục", "Rẽ trái và đi", "Rẽ phải và đi", "Quay lại và đi", "Vào Tòa … qua cửa …".
+- Chỉ coi là rẽ khi góc ≥ 45° (≥ 150° là "Quay lại"); khúc cua nhỏ hơn gộp vào bước trước.
+- Cửa phòng đích nằm dọc hành lang → kết thúc bằng "…, ở bên trái/phải" thay vì một lần rẽ; cửa đi ngang qua giữa đường không tính là rẽ.
+- Mỗi bước có thể kèm tối đa 3 mốc đi ngang qua (vd "quầy cà phê bên trái").
+
+## Môi trường
+
+- Windows 11, PowerShell. Node 18.14.2, npm 9.5.0. Python 3.13.
+- GPU: NVIDIA GTX 1650 4 GB. **Đã kiểm 27/11/2026:** MegaLoc load được trên GPU, đầu ra `(1, 8448)`, ~73 ms/ảnh (ảnh 322×322, batch 1). Lần load đầu ~2 phút vì phải tải trọng số.
+- Backend venv: `backend/.venv` (torch 2.14.1+cu126, torchvision 0.29.1+cu126, fastapi 0.165, uvicorn 0.54, python-multipart, opencv-python-headless, huggingface_hub 2.5, safetensors, networkx 3.7, numpy 2.5.4, pillow). Chưa có `requirements.txt`; nên viết khi code backend bắt đầu.
+- Cache model: mã MegaLoc (torch hub) ở `backend/.torch/hub`, trọng số (~870 MB) ở HuggingFace cache. Để chạy tự chứa trong dự án, đặt **cả hai** biến trước khi chạy: `TORCH_HOME=backend/.torch` và `HF_HOME=backend/.torch/hf` (đã có sẵn bản trọng số ở đó). Bản gốc còn ở `~/.cache/huggingface/hub/models--gberton--MegaLoc`.
+- Tải model: `torch.hub.load('gmberton/MegaLoc', 'get_trained_model', trust_repo=True)` (cần `huggingface_hub`, `safetensors`). Repo Hound-Around ghim phiên bản mã/trọng số theo commit; nên ghim tương tự khi cài đặt chính thức để vector không đổi.
+- Không có `HF_TOKEN` → tải HF bị giới hạn tốc độ (chỉ cảnh báo, vẫn chạy).
+
+## Cấu trúc thư mục (dự kiến)
+
+Thư mục này nằm trong repo nhóm: `K5-Day15-L3B-Sunshine/vinuni-wayfinder/`. Các thư mục ghi "không commit" bên dưới đã được `.gitignore` của repo chặn.
+
+```
+vinuni-wayfinder/
+  CLAUDE.md
+  maps/            ảnh nguồn, không commit: campus-map.webp (sơ đồ campus), toa-I-tang-tret.webp (mặt bằng Tòa I)
+  backend/         FastAPI + MegaLoc (.venv, .torch là cache, không commit)
+  backend/data/    site.json, frames/, index.npz, ảnh mặt bằng đã upload — dữ liệu riêng, không commit
+  frontend/        React + Vite (HTTPS tự ký, proxy /api)
+```
+
+## Dữ liệu bản đồ
+
+### Campus (`maps/campus-map.webp`)
+Hai cổng: **Main Gate** (phía Nam, qua Main Square) và **San Ho Gate** (phía Bắc, đường San Hô).
+Các tòa: A, B (Auditorium/hội trường), C, E (Canteen), F (Medical Simulation Center), G (Superlab), H, I, J (Dorm), K, L, Parking Lot.
+Trục trung tâm từ Bắc xuống Nam: G – A – I nối liền nhau; Main Square nằm ngay phía Nam Tòa I. B ở Đông Bắc của A, C ở phía Tây I, E ở phía Đông I.
+
+### Tòa I – tầng trệt (ảnh "Floor map" chụp từ bảng thoát hiểm trong tòa)
+- Ảnh đã lưu ở `maps/toa-I-tang-tret.webp` (27/11/2026). Ảnh chụp nghiêng, có chói, chữ nhỏ → tên phòng phải kiểm lại tại chỗ.
+- Sơ đồ bị xoay so với campus: hướng "lên" trên ảnh là phía Tòa E. Việc neo GPS (anchor) sẽ xử lý phép xoay.
+- Lối ra/vào và hướng dẫn trên bảng: phía trên-trái → Tòa B (Hội trường); phía trên-giữa → Tòa E (nhà ăn, lab, lớp học); cạnh trái → Trung tâm Khởi nghiệp (Entrepreneurship Lab), Vườn Thư viện (Library Garden), Tòa A (Thư viện); phía dưới-trái → Parking (P), cũng là vị trí "Bạn đang ở đây"; phía dưới-giữa → Tòa C (lớp học, giảng đường).
+- Phòng/khu vực đọc được: Quầy cà phê (Coffee Shop), Quầy tiện ích (Convenience Store), Khu tự học mở (Open learning space), **I119** (Phòng y tế), **I109**, Văn phòng (Office, khu lớn bên phải), nhà vệ sinh, thang máy, cầu thang. Khu phía đông có nhiều phòng nhỏ chưa ghi số → cần thu thập tại chỗ.
+
+## Tiến độ
+
+- [x] Chốt yêu cầu qua nhiều vòng hỏi đáp
+- [x] Cài PyTorch CUDA + deps backend, kiểm tra MegaLoc chạy trên GPU (vector 8448-d, ~73 ms/ảnh, đo lại 27/11/2026)
+- [x] Lưu sơ đồ campus vào `maps/campus-map.webp`
+- [x] Cập nhật doc repo nhóm theo hướng wayfinder ưu tiên, commit `47743d3` đã push lên `main`
+- [x] Lưu ảnh mặt bằng Tòa I vào `maps/toa-I-tang-tret.webp`
+- [ ] Đi bộ kiểm lại tên/vị trí từng phòng ở Tòa I (đọc từ ảnh biển nên có thể sai, ví dụ I109/I119)
+- [ ] Bộ đo nhận diện bằng ảnh + ngưỡng tin cậy hiệu chỉnh trên dữ liệu thật (chưa có số đo nào)
+- [ ] Backend FastAPI: `/api/site` (GET/PUT), upload mặt bằng, upload video spot → cắt khung + embed, `/api/locate`, `/api/correct`, `/api/route`, xuất/nhập JSON
+- [ ] Frontend: màn dẫn đường (thẻ + mũi tên la bàn, chụp ảnh định vị, gõ số phòng, PDR) và màn thu thập (neo GPS, vẽ hành lang, đặt phòng, quay video, ghi vết)
+- [ ] Thu thập dữ liệu thật tại Tòa I, kiểm thử end-to-end trên điện thoại
+
+## Lưu ý quyền riêng tư / an toàn
+
+- Không commit `backend/data/`, `.venv`, `.torch`, video/khung hình. **Không đưa ảnh/video hành lang, sơ đồ hay mặt bằng tòa nhà, đồ thị đường đi thật và vector vào repo công khai của nhóm** (một bộ ảnh đầy đủ của tòa nhà là rủi ro an ninh). Nếu sau này đưa code wayfinder vào repo nhóm, chỉ đưa code, không đưa dữ liệu, và thêm quy tắc chặn vào `.gitignore` trước.
+- Ảnh người dùng gửi để định vị bị xóa ngay sau khi embed; không lưu GPS của người dùng sau khi trả lời.
+- Không hiển thị toàn bộ sơ đồ tòa cho người dùng cuối (chỉ ở chế độ thu thập).
+- Quay ở hành lang công cộng; tránh quay mặt người, hoặc làm mờ mặt trước khi lưu.

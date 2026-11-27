@@ -32,7 +32,7 @@ Khung chỉ dùng thư viện chuẩn của Python. Thêm thư viện thì ghi v
 ## Luật — agent KHÔNG được làm
 
 - Không commit `.env`, API key, dữ liệu cá nhân thật, nguyên file data BTC cấp.
-- Không commit ảnh/video hành lang, sơ đồ hay mặt bằng toà nhà, đồ thị đường đi thật và vector nhận diện của wayfinder (repo công khai; xem `data/DATA_CARD.md`). Mã wayfinder nằm ở thư mục riêng ngoài repo cho tới khi nhóm quyết định đưa code (không đưa dữ liệu) vào đây.
+- Không commit ảnh/video hành lang, sơ đồ hay mặt bằng toà nhà, đồ thị đường đi thật và vector nhận diện của wayfinder (repo công khai; xem `data/DATA_CARD.md`). Mã wayfinder nằm trong repo này, ở `vinuni-wayfinder/` (xem `vinuni-wayfinder/CLAUDE.md`); `.gitignore` đã chặn `vinuni-wayfinder/maps/`, `backend/data/`, `backend/.venv/`, `backend/.torch/`, `*.npz`, video. Chỉ commit code và doc, không commit dữ liệu.
 - Không sửa `eval/run-*.csv`, `cost/simulate-*.csv`, `traces/*` đã chạy (trừ điền cột `pass`, `ghi_chu`).
 - Không sửa chuẩn "đạt" (`spec.md` §7), `eval/metric_spec.yaml` sau CP2; không xoá câu thử trượt, không sửa `expected` cho khớp output.
 - Không bịa người được phỏng vấn, trích dẫn, câu trả lời khảo sát, số liệu. Số không có nguồn thì ghi rõ *(tự ước tính)*.
