@@ -91,6 +91,12 @@ Trục trung tâm từ Bắc xuống Nam: G – A – I nối liền nhau; Main 
 - Lối ra/vào và hướng dẫn trên bảng: phía trên-trái → Tòa B (Hội trường); phía trên-giữa → Tòa E (nhà ăn, lab, lớp học); cạnh trái → Trung tâm Khởi nghiệp (Entrepreneurship Lab), Vườn Thư viện (Library Garden), Tòa A (Thư viện); phía dưới-trái → Parking (P), cũng là vị trí "Bạn đang ở đây"; phía dưới-giữa → Tòa C (lớp học, giảng đường).
 - Phòng/khu vực đọc được: Quầy cà phê (Coffee Shop), Quầy tiện ích (Convenience Store), Khu tự học mở (Open learning space), **I119** (Phòng y tế), **I109**, Văn phòng (Office, khu lớn bên phải), nhà vệ sinh, thang máy, cầu thang. Khu phía đông có nhiều phòng nhỏ chưa ghi số → cần thu thập tại chỗ.
 
+### Tòa G – tầng trệt (ảnh "Fire Evacuation Plan", thêm 27/11/2026)
+- Ảnh ở `maps/toa-G-tang-tret.webp` (2000×1500). Người dùng **thu thập Tòa G trước** (trước Tòa I).
+- Phòng: G101–G107, 2 khu WC, 2 thang máy, 2 cầu thang bộ, 1 thang hàng (chưa đưa vào). Hành lang: trục ngang qua sảnh trung tâm (vị trí "bạn đang ở đây" trên bảng), trục dọc xuống cửa Nam, hai hành lang hai bên khối thang/WC, hành lang chữ U phía Bắc quanh G102.
+- 33 điểm trong nhà + 1 điểm campus (`g_east`), tất cả `verified: false`. Lối nối cửa G ↔ campus là đoán (giả định phía trên ảnh là Bắc): cửa Tây ↔ `g_w`, cửa Bắc ↔ `r_n`, cửa Đông ↔ `g_east`; cửa Nam chưa nối (Tòa A sát phía Nam).
+- `metersPerPx` = 0.04 *(tự ước tính)*. Ảnh kiểm tra đồ thị: `maps/toa-G-do-thi-kiem-tra.jpg`.
+
 ## Tiến độ
 
 - [x] Chốt yêu cầu qua nhiều vòng hỏi đáp
@@ -100,8 +106,10 @@ Trục trung tâm từ Bắc xuống Nam: G – A – I nối liền nhau; Main 
 - [x] Lưu ảnh mặt bằng Tòa I vào `maps/toa-I-tang-tret.webp`
 - [ ] Đi bộ kiểm lại tên/vị trí từng phòng ở Tòa I (đọc từ ảnh biển nên có thể sai, ví dụ I109/I119)
 - [ ] Bộ đo nhận diện bằng ảnh + ngưỡng tin cậy hiệu chỉnh trên dữ liệu thật (chưa có số đo nào)
-- [ ] Backend FastAPI: `/api/site` (GET/PUT), upload mặt bằng, upload video spot → cắt khung + embed, `/api/locate`, `/api/correct`, `/api/route`, xuất/nhập JSON
-- [ ] Frontend: màn dẫn đường (thẻ + mũi tên la bàn, chụp ảnh định vị, gõ số phòng, PDR) và màn thu thập (neo GPS, vẽ hành lang, đặt phòng, quay video, ghi vết)
+- [x] Backend FastAPI (`backend/app/`): `/api/site` (GET/PUT), `/api/destinations`, upload ảnh sơ đồ, `/api/spots/{id}/video` (cắt 40 khung rõ nét + MegaLoc, video gốc xoá ngay), `/api/locate` (k=10, gộp phiếu trong 8 m, tier auto/picker/second, gộp ảnh thứ 2), `/api/correct`, `/api/route` (thẻ chỉ dẫn, không trả toạ độ), vết đi bộ, xuất/nhập JSON. Kiểm 27/11/2026 bằng TestClient + video giả: pipeline chạy, ~90 ms/ảnh định vị, ~3 s/video 40 khung trên GTX 1650 (chưa có số đo độ chính xác thật).
+- [x] Seed bản đồ: `maps/seed-site.json` (gitignored, vì là đồ thị đường đi thật) — 25 điểm ngoài trời + 30 điểm Tòa I, tất cả `verified: false`. Backend dùng seed khi chưa có `backend/data/site.json`.
+- [x] Frontend (`frontend/`, Vite 5 vì Node 18): màn Chỉ đường (chọn đích, chụp ảnh / GPS / gõ số phòng, top-3, ảnh thứ 2, thẻ từng bước + mũi tên la bàn ngoài trời + đếm bước trong nhà) và màn Thu thập `#thu-thap` (kéo/thêm/nối/xoá điểm, phòng, neo GPS, GPS từng điểm, quay video, độ phủ ảnh, ghi vết, xuất/nhập). Đã thử trên trình duyệt laptop (HTTP): luồng chỉ đường và lưu dữ liệu chạy đúng; **chưa thử trên điện thoại** (camera, GPS, la bàn, HTTPS).
+- Chạy thử trong khung trình duyệt của Claude: `D:\VinAI\Hackathon\.claude\launch.json` (backend + `frontend-http`).
 - [ ] Thu thập dữ liệu thật tại Tòa I, kiểm thử end-to-end trên điện thoại
 
 ## Lưu ý quyền riêng tư / an toàn

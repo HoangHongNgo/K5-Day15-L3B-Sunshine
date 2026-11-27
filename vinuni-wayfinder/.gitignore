@@ -1,0 +1,7 @@
+frontend/dist/
+frontend/node_modules/
+backend/data/
+backend/.venv/
+backend/.torch/
+maps/
+__pycache__/

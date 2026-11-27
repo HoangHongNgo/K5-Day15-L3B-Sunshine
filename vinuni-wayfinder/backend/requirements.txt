@@ -1,0 +1,11 @@
+# Cài PyTorch bản CUDA trước (GTX 1650):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+fastapi
+uvicorn[standard]
+python-multipart
+opencv-python-headless
+huggingface_hub
+safetensors
+networkx
+numpy
+pillow

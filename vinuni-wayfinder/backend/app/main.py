@@ -1,0 +1,352 @@
+"""VinUni Wayfinder API (FastAPI). Chạy: uvicorn app.main:app --port 8000"""
+from __future__ import annotations
+
+import io
+import secrets
+import tempfile
+import time
+import unicodedata
+from pathlib import Path
+
+import cv2
+import numpy as np
+from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
+from PIL import Image, ImageOps
+
+from .embedder import DIM, MODEL_NAME, embedder
+from .index import VectorIndex
+from .routing import SiteGraph
+from .store import DATA, MAPS_SRC, load_site, save_site
+
+app = FastAPI(title='VinUni Wayfinder')
+index = VectorIndex(DATA / 'index.npz', DIM, MODEL_NAME)
+
+K = 10
+POOL_M = 8.0
+AUTO_P, PICKER_P = 0.7, 0.5          # ngưỡng heuristic, chưa hiệu chỉnh trên dữ liệu thật
+PHOTO_TTL = 600                       # giây giữ vector ảnh để sửa sai / gộp ảnh thứ 2
+FRAMES_PER_VIDEO = 40
+MAX_UPLOAD = 200 * 1024 * 1024
+
+_photos: dict[str, dict] = {}
+_graph_cache: dict = {'key': None, 'graph': None}
+
+
+def graph() -> SiteGraph:
+    site = load_site()
+    key = hash(repr(site['nodes']) + repr(site['edges']) + repr(site['maps']))
+    if _graph_cache['key'] != key:
+        _graph_cache.update(key=key, graph=SiteGraph(site))
+    return _graph_cache['graph']
+
+
+def _fold(s: str) -> str:
+    """Bỏ dấu tiếng Việt để tìm kiếm ('bai do' khớp 'Bãi đỗ')."""
+    s = unicodedata.normalize('NFD', s or '').replace('đ', 'd').replace('Đ', 'D')
+    return ''.join(c for c in s if unicodedata.category(c) != 'Mn').lower().strip()
+
+
+def err(status, code, message):
+    raise HTTPException(status, {'code': code, 'message': message})
+
+
+# ---------------- trạng thái & dữ liệu bản đồ ----------------
+@app.get('/api/health')
+def health():
+    return {'ok': True, 'indexSize': len(index), 'model': MODEL_NAME, 'modelLoaded': embedder.loaded}
+
+
+@app.get('/api/site')
+def get_site():
+    """Toàn bộ dữ liệu — CHỈ dùng cho chế độ Thu thập."""
+    g = graph()
+    site = load_site()
+    site['mapInfo'] = {mid: tf.info() for mid, tf in g.tf.items()}
+    return site
+
+
+@app.put('/api/site')
+def put_site(site: dict = Body(...)):
+    site.pop('mapInfo', None)
+    try:
+        return {'ok': True, 'nodes': len(save_site(site)['nodes'])}
+    except (ValueError, KeyError, TypeError) as e:
+        err(400, 'invalid_site', str(e))
+
+
+@app.get('/api/destinations')
+def destinations():
+    """Danh sách điểm đến cho người dùng (không lộ toạ độ/sơ đồ)."""
+    g = graph()
+    return {'rooms': [{'id': r['id'], 'code': r.get('code', ''), 'name': r['name'],
+                       'aliases': r.get('aliases', []),
+                       'building': g.maps.get(g.nodes[r['node']]['map'], {}).get('building')}
+                      for r in g.rooms if r['node'] in g.nodes],
+            'outdoorGeo': any(tf.geo for mid, tf in g.tf.items()
+                              if g.maps[mid].get('kind') == 'outdoor')}
+
+
+@app.get('/maps/{name}')
+def map_image(name: str):
+    for base in (DATA / 'maps', MAPS_SRC):
+        p = (base / name).resolve()
+        if p.parent == base.resolve() and p.is_file():
+            return FileResponse(p)
+    err(404, 'not_found', 'Không có ảnh bản đồ này')
+
+
+@app.post('/api/maps/{map_id}/image')
+async def upload_map_image(map_id: str, image: UploadFile = File(...)):
+    site = load_site()
+    m = next((m for m in site['maps'] if m['id'] == map_id), None)
+    if not m:
+        err(404, 'no_map', 'Không có bản đồ này')
+    raw = await image.read()
+    im = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert('RGB')
+    (DATA / 'maps').mkdir(parents=True, exist_ok=True)
+    name = f'{map_id}-{int(time.time())}.jpg'
+    im.save(DATA / 'maps' / name, quality=90)
+    m.update(image=f'/maps/{name}', width=im.width, height=im.height)
+    save_site(site)
+    return {'ok': True, 'image': m['image'], 'width': im.width, 'height': im.height}
+
+
+# ---------------- thu thập ảnh cho nhận diện ----------------
+def _extract_frames(path: str, n_out: int):
+    cap = cv2.VideoCapture(path)
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    frames = []
+    if total > 0:
+        for idx in np.linspace(0, total - 1, min(total, int(n_out * 1.5))).astype(int):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
+            ok, f = cap.read()
+            if ok:
+                frames.append(f)
+    else:  # một số video không báo số khung: đọc tuần tự
+        allf = []
+        while True:
+            ok, f = cap.read()
+            if not ok:
+                break
+            allf.append(f)
+        step = max(1, len(allf) // int(n_out * 1.5))
+        frames = allf[::step]
+    cap.release()
+    scored = []
+    for f in frames:
+        h, w = f.shape[:2]
+        s = 640 / max(h, w)
+        f = cv2.resize(f, (int(w * s), int(h * s))) if s < 1 else f
+        sharp = cv2.Laplacian(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var()
+        scored.append((sharp, f))
+    if not scored:
+        return [], 0
+    cut = np.percentile([s for s, _ in scored], 25)
+    kept = [f for s, f in scored if s >= cut and s > 15][:n_out]
+    return [Image.fromarray(cv2.cvtColor(f, cv2.COLOR_BGR2RGB)) for f in kept], len(scored)
+
+
+@app.post('/api/spots/{node_id}/video')
+async def add_spot_video(node_id: str, video: UploadFile = File(...)):
+    g = graph()
+    if node_id not in g.nodes:
+        err(404, 'no_node', 'Không có điểm này trên bản đồ')
+    with tempfile.NamedTemporaryFile(suffix=Path(video.filename or 'v.mp4').suffix, delete=False) as tmp:
+        size = 0
+        while chunk := await video.read(1 << 20):
+            size += len(chunk)
+            if size > MAX_UPLOAD:
+                err(413, 'too_large', 'Video quá lớn (tối đa 200 MB)')
+            tmp.write(chunk)
+        tmp_path = tmp.name
+    try:
+        images, seen = _extract_frames(tmp_path, FRAMES_PER_VIDEO)
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)   # không giữ video gốc
+    if len(images) < 5:
+        err(422, 'few_frames', f'Chỉ lấy được {len(images)} khung rõ nét; hãy quay lại chậm hơn, đủ sáng')
+    vid = f'v{int(time.time())}_{secrets.token_hex(2)}'
+    t0 = time.time()
+    vecs = embedder(images)
+    index.add(vecs, node_id, 'video', vid)
+    thumbs = DATA / 'frames' / node_id
+    thumbs.mkdir(parents=True, exist_ok=True)
+    for j, im in enumerate(images[:: max(1, len(images) // 4)][:4]):
+        im.copy().resize((im.width // 2, im.height // 2)).save(thumbs / f'{vid}_{j}.jpg', quality=70)
+    return {'ok': True, 'video': vid, 'frames': len(images), 'seen': seen,
+            'embedMs': round((time.time() - t0) * 1000), 'indexSize': len(index),
+            'spot': index.counts().get(node_id)}
+
+
+@app.get('/api/spots')
+def spots():
+    c = index.counts()
+    thumbs = {}
+    base = DATA / 'frames'
+    if base.exists():
+        for d in base.iterdir():
+            thumbs[d.name] = sorted(p.name for p in d.glob('*.jpg'))[-4:]
+    return {'counts': c, 'thumbs': thumbs, 'indexSize': len(index)}
+
+
+@app.get('/api/frames/{node_id}/{name}')
+def frame(node_id: str, name: str):
+    base = (DATA / 'frames').resolve()
+    p = (base / node_id / name).resolve()
+    if p.parent.parent != base or not p.is_file():
+        err(404, 'not_found', 'Không có khung hình')
+    return FileResponse(p)
+
+
+@app.delete('/api/spots/{node_id}')
+def clear_spot(node_id: str):
+    removed = index.remove(label=node_id)
+    d = DATA / 'frames' / node_id
+    if d.exists():
+        for p in d.glob('*.jpg'):
+            p.unlink()
+    return {'ok': True, 'removed': removed, 'indexSize': len(index)}
+
+
+# ---------------- định vị bằng ảnh ----------------
+def _gc_photos():
+    now = time.time()
+    for pid in [p for p, v in _photos.items() if now - v['t'] > PHOTO_TTL]:
+        _photos.pop(pid, None)
+
+
+def _pool(tally, g: SiteGraph):
+    pooled = {}
+    for s in tally:
+        near = g.near_spots(s, POOL_M) if s in g.nodes else {s}
+        pooled[s] = sum(t['votes'] for x, t in tally.items() if x in near)
+    return pooled
+
+
+def _label(g, s):
+    n = g.nodes.get(s)
+    return n['label'] if n else s
+
+
+@app.post('/api/locate')
+async def locate(image: UploadFile = File(...), previous: str | None = Form(None)):
+    if len(index) == 0:
+        err(409, 'no_index', 'Chưa có dữ liệu ảnh. Hãy quay video ở các điểm trong chế độ Thu thập trước.')
+    _gc_photos()
+    raw = await image.read()
+    try:
+        im = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert('RGB')
+    except Exception:
+        err(400, 'bad_image', 'Không đọc được ảnh')
+    del raw                                    # ảnh gốc không lưu lại
+    t0 = time.time()
+    q = embedder([im])[0]
+    tally, top_sim = index.vote(q, K)
+    denom = K
+    prev = _photos.get(previous) if previous else None
+    if prev:
+        for s, t in prev['tally'].items():
+            c = tally.setdefault(s, {'votes': 0.0, 'sim': 0.0, 'nearest': False})
+            c['votes'] += t['votes']
+            c['sim'] += t['sim']
+        denom = 2 * K
+    g = graph()
+    pooled = _pool(tally, g)
+    ranked = sorted(tally, key=lambda s: (tally[s]['nearest'], pooled[s], tally[s]['votes'],
+                                          tally[s]['sim']), reverse=True)
+    best = ranked[0]
+    conf = min(1.0, pooled[best] / denom)
+    if prev:
+        tier = 'auto' if conf >= 0.8 else 'picker'    # không bao giờ xin ảnh thứ 3
+    else:
+        tier = 'auto' if conf >= AUTO_P else 'picker' if conf >= PICKER_P else 'second'
+    pid = 'p_' + secrets.token_hex(6)
+    _photos[pid] = {'vec': q, 'tally': tally, 't': time.time(), 'pred': best}
+    return {'photoId': pid, 'spot': best, 'label': _label(g, best), 'confidence': round(conf, 2),
+            'tier': tier, 'topSim': round(top_sim, 3),
+            'top3': [{'spot': s, 'label': _label(g, s), 'votes': tally[s]['votes']} for s in ranked[:3]],
+            'combined': bool(prev), 'ms': round((time.time() - t0) * 1000)}
+
+
+@app.post('/api/correct')
+def correct(body: dict = Body(...)):
+    p = _photos.get(body.get('photoId'))
+    spot = body.get('trueSpot')
+    if not p:
+        err(410, 'expired', 'Ảnh đã hết hạn (10 phút), hãy chụp lại')
+    if spot not in graph().nodes:
+        err(404, 'no_node', 'Không có điểm này')
+    if p.get('corrected'):
+        return {'ok': True, 'indexSize': len(index), 'duplicate': True}
+    index.add(p['vec'][None, :], spot, 'correction', body.get('photoId'))
+    p['corrected'] = spot
+    return {'ok': True, 'indexSize': len(index)}
+
+
+@app.get('/api/spots/search')
+def spot_search(q: str = ''):
+    """Cho màn top-3/chọn thủ công: tên dễ hiểu của các điểm trong nhà."""
+    g = graph()
+    q = _fold(q)
+    out = [{'spot': n['id'], 'label': n['label']} for n in g.nodes.values()
+           if g.maps.get(n['map'], {}).get('kind') == 'indoor' and (not q or q in _fold(n['label']))]
+    return {'spots': out[:30]}
+
+
+# ---------------- chỉ đường ----------------
+@app.get('/api/route')
+def route(to: str, start: str | None = None, lat: float | None = None, lng: float | None = None):
+    g = graph()
+    dest, dest_name = g.resolve_target(to)
+    if not dest:
+        err(404, 'no_dest', f'Không tìm thấy điểm đến "{to}"')
+    start_ll = None
+    if start:
+        sid, _ = g.resolve_target(start)
+        if not sid:
+            err(404, 'no_start', f'Không tìm thấy điểm xuất phát "{start}"')
+    elif lat is not None and lng is not None:
+        sid, d = g.nearest_geo_node(lat, lng)
+        if not sid:
+            if d is None:
+                err(409, 'no_geo', 'Bản đồ ngoài trời chưa được neo GPS, chưa dùng được vị trí GPS')
+            err(409, 'too_far', f'Bạn đang cách campus khoảng {round(d)} m')
+        start_ll = (lat, lng)
+    else:
+        err(400, 'no_start', 'Thiếu điểm xuất phát')
+    try:
+        r = g.route(sid, dest, dest_name, start_ll)
+    except Exception:
+        err(409, 'no_path', 'Chưa có đường nối tới điểm đến này')
+    r.pop('path')                               # không gửi toạ độ/đồ thị cho người dùng
+    r['destination'] = dest_name
+    r['start'] = g.nodes[sid]['label']
+    return r
+
+
+# ---------------- vết đi bộ, sao lưu ----------------
+@app.post('/api/traces')
+def add_trace(trace: dict = Body(...)):
+    site = load_site()
+    trace['id'] = 't' + secrets.token_hex(3)
+    site.setdefault('traces', []).append(trace)
+    save_site(site)
+    return {'ok': True, 'id': trace['id']}
+
+
+@app.get('/api/export')
+def export():
+    site = load_site()
+    return JSONResponse(site, headers={'Content-Disposition': 'attachment; filename="wayfinder-site.json"'})
+
+
+@app.post('/api/import')
+async def import_site(file: UploadFile = File(...)):
+    import json
+    try:
+        site = json.loads(await file.read())
+        save_site(site)
+    except (ValueError, KeyError, TypeError) as e:
+        err(400, 'invalid_site', f'File không hợp lệ: {e}')
+    return {'ok': True}
