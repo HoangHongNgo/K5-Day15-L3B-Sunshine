@@ -72,7 +72,8 @@ Thư mục này nằm trong repo nhóm: `K5-Day15-L3B-Sunshine/vinuni-wayfinder/
 ```
 vinuni-wayfinder/
   CLAUDE.md
-  maps/            ảnh nguồn, không commit: campus-map.webp (sơ đồ campus), toa-I-tang-tret.webp (mặt bằng Tòa I)
+  maps/            ảnh nguồn, không commit: campus-osm.webp (sơ đồ campus dựng từ OSM; campus-map.webp là bản vẽ tay cũ), toa-I-tang-tret.webp (mặt bằng Tòa I)
+  backend/tools/   build_osm_campus.py (dựng sơ đồ campus từ OSM; đây là code, commit được)
   backend/         FastAPI + MegaLoc (.venv, .torch là cache, không commit)
   backend/data/    site.json, frames/, index.npz, ảnh mặt bằng đã upload — dữ liệu riêng, không commit
   frontend/        React + Vite (HTTPS tự ký, proxy /api)
@@ -90,7 +91,14 @@ vinuni-wayfinder/
 
 ## Dữ liệu bản đồ
 
-### Campus (`maps/campus-map.webp`)
+### Campus — từ 28/11/2026 dựng từ OpenStreetMap (thay sơ đồ vẽ tay `maps/campus-map.webp`)
+- Công cụ: `backend/tools/build_osm_campus.py` (chạy trong `backend/`: `python -m tools.build_osm_campus --dry --preview x.png` để xem thử, bỏ `--dry` để ghi). Tải Overpass (cache `backend/data/osm-cache.json`), vẽ ảnh nền `maps/campus-osm.webp` (hướng Bắc lên, 0.35 m/px, 4 neo GPS ở góc nên sai số 0 m), dựng đồ thị đi bộ trong ranh giới trường (OSM way 777888670) + vùng đệm 35 m, rút gọn khúc cua nhỏ, đặt lại các điểm có tên. Ghi `site.json` (sao lưu `backend/data/site.pre-osm.json`) và seed (sao lưu `maps/seed-site.pre-osm.json`).
+- Kết quả: ~290 điểm, ~400 cạnh, **GPS ngoài trời dùng được** (`outdoorGeo = true`). Giữ nguyên id mà phòng/cửa trong nhà trỏ tới (`gate_main`, `gate_sanho`, `square`, `a_door`, `b_door`, `c_door`, `e_door`, `f_door`, `j_door`, `parking`, `i_west`, `i_east`, `lib_garden`, `g_w`, `r_n`, `g_east`); thêm `h_door`, `gd_ne`, `gd_s`, `gd_nw`. Điểm không tên gọi "Ngã rẽ gần Tòa X".
+- Dữ liệu © OpenStreetMap contributors (ODbL): giữ dòng ghi nguồn trên ảnh và ở nơi hiển thị.
+- **Chưa chắc, cần đi bộ kiểm:** (1) hai cổng lấy từ nút OSM theo suy luận — Cổng chính = `barrier=gate` (node 7972661011) ở đầu Nam; Cổng San Hô = `lift_gate` (node 10991194448, `access=private`) cuối trục đường thẳng từ Tòa G lên Bắc; (2) cửa tòa A, B, C, E, F, H, J, bãi xe = đỉnh đường đi bộ gần footprint nhất, không phải cửa thật; (3) cửa Tòa I nối theo hướng tới tòa lân cận vì Tòa I chưa có neo GPS; (4) **Tòa K không có trong OSM** nên đã bỏ phòng `bK`, thêm lại bằng chế độ Thu thập; (5) tên cửa Tòa G ("Tây/Bắc/Nam…") theo hướng trên bảng thoát hiểm, mà neo GPS của bạn cho thấy hướng "lên" của bảng gần như là Nam thật — nên đặt lại tên theo hướng thật khi đi kiểm.
+- Cửa Tòa G nối theo GPS thật: vị trí mỗi cửa tính từ 3 neo của Tòa G (sai số 4,9 m), rồi gắn vào đỉnh đường đi bộ gần nhất (8–19 m).
+
+### Campus cũ (sơ đồ vẽ tay, không còn dùng — giữ lại để tham khảo)
 Hai cổng: **Main Gate** (phía Nam, qua Main Square) và **San Ho Gate** (phía Bắc, đường San Hô).
 Các tòa: A, B (Auditorium/hội trường), C, E (Canteen), F (Medical Simulation Center), G (Superlab), H, I, J (Dorm), K, L, Parking Lot.
 Trục trung tâm từ Bắc xuống Nam: G – A – I nối liền nhau; Main Square nằm ngay phía Nam Tòa I. B ở Đông Bắc của A, C ở phía Tây I, E ở phía Đông I.
@@ -120,6 +128,8 @@ Trục trung tâm từ Bắc xuống Nam: G – A – I nối liền nhau; Main 
 - [x] Seed bản đồ: `maps/seed-site.json` (gitignored, vì là đồ thị đường đi thật) — 25 điểm ngoài trời + 30 điểm Tòa I, tất cả `verified: false`. Backend dùng seed khi chưa có `backend/data/site.json`.
 - [x] Frontend (`frontend/`, Vite 5 vì Node 18): màn Chỉ đường (chọn đích, chụp ảnh / GPS / gõ số phòng, top-3, ảnh thứ 2, thẻ từng bước + mũi tên la bàn ngoài trời + đếm bước trong nhà) và màn Thu thập `#thu-thap` (kéo/thêm/nối/xoá điểm, phòng, neo GPS, GPS từng điểm, quay video, độ phủ ảnh, ghi vết, xuất/nhập). Đã thử trên trình duyệt laptop (HTTP): luồng chỉ đường và lưu dữ liệu chạy đúng; **chưa thử trên điện thoại** (camera, GPS, la bàn, HTTPS).
 - Chạy thử trong khung trình duyệt của Claude: `D:\VinAI\Hackathon\.claude\launch.json` (backend + `frontend-http`).
+- [x] 28/11/2026: thay sơ đồ campus bằng OSM (xem mục "Dữ liệu bản đồ"). Kiểm bằng TestClient: từ `gate_main` và `gate_sanho` tới G106, I119 đều ra tuyến; GPS ngoài trời trả điểm gần nhất; Thu thập hiện đúng ảnh + đồ thị. Sửa kèm: `routing.py` gộp bước ngoài trời < 15 m, bỏ "tới Ngã rẽ" khi ngã rẽ không tên, bỏ "(bên phải)" khỏi tên cửa trong câu chỉ dẫn; `App.jsx`/`styles.css` đổi class gốc `app collect` → `app app-collect` vì trùng `.collect` (grid) làm khung sơ đồ co còn 2 px ở màn rộng.
+- [ ] Đi bộ kiểm đồ thị campus OSM (cổng, cửa tòa, Tòa K), kiểm lại hướng tên cửa Tòa G
 - [ ] Thu thập dữ liệu thật tại Tòa I, kiểm thử end-to-end trên điện thoại
 
 ## Lưu ý quyền riêng tư / an toàn

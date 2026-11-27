@@ -17,7 +17,7 @@ export default function App() {
   useEffect(() => { api.health().then(setHealth).catch(() => setHealth({ ok: false })) }, [mode])
 
   return (
-    <div className={'app ' + mode}>
+    <div className={'app app-' + mode}>
       <header>
         <a href="#" className="brand" onClick={() => setMode('nav')}>VinUni <span>· Chỉ đường</span></a>
         <nav>

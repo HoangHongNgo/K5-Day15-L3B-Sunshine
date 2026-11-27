@@ -6,6 +6,7 @@ bước trước; phòng đích dọc hành lang -> "ở bên trái/phải"; t�
 from __future__ import annotations
 
 import math
+import re
 
 import networkx as nx
 
@@ -13,6 +14,7 @@ from .geo import MapTransform, haversine
 
 TURN_DEG = 45
 BACK_DEG = 150
+SHORT_STEP_M = 15          # bước ngoài trời ngắn hơn mức này thì gộp với đoạn sau (tránh "rẽ trái 5 m")
 DOOR_COST_M = 1.0
 DOOR_PENALTY_M = 30.0
 LANDMARK_TYPES = {'room', 'landmark'}
@@ -116,7 +118,8 @@ class SiteGraph:
             ll = self.latlng(n0)
             d = haversine(*start_ll, *ll) if ll else None
             if d and d > 8:
-                steps.insert(0, self._step('walk', f'Đi tới {n0["label"]}', d, n0, approx=False))
+                where = 'lối đi gần nhất' if n0['label'] == 'Ngã rẽ' else n0['label']
+                steps.insert(0, self._step('walk', f'Đi tới {where}', d, n0, approx=False))
         total = sum(s['meters'] for s in steps)
         return {'path': path, 'steps': steps, 'totalMeters': round(total),
                 'estSeconds': round(total / 1.2)}
@@ -159,6 +162,8 @@ class SiteGraph:
                 dist = self._fmt_m(cur['meters'], approx)
                 if cur.get('arrive'):
                     text = f"{verb} {dist} — {cur['arrive']}"
+                elif N[cur['to']]['label'] == 'Ngã rẽ':
+                    text = f'{verb} {dist}'                # ngã rẽ không tên: không có mốc để nhắc
                 else:
                     text = f"{verb} {dist} tới {N[cur['to']]['label']}"
                 passes = self._passes(cur['nodes'][1:-1], cur['dir'], path_set)
@@ -192,7 +197,8 @@ class SiteGraph:
                 break
             if cur and cur['map'] == a['map']:
                 ang = self.angle(cur['dir'], d)
-                if abs(ang) < TURN_DEG:
+                # đoạn quá ngắn (< SHORT_STEP_M) không đáng thành một lần rẽ riêng: gộp tiếp
+                if abs(ang) < TURN_DEG or cur['meters'] < SHORT_STEP_M:
                     cur['meters'] += length
                     cur['to'] = b['id']
                     cur['nodes'].append(b['id'])
@@ -216,7 +222,8 @@ class SiteGraph:
 
     @staticmethod
     def _door(label):
-        """'Cửa ra phía Tòa B' -> 'cửa phía Tòa B' (giữ hoa tên tòa)."""
+        """'Cửa ra phía Tòa B' -> 'cửa phía Tòa B' (giữ hoa tên tòa); bỏ ghi chú '(bên phải)'."""
+        label = re.sub(r'\s*\((?:bên trái|bên phải)\)', '', label)
         if label.startswith('Cửa ra '):
             return 'cửa ' + label[len('Cửa ra '):]
         return label[:1].lower() + label[1:] if label.startswith('Cửa') else label
