@@ -1,4 +1,5 @@
 frontend/dist/
+frontend/.vite/
 frontend/node_modules/
 backend/data/
 backend/.venv/

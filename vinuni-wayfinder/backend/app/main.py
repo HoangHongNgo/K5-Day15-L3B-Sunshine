@@ -11,16 +11,19 @@ from pathlib import Path
 import cv2
 import numpy as np
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from PIL import Image, ImageOps
 
+from . import store, supa
 from .embedder import DIM, MODEL_NAME, embedder
 from .index import VectorIndex
 from .routing import SiteGraph
-from .store import DATA, MAPS_SRC, load_site, save_site
+from .store import DATA, MAPS_SRC, SAFE_NAME, SiteConflict, load_site, save_site
 
 app = FastAPI(title='VinUni Wayfinder')
-index = VectorIndex(DATA / 'index.npz', DIM, MODEL_NAME)
+REMOTE = supa.client() if supa.ENABLED else None
+index = VectorIndex(DATA / 'index.npz', DIM, MODEL_NAME, remote=REMOTE)
+_map_cache: dict[str, tuple[bytes, str]] = {}
 
 K = 10
 POOL_M = 8.0
@@ -51,10 +54,18 @@ def err(status, code, message):
     raise HTTPException(status, {'code': code, 'message': message})
 
 
+@app.exception_handler(supa.SupabaseError)
+async def _supabase_error(request, exc):
+    return JSONResponse(status_code=502, content={'detail': {
+        'code': 'offline' if exc.code == 'offline' else 'supabase',
+        'message': f'Lỗi Supabase: {exc.message}'}})
+
+
 # ---------------- trạng thái & dữ liệu bản đồ ----------------
 @app.get('/api/health')
 def health():
-    return {'ok': True, 'indexSize': len(index), 'model': MODEL_NAME, 'modelLoaded': embedder.loaded}
+    return {'ok': True, 'indexSize': len(index), 'model': MODEL_NAME, 'modelLoaded': embedder.loaded,
+            'storage': store.mode()}
 
 
 @app.get('/api/site')
@@ -70,7 +81,13 @@ def get_site():
 def put_site(site: dict = Body(...)):
     site.pop('mapInfo', None)
     try:
-        return {'ok': True, 'nodes': len(save_site(site)['nodes'])}
+        saved = save_site(site)
+        return {'ok': True, 'nodes': len(saved['nodes']), 'version': saved.get('version')}
+    except SiteConflict:
+        err(409, 'version_conflict',
+            'Người khác vừa lưu thay đổi. Hãy tải lại trang để lấy bản mới nhất rồi sửa lại (bản sửa chưa lưu của bạn sẽ mất).')
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
     except (ValueError, KeyError, TypeError) as e:
         err(400, 'invalid_site', str(e))
 
@@ -87,9 +104,25 @@ def destinations():
                               if g.maps[mid].get('kind') == 'outdoor')}
 
 
+_MIME = {'.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg'}
+
+
 @app.get('/maps/{name}')
 def map_image(name: str):
-    for base in (DATA / 'maps', MAPS_SRC):
+    if not SAFE_NAME.match(name):
+        err(404, 'not_found', 'Không có ảnh bản đồ này')
+    if REMOTE is not None:                       # ảnh sơ đồ nằm trong kho riêng tư 'maps' của Supabase
+        if name not in _map_cache:
+            try:
+                data = REMOTE.download('maps', name)
+            except supa.SupabaseError as e:
+                err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+            if data is not None:
+                _map_cache[name] = (data, _MIME.get(Path(name).suffix.lower(), 'application/octet-stream'))
+        if name in _map_cache:
+            data, mime = _map_cache[name]
+            return Response(data, media_type=mime, headers={'Cache-Control': 'private, max-age=300'})
+    for base in (DATA / 'maps', MAPS_SRC):       # dự phòng: file cục bộ
         p = (base / name).resolve()
         if p.parent == base.resolve() and p.is_file():
             return FileResponse(p)
@@ -104,11 +137,22 @@ async def upload_map_image(map_id: str, image: UploadFile = File(...)):
         err(404, 'no_map', 'Không có bản đồ này')
     raw = await image.read()
     im = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert('RGB')
-    (DATA / 'maps').mkdir(parents=True, exist_ok=True)
     name = f'{map_id}-{int(time.time())}.jpg'
-    im.save(DATA / 'maps' / name, quality=90)
+    if REMOTE is not None:
+        buf = io.BytesIO()
+        im.save(buf, 'JPEG', quality=90)
+        try:
+            REMOTE.upload('maps', name, buf.getvalue(), 'image/jpeg')
+        except supa.SupabaseError as e:
+            err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+    else:
+        (DATA / 'maps').mkdir(parents=True, exist_ok=True)
+        im.save(DATA / 'maps' / name, quality=90)
     m.update(image=f'/maps/{name}', width=im.width, height=im.height)
-    save_site(site)
+    try:
+        save_site(site)
+    except SiteConflict:
+        err(409, 'version_conflict', 'Người khác vừa lưu thay đổi. Hãy tải lại trang rồi thử đổi ảnh lại.')
     return {'ok': True, 'image': m['image'], 'width': im.width, 'height': im.height}
 
 
@@ -169,11 +213,25 @@ async def add_spot_video(node_id: str, video: UploadFile = File(...)):
     vid = f'v{int(time.time())}_{secrets.token_hex(2)}'
     t0 = time.time()
     vecs = embedder(images)
-    index.add(vecs, node_id, 'video', vid)
-    thumbs = DATA / 'frames' / node_id
-    thumbs.mkdir(parents=True, exist_ok=True)
-    for j, im in enumerate(images[:: max(1, len(images) // 4)][:4]):
-        im.copy().resize((im.width // 2, im.height // 2)).save(thumbs / f'{vid}_{j}.jpg', quality=70)
+    try:
+        index.add(vecs, node_id, 'video', vid)
+        thumb_set = images[:: max(1, len(images) // 4)][:4]
+        if REMOTE is not None:
+            rows = []
+            for j, im in enumerate(thumb_set):
+                buf = io.BytesIO()
+                im.copy().resize((im.width // 2, im.height // 2)).save(buf, 'JPEG', quality=70)
+                name = f'{vid}_{j}.jpg'
+                REMOTE.upload('frames', f'{node_id}/{name}', buf.getvalue(), 'image/jpeg')
+                rows.append({'spot': node_id, 'name': name})
+            REMOTE.insert('frame_thumbs', rows, on_conflict='spot,name')
+        else:
+            thumbs = DATA / 'frames' / node_id
+            thumbs.mkdir(parents=True, exist_ok=True)
+            for j, im in enumerate(thumb_set):
+                im.copy().resize((im.width // 2, im.height // 2)).save(thumbs / f'{vid}_{j}.jpg', quality=70)
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
     return {'ok': True, 'video': vid, 'frames': len(images), 'seen': seen,
             'embedMs': round((time.time() - t0) * 1000), 'indexSize': len(index),
             'spot': index.counts().get(node_id)}
@@ -181,17 +239,36 @@ async def add_spot_video(node_id: str, video: UploadFile = File(...)):
 
 @app.get('/api/spots')
 def spots():
+    index.sync_if_stale(20)                      # lấy vector người khác vừa thêm
     c = index.counts()
     thumbs = {}
-    base = DATA / 'frames'
-    if base.exists():
-        for d in base.iterdir():
-            thumbs[d.name] = sorted(p.name for p in d.glob('*.jpg'))[-4:]
+    if REMOTE is not None:
+        try:
+            for r in REMOTE.select('frame_thumbs', {'select': 'spot,name', 'order': 'created_at.asc,name.asc'}):
+                thumbs.setdefault(r['spot'], []).append(r['name'])
+        except supa.SupabaseError:
+            pass
+        thumbs = {k: v[-4:] for k, v in thumbs.items()}
+    else:
+        base = DATA / 'frames'
+        if base.exists():
+            for d in base.iterdir():
+                thumbs[d.name] = sorted(p.name for p in d.glob('*.jpg'))[-4:]
     return {'counts': c, 'thumbs': thumbs, 'indexSize': len(index)}
 
 
 @app.get('/api/frames/{node_id}/{name}')
 def frame(node_id: str, name: str):
+    if not (SAFE_NAME.match(node_id) and SAFE_NAME.match(name)):
+        err(404, 'not_found', 'Không có khung hình')
+    if REMOTE is not None:
+        try:
+            data = REMOTE.download('frames', f'{node_id}/{name}')
+        except supa.SupabaseError as e:
+            err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+        if data is None:
+            err(404, 'not_found', 'Không có khung hình')
+        return Response(data, media_type='image/jpeg', headers={'Cache-Control': 'private, max-age=300'})
     base = (DATA / 'frames').resolve()
     p = (base / node_id / name).resolve()
     if p.parent.parent != base or not p.is_file():
@@ -201,7 +278,14 @@ def frame(node_id: str, name: str):
 
 @app.delete('/api/spots/{node_id}')
 def clear_spot(node_id: str):
-    removed = index.remove(label=node_id)
+    try:
+        removed = index.remove(label=node_id)
+        if REMOTE is not None:
+            rows = REMOTE.select('frame_thumbs', {'select': 'name', 'spot': f'eq.{node_id}'})
+            REMOTE.remove('frames', [f'{node_id}/{r["name"]}' for r in rows])
+            REMOTE.delete('frame_thumbs', {'spot': f'eq.{node_id}'})
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
     d = DATA / 'frames' / node_id
     if d.exists():
         for p in d.glob('*.jpg'):
@@ -231,6 +315,7 @@ def _label(g, s):
 
 @app.post('/api/locate')
 async def locate(image: UploadFile = File(...), previous: str | None = Form(None)):
+    index.sync_if_stale(20)
     if len(index) == 0:
         err(409, 'no_index', 'Chưa có dữ liệu ảnh. Hãy quay video ở các điểm trong chế độ Thu thập trước.')
     _gc_photos()
@@ -279,7 +364,10 @@ def correct(body: dict = Body(...)):
         err(404, 'no_node', 'Không có điểm này')
     if p.get('corrected'):
         return {'ok': True, 'indexSize': len(index), 'duplicate': True}
-    index.add(p['vec'][None, :], spot, 'correction', body.get('photoId'))
+    try:
+        index.add(p['vec'][None, :], spot, 'correction', body.get('photoId'))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
     p['corrected'] = spot
     return {'ok': True, 'indexSize': len(index)}
 
@@ -328,11 +416,10 @@ def route(to: str, start: str | None = None, lat: float | None = None, lng: floa
 # ---------------- vết đi bộ, sao lưu ----------------
 @app.post('/api/traces')
 def add_trace(trace: dict = Body(...)):
-    site = load_site()
-    trace['id'] = 't' + secrets.token_hex(3)
-    site.setdefault('traces', []).append(trace)
-    save_site(site)
-    return {'ok': True, 'id': trace['id']}
+    try:
+        return {'ok': True, 'id': store.add_trace(trace)}
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
 
 
 @app.get('/api/export')
@@ -346,7 +433,13 @@ async def import_site(file: UploadFile = File(...)):
     import json
     try:
         site = json.loads(await file.read())
+        if REMOTE is not None:                   # nhập file = chủ động thay toàn bộ dữ liệu hiện tại
+            site['version'] = load_site().get('version')
         save_site(site)
+    except SiteConflict:
+        err(409, 'version_conflict', 'Có người vừa lưu trong lúc nhập. Hãy thử nhập lại.')
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
     except (ValueError, KeyError, TypeError) as e:
         err(400, 'invalid_site', f'File không hợp lệ: {e}')
     return {'ok': True}

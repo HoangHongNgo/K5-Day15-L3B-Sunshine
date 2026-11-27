@@ -9,3 +9,4 @@ safetensors
 networkx
 numpy
 pillow
+httpx

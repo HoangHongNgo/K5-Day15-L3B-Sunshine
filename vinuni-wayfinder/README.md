@@ -30,6 +30,28 @@ Laptop có thể phải cho phép cổng 5173 qua Windows Firewall. Wi-Fi trư�
 
 `npm run dev:http` chỉ để thử trên laptop (không có camera/cảm biến).
 
+## Dữ liệu chung của nhóm (Supabase)
+
+Bản đồ, điểm, đường nối, phòng, vết đi bộ, vector nhận diện và ảnh (sơ đồ, khung nhỏ) lưu trên **một project Supabase
+riêng tư** để cả nhóm dùng chung. Mỗi người vẫn chạy backend trên laptop của mình (dùng GPU của mình), cùng trỏ vào
+project đó. Mọi bảng bật RLS và không có policy, hai kho ảnh `maps` và `frames` là private: chỉ khoá service mới đọc
+được. **Khoá này bỏ qua RLS, không đưa lên Git, không dán vào chat.**
+
+Mỗi thành viên:
+1. Xin khoá `SUPABASE_SERVICE_KEY` từ người quản lý project (qua kênh riêng của nhóm).
+2. Sao chép `backend/.env.example` thành `backend/.env`, điền `SUPABASE_URL` và `SUPABASE_SERVICE_KEY`.
+3. Chạy backend như bình thường. `GET /api/health` sẽ báo `"storage": "supabase"`. Thiếu `.env` thì backend chạy chế độ
+   cục bộ (dữ liệu trong `backend/data/`, không chia sẻ).
+
+Người đang giữ dữ liệu cục bộ chuyển lên một lần: `cd backend; .\.venv\Scripts\python.exe migrate_to_supabase.py`
+(thêm `--replace` để ghi đè). Script từ chối chạy nếu Supabase đã có dữ liệu.
+
+Khi dùng chung:
+- **Sửa bản đồ:** lưu kiểu "người lưu sau thua nếu có người lưu trước". Nếu người khác vừa lưu, bạn nhận thông báo
+  "hãy tải lại trang" và phải sửa lại, nên hãy chia nhau mỗi người một khu vực (Tòa G, Tòa I, campus) và lưu thường xuyên.
+- **Vector nhận diện:** quay video ở máy nào cũng vào chung kho. Các máy tự đồng bộ trong khoảng 20 giây.
+- Ảnh sơ đồ và khung nhỏ phục vụ qua backend, không có đường dẫn công khai nào.
+
 ## Hai chế độ
 
 - **Chỉ đường** (`/`): chọn điểm đến → xác định vị trí (chụp ảnh / GPS / gõ số phòng) → xác nhận nếu chưa chắc → thẻ chỉ dẫn.

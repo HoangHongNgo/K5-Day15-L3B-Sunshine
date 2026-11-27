@@ -78,6 +78,16 @@ vinuni-wayfinder/
   frontend/        React + Vite (HTTPS tự ký, proxy /api)
 ```
 
+## Dữ liệu chung của nhóm: Supabase (thêm 28/11/2026)
+
+- Project Supabase **vinwayfinder** (riêng tư) chứa bản đồ, điểm, đường nối, phòng, vết đi bộ, vector nhận diện (bảng `embeddings`, float16 bytea) và ảnh (kho `maps`, `frames`). Mọi bảng bật RLS, **không có policy**; chỉ khoá service đọc/ghi được.
+- Backend tự chuyển chế độ: có `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` (trong `backend/.env`, gitignore) thì dùng Supabase; thiếu thì dùng file cục bộ `backend/data/`. `GET /api/health` trả `storage`.
+- Khoá service **không bao giờ** được đưa vào Git, frontend, chat hay log. Mỗi người xin khoá qua kênh riêng của nhóm.
+- Lưu sơ đồ qua hàm SQL `save_site(base_version, payload)`: có số phiên bản, nếu người khác đã lưu thì trả 409 `version_conflict` (người dùng phải tải lại). `get_site()` đọc toàn bộ. Vector được nạp vào bộ nhớ lúc khởi động và tự đồng bộ ~20 giây (MegaLoc 8448 chiều vượt giới hạn chỉ mục pgvector).
+- Lệnh DELETE qua API của Supabase bắt buộc có WHERE (`delete ... where true`).
+- Dữ liệu cục bộ đã chuyển lên bằng `backend/migrate_to_supabase.py`. Sau đó file `backend/data/site.json` **không còn là nguồn chính** khi có `.env`: sửa trực tiếp file đó sẽ không lên Supabase.
+- Kiểm 28/11/2026 với hai backend (một có thư mục dữ liệu rỗng): cùng thấy 355 điểm, 476 đường nối, 27 phòng, 240 vector, ảnh sơ đồ/khung từ Supabase; lưu chồng nhau cho 409 đúng. Chưa thử với người dùng thật ở máy khác.
+
 ## Dữ liệu bản đồ
 
 ### Campus (`maps/campus-map.webp`)
