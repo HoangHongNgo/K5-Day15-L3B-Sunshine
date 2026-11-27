@@ -1,4 +1,4 @@
-# AI SPEC — Mascot dẫn đường cho sinh viên mới · Nhóm Sunshine · Phòng __ · Zone __
+# AI SPEC — Wayfinder chỉ đường trong khuôn viên VinUni (mascot AR làm sau) · Nhóm Sunshine · Phòng __ · Zone __
 
 > Mốc nộp: §7 chốt chuẩn "đạt" tại **CP2 19:30 Thứ Sáu 27/11** · §0–§7 nộp **CP3 10:00 Thứ Bảy 28/11** · đủ §0–§10 **CP4 14:30 Thứ Bảy 28/11** · §10 changelog ghi tiếp đến **23:59 Thứ Bảy 28/11**.
 > Đầu mỗi mục ghi bước guide (`02-guide.md` trong repo đề) chỉ cách điền. Mỗi mục ngắn, có số và nguồn; chi tiết để ở file được trỏ tới. Xoá dòng hướng dẫn trong ngoặc vuông khi điền xong.
@@ -30,16 +30,16 @@ Data BTC cấp đã dùng (nếu có — không commit nguyên file): không (tr
 - Số lần / tháng của từng kiểu người dùng (dùng cho persona ở §8):
 
 ## §3. Giải pháp tương tự *(guide 2.1)*
-- [sản phẩm / tính năng gần giống]: một điều đáng học · một điều đáng né · mình khác gì
+- **Hound Around** (BU Spark! DS+X 2026, app web chỉ đường trong toà CDS của Đại học Boston; nguồn: trang Devpost của dự án và repo GitHub công khai `DxubleBTW/Hound-Around`): đáng học — nhận diện vị trí bằng một ảnh hành lang, nói thẳng khi chưa chắc (top 3 hoặc xin ảnh thứ hai) thay vì đoán, và cho gõ số phòng khi không chụp được; đáng né — chỉ nhận diện sau khi chụp ảnh, không theo dõi liên tục, và dữ liệu quay phải làm tay cho từng toà; mình khác — thêm GPS ngoài trời giữa các toà, thêm màn thu thập dữ liệu ngay trên điện thoại, và dữ liệu là toà của VinUni. Nhóm tự cài đặt, không chép code (repo đó không có giấy phép khi nhóm kiểm). Số liệu độ chính xác của họ chỉ để tham khảo, đo trên toà khác.
 
 ## §4. Thiết kế *(guide 2.2, 3.2)*
-- **Lát cắt MỘT CÂU:** Một sinh viên mới · hỏi đường tới một địa điểm/hoạt động trong trường bằng câu tự nhiên · AI quyết định điểm xuất phát, điểm đến và nên dẫn đường / hỏi lại / từ chối, dựa trên bản đồ và lịch hoạt động giả lập · mascot đưa lộ trình từng bước (hiện trên camera Android) và mã QR check-in của hoạt động.
+- **Lát cắt MỘT CÂU** *(cập nhật 27/11/2026, xem §10)*: Một sinh viên mới hoặc khách đang ở trong khuôn viên VinUni · hỏi đường tới một phòng/địa điểm/hoạt động bằng câu tự nhiên · AI quyết định (a) mình đang đứng ở đâu — GPS ngoài trời, nhận diện ảnh hành lang trong toà (chỉ tầng trệt Toà I) — và (b) nên dẫn đường / hỏi lại / từ chối · app đưa thẻ chỉ dẫn từng bước và mã QR check-in của hoạt động (nếu có).
 - Không làm (≥3 điều):
-  1. Ban tổ chức tạo mascot 3D từ mô tả (dùng một mascot dựng sẵn).
-  2. Định vị GPS / trong nhà thật; vị trí xuất phát do sinh viên nói.
-  3. Ghi nhận điểm danh vào hệ thống thật (chỉ sinh nội dung mã QR).
-  4. Gợi ý hoạt động "hợp với mình" theo sở thích.
-  5. Nhiệm vụ / trò chơi AR.
+  1. Mascot AR dẫn đường trên camera: **hoãn**, làm khi wayfinder chạy được (trước đây là phần chính của lát cắt).
+  2. Nhiều tầng, thang máy / cầu thang giữa các tầng, và các toà khác ngoài Toà I khi nhận diện trong nhà.
+  3. Chế độ tiếp cận (lộ trình không bậc thang) và giao diện tiếng Anh.
+  4. Ghi nhận điểm danh vào hệ thống thật (chỉ sinh nội dung mã QR).
+  5. Gợi ý hoạt động "hợp với mình" theo sở thích; nhiệm vụ / trò chơi AR.
 - **Sơ đồ:**
 
 ```mermaid
@@ -51,9 +51,11 @@ flowchart LR
   M -- "tu_choi" --> R["[TỪ CHỐI] + chỉ tới BTC / phòng CTSV"]
   G -- "có" --> T2["tim_lo_trinh (code BFS,<br/>model không sinh đường)"]
   T2 --> T3["tao_ma_checkin<br/>(chỉ nội dung QR, nháp)"]
-  T3 --> O["[DẪN ĐƯỜNG] các bước + phút + giờ hoạt động<br/>→ mascot AR hiển thị"]
+  T3 --> O["[DẪN ĐƯỜNG] các bước + phút + giờ hoạt động<br/>→ thẻ chỉ dẫn từng bước"]
   O --> P["Ban tổ chức xác nhận check-in<br/>khi quét QR tại cửa (người duyệt)"]
 ```
+
+- **Sơ đồ định vị (wayfinder, phần mới — chưa cài đặt):** điểm xuất phát có thể đến từ ba nguồn thay cho việc sinh viên tự nói: GPS (ngoài trời) · ảnh hành lang → vector MegaLoc → 10 khung gần nhất bỏ phiếu → độ tin cậy → tự trả lời / top 3 / xin ảnh thứ hai · gõ số phòng. Kết quả thành mã địa điểm đưa vào `tim_lo_trinh` như trên. Ảnh bị xoá sau khi so khớp; chỉ giữ vector và dự đoán để người dùng sửa. Chi tiết ở `docs/PRD.md`.
 
 - **Hình dạng:** [x] workflow cố định · [ ] một agent · [ ] nhiều agent — Chỉ có một quyết định cần AI (hiểu câu hỏi → from/to/hành động); tra cứu và tìm đường là việc tất định nên để code làm. Không chọn agent vì không cần AI tự chọn bước tiếp, và để model tự đi nhiều bước dễ bịa đường, khó đo.
 - **AI dựa vào đâu** — mỗi công cụ (khớp `codebase/tools.py`):
@@ -76,7 +78,7 @@ flowchart LR
   | G11 — giải thích vì sao | output nêu rõ từ đâu tới đâu, mã địa điểm, số phút và từng bước, để sinh viên đối chiếu biển chỉ dẫn |
   | G1/G2 — nói rõ làm được gì | lời từ chối nói mascot chỉ dẫn đường trong trường, việc khác liên hệ BTC / phòng CTSV |
 
-- Phần nào còn giả: bản đồ và lịch là `synthetic` (`data/DATA_CARD.md`); model đang ở chế độ giả (chưa nối model thật, sẽ nối trước CP3); phần hiển thị mascot AR trên Android chưa làm, bản chạy thử là dòng lệnh.
+- Phần nào còn giả: bản đồ và lịch trong `codebase/` là `synthetic` (`data/DATA_CARD.md`); model đang ở chế độ giả (chưa nối model thật, sẽ nối trước CP3); bản chạy thử trong `codebase/` là dòng lệnh. Phần wayfinder (GPS, nhận diện ảnh, thẻ chỉ dẫn, chế độ thu thập) **chưa viết xong**, chưa có dữ liệu quay và chưa có số đo độ chính xác; môi trường PyTorch + GPU đã chạy được. Mascot AR hoãn.
 
 ## §5. Chỗ khó — 4 lớp + ≥6 kịch bản + 2 tấn công *(guide 2.3)*
 
@@ -95,7 +97,7 @@ flowchart LR
 (1) nguồn sự thật · (2) mơ hồ / thiếu thông tin · (3) ngoài phạm vi / thẩm quyền · (4) đặc thù lĩnh vực (sai thì người dùng mất gì đắt nhất: đi nhầm chỗ, trễ hoặc lỡ hoạt động)
 
 ## §6. Bốn đường đi của trải nghiệm
-- Mọi thứ suôn sẻ: `[DẪN ĐƯỜNG]` các bước + phút + QR · Không chắc (lớp 2): `[HỎI LẠI]` một câu · Không có căn cứ (lớp 1): `[HỎI LẠI]`, nói không có trong bản đồ · Người dùng sửa: hỏi lại với vị trí mới, mascot tính lại đường
+- Mọi thứ suôn sẻ: `[DẪN ĐƯỜNG]` các bước + phút + QR · Không chắc (lớp 2): `[HỎI LẠI]` một câu · Không có căn cứ (lớp 1): `[HỎI LẠI]`, nói không có trong bản đồ · Người dùng sửa: hỏi lại với vị trí mới, app tính lại đường
 - Bị đòi ngoài phạm vi (lớp 3): `[TỪ CHỐI]` + chỉ tới BTC / phòng CTSV · Trường hợp đặc thù lĩnh vực (lớp 4): đích luôn lấy từ địa điểm của hoạt động trong lịch
 
 ## §7. Đánh giá & chuẩn "đạt" *(guide 2.4, 4.1)*
@@ -110,9 +112,9 @@ flowchart LR
 - So với impact / người / tháng (§2): đáng làm không, vì sao:
 
 ## §9. Rủi ro & an toàn
-- Dữ liệu: đã ẩn danh gì, không thu gì, không đưa gì vào model gói miễn phí:
-- AI **không được** làm gì kể cả khi người dùng yêu cầu:
-- Ai có thể bị hại nếu AI sai, và nhóm chặn thế nào:
+- Dữ liệu *(thiết kế của wayfinder, chưa cài đặt xong)*: không lưu vị trí GPS của người dùng sau khi trả lời; ảnh người dùng gửi để định vị bị xoá ngay sau khi so khớp, chỉ giữ vector và dự đoán; không có tài khoản. Dữ liệu quay (ảnh hành lang, sơ đồ, đồ thị, vector) chỉ quay ở hành lang công cộng, làm mờ khuôn mặt trước khi lưu, và **không nằm trong repo công khai** vì một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh. Không đưa dữ liệu cá nhân thật vào model gói miễn phí.
+- AI **không được** làm gì kể cả khi người dùng yêu cầu: điểm danh hộ, in mọi mã check-in hoặc danh sách sinh viên, đoán vị trí khi chưa chắc (phải hỏi lại / hiện top 3 / xin ảnh thứ hai), bịa địa điểm, lộ trình hoặc giờ không có trong dữ liệu.
+- Ai có thể bị hại nếu AI sai, và nhóm chặn thế nào: người dùng bị dẫn sai chỗ và trễ giờ — chặn bằng độ tin cậy thật, top 3, ảnh thứ hai và gõ số phòng; người cần lối đi không bậc thang chưa được phục vụ (chưa làm chế độ tiếp cận, ghi rõ ở "Không làm"); dữ liệu quay dự kiến chỉ ở chiều cao cầm tay nên chưa kiểm ở tầm ngồi xe lăn.
 
 ## §10. Phân công & changelog
 - Phân công có tên (theo chặng, chia cặp — guide "Cách chia việc"): __
@@ -123,7 +125,7 @@ flowchart LR
 
 | Thời điểm | Đổi gì | Vì sao (trỏ về câu thử / lỗi / bằng chứng nào) |
 |---|---|---|
-|  |  |  |
+| 27/11/2026 | Đổi ưu tiên của lát cắt (§4): từ "mascot AR dẫn đường trên camera, bản đồ giả lập, người dùng tự nói vị trí" sang **wayfinder** — định vị bằng GPS ngoài trời và ảnh hành lang trong toà (Toà I, tầng trệt), thẻ chỉ dẫn từng bước, chế độ thu thập dữ liệu trên điện thoại. Mascot AR chuyển sang giai đoạn sau. Cập nhật `docs/PRD.md`, `canvas.md`, `data/DATA_CARD.md`, `README.md`; thêm Hound Around vào §3 và viết §9. **Không sửa** chuẩn "đạt" §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Quyết định của nhóm: chỉ đường chính xác tới đúng phòng thật có giá trị hơn mascot, và GPS không đủ trong nhà. Bộ câu thử hiện tại vẫn đo đúng phần hiểu câu hỏi, lộ trình và từ chối của luồng này; **chưa có bộ đo cho nhận diện bằng ảnh** — cần quyết định có thêm câu thử mới hay không, không thêm im lặng vào bộ cũ |
 
 **Sau CP4 (đến 23:59 Thứ Bảy 28/11)** (sửa theo góp ý — không sửa chuẩn "đạt", câu thử, số bằng chứng, kết quả các lượt đã chạy)
 

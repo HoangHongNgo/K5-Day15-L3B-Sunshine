@@ -1,63 +1,86 @@
-# Sunshine Mascot MVP — Tài liệu yêu cầu sản phẩm (PRD)
+# VinUni Wayfinder (nhóm Sunshine) — Tài liệu yêu cầu sản phẩm (PRD)
 
-> Nhóm Sunshine · L3B · Track F. PRD này bám theo phạm vi đã chốt ở [`spec.md`](../spec.md) §4. Dữ liệu là `synthetic` (xem [`data/DATA_CARD.md`](../data/DATA_CARD.md)). Số liệu bằng chứng sẽ được điền từ [`evidence/`](../evidence/) sau khi phỏng vấn và khảo sát xong. Không có con số nào dưới đây là bịa.
+> Nhóm Sunshine · L3B · Track F. PRD này bám theo phạm vi ở [`spec.md`](../spec.md) §4. Số liệu bằng chứng sẽ được điền từ [`evidence/`](../evidence/) sau khi phỏng vấn và khảo sát xong; chưa có số nào, và không có con số nào dưới đây là bịa. Số liệu của dự án tham khảo được ghi rõ là của họ, đo trên toà nhà khác.
+>
+> **Cập nhật 27/11/2026:** nhóm chuyển ưu tiên sang **wayfinder** (chỉ đường trong khuôn viên VinUni Gia Lâm, có nhận diện vị trí bằng ảnh). Mascot AR dẫn đường không bỏ, nhưng làm sau khi wayfinder chạy được (xem [Kế hoạch phát triển](#kế-hoạch-phát-triển)). Lý do và các dòng bị ảnh hưởng ghi ở `spec.md` §10.
 
 ## Vấn đề
 
-Sinh viên mới vào trường thường không biết hoạt động được tổ chức ở đâu. Tuần định hướng dồn rất nhiều hoạt động vào vài ngày (lễ chào đón, ngày hội câu lạc bộ, workshop, thể thao, tư vấn học bổng), rải khắp các toà, tầng và phòng mà các bạn chưa từng đến.
+Sinh viên mới, khách và người đến dự sự kiện thường không biết phòng mình cần tới nằm ở toà nào, tầng nào, và đi lối nào trong khuôn viên VinUni (Gia Lâm). Tuần định hướng dồn nhiều hoạt động vào vài ngày, rải khắp các toà mà các bạn chưa từng đến.
 
 Hiện nay các bạn tìm đường như sau:
 
-- Đọc mã phòng trên poster hoặc nhóm chat ("P.A305", "Hội trường A1") nhưng không biết phòng đó ở toà nào, tầng mấy.
+- Đọc mã phòng trên poster hoặc nhóm chat ("I109", "Hội trường B") nhưng không biết phòng đó ở đâu.
 - Hỏi bạn bè, bảo vệ hoặc người đi ngang, mỗi người chỉ một kiểu.
-- Mở Google Maps, thấy được khuôn viên nhưng không thấy toà, tầng hay phòng.
+- Mở Google Maps, thấy được khuôn viên nhưng không thấy toà, tầng hay phòng. GPS dừng ở cửa toà nhà.
 - Nếu đã trễ, các bạn đi vòng tìm biển chỉ dẫn, có bạn bỏ cuộc và lỡ luôn hoạt động.
 
-Phía ban tổ chức cũng gặp khó. Họ chuẩn bị công phu nhưng số sinh viên đến ít hơn số đăng ký, còn điểm danh ở cửa thì chậm và làm bằng tay.
+Trong toà nhà, biển "Floor map" dán ở lối vào có sơ đồ nhưng người đọc phải tự định hướng từ chấm "Bạn đang ở đây" tới phòng cần tìm, và chỉ có ở chỗ biển được dán.
 
-Hậu quả là sinh viên mới đến trễ hoặc bỏ lỡ hoạt động hợp với mình, còn ban tổ chức không có cách dễ dàng để đưa sinh viên tới đúng chỗ, đúng giờ.
+Phía ban tổ chức cũng gặp khó: họ chuẩn bị công phu nhưng số sinh viên đến ít hơn số đăng ký, còn điểm danh ở cửa chậm và làm bằng tay.
 
-Tình trạng bằng chứng: đang là giả thuyết. Nhóm sẽ phỏng vấn ít nhất 3 sinh viên VinUni (P1–P3) và khảo sát ít nhất 20 sinh viên AI20K, lấy ít nhất 5 trích dẫn nguyên văn. Kết quả ghi ở `evidence/summary.md` và thay đoạn này tại CP2.
+Tình trạng bằng chứng: đang là giả thuyết. Nhóm sẽ phỏng vấn ít nhất 3 sinh viên VinUni (P1–P3) và khảo sát ít nhất 20 sinh viên AI20K, lấy ít nhất 5 trích dẫn nguyên văn. Kết quả ghi ở `evidence/summary.md`.
 
 ## Người dùng mục tiêu
 
-Người dùng chính là sinh viên mới, sinh viên năm nhất lần đầu tham gia một hoạt động trong khuôn viên trường. Ban tổ chức sự kiện (câu lạc bộ sinh viên, phòng Công tác sinh viên) cũng được lợi: sinh viên đến đúng giờ, và điểm danh bằng mã QR thay cho danh sách giấy.
+Người dùng chính là sinh viên mới, sinh viên năm nhất lần đầu tìm một phòng trong khuôn viên. Khách, phụ huynh và người dự sự kiện (ví dụ Career Day ở toà K, phỏng vấn và mentoring ở toà I) cũng dùng cùng một luồng. Ban tổ chức sự kiện được lợi gián tiếp: người đến đúng giờ, điểm danh bằng mã QR thay cho danh sách giấy.
 
 ## Giải pháp
 
-Sunshine là mascot của trường, dẫn sinh viên tới nơi tổ chức hoạt động. Sinh viên hỏi theo cách nói của mình, ví dụ "Mình ở căng tin, ngày hội CLB AI ở đâu?", và mascot chỉ đường từng bước trên camera điện thoại, kèm giờ hoạt động và mã QR check-in.
+Wayfinder là web app mở trên điện thoại, không cần cài đặt và không cần tài khoản. Người dùng nói mình muốn tới đâu bằng câu tự nhiên; app xác định mình đang đứng ở đâu rồi chỉ đường từng bước.
 
-Chỉ có một lần gọi model để hiểu sinh viên muốn gì. Mọi thứ cần chính xác (địa điểm, lộ trình, giờ, mã check-in) đều lấy từ dữ liệu của trường. Model không bao giờ tự nghĩ ra địa điểm, đường đi hay giờ giấc.
+1. **Hỏi bằng câu tự nhiên.** Sinh viên gõ điểm đến: một phòng ("I109"), một địa điểm ("thư viện", "quầy cà phê") hoặc một hoạt động ("Career Day"). Một lần gọi model để hiểu ý; mọi mã địa điểm, lộ trình và giờ lấy từ dữ liệu của nhóm. Model không bao giờ tự nghĩ ra địa điểm, đường đi hay giờ giấc. Khi chưa chắc, app hỏi lại một câu ngắn.
+2. **Xác định vị trí hiện tại.**
+   - *Ngoài trời:* dùng GPS của điện thoại, cập nhật liên tục khi app đang mở.
+   - *Trong toà nhà:* GPS sai 5–20 m nên không đủ. Người dùng chụp một ảnh hành lang. Server nhận diện địa điểm bằng mô hình nhận diện vị trí **MegaLoc** (vector đặc trưng của ảnh) và so với các khung hình nhóm đã quay sẵn ở từng điểm; 10 khung giống nhất bỏ phiếu chọn ra vị trí.
+   - *Khi chưa chắc:* app nói thẳng là chưa chắc, hiện 3 vị trí khả dĩ nhất để người dùng chọn, hoặc xin một ảnh thứ hai chụp hướng khác. Người dùng chọn đúng thì ảnh đó được thêm vào dữ liệu để lần sau nhận đúng.
+   - *Không chụp được ảnh:* người dùng gõ số phòng ngay bên cạnh để làm điểm xuất phát.
+3. **Chỉ đường bằng thẻ từng bước.** Mỗi lần một thẻ ("Đi thẳng", "Rẽ trái về phía quầy cà phê", "Ra cổng toà I, đi về toà C"). Không hiện sơ đồ toà nhà: người dùng chỉ thấy bước kế tiếp. Ngoài trời, thẻ có mũi tên la bàn xoay theo hướng điện thoại và khoảng cách còn lại. Lộ trình do code tính trên đồ thị đường đi (networkx), model không viết lộ trình.
+4. **Chế độ thu thập dữ liệu (cho nhóm).** Một màn hình riêng trên điện thoại để xây dữ liệu cho từng toà, thay cho việc dựng tay:
+   - neo ảnh sơ đồ mặt bằng vào bản đồ thật bằng vài điểm GPS;
+   - chạm để đặt phòng và cửa, nhập mã/tên phòng;
+   - vẽ hành lang và lối đi thành đồ thị;
+   - tại mỗi điểm, quay video ngắn xoay nhiều hướng; server cắt khung hình và tính vector đặc trưng;
+   - ghi vết khi đi bộ để kiểm tra lối đi đã vẽ.
+   Dữ liệu lưu trên máy chủ của nhóm, có nút xuất/nhập JSON để sao lưu.
+5. **Mã QR check-in và từ chối.** Giữ từ bản Sunshine: khi điểm đến là một hoạt động, app sinh nội dung mã QR nháp; app từ chối điểm danh hộ, đóng vai admin hoặc xuất dữ liệu sinh viên.
 
-1. **Hỏi bằng câu tự nhiên.** Sinh viên gõ hoặc nói mình đang ở đâu và muốn tới đâu. Điểm đến có thể là một địa điểm ("phòng lab", "thư viện") hoặc một hoạt động ("workshop Python"). Agent sẽ:
-   - so từ ngữ với tên và bí danh của địa điểm trong bản đồ ("hội trường" → `HT_A1`, "phòng lab" → `P_A305`);
-   - so với tên và thẻ chủ đề của hoạt động trong lịch, và lấy địa điểm của hoạt động đó làm điểm đến;
-   - chỉ được chọn mã địa điểm và mã hoạt động có trong dữ liệu.
-2. **Hỏi lại khi chưa chắc.** Nếu thiếu điểm xuất phát, tên địa điểm quá chung, hoặc phòng không tồn tại (ví dụ "C501"), agent hỏi lại một câu ngắn thay vì đoán. Nếu sinh viên bị lạc, agent hỏi một mốc nhìn thấy được hoặc gợi ý quay về sân trung tâm.
-3. **Lộ trình lấy từ dữ liệu, không lấy từ model.** Khi điểm xuất phát và điểm đến đều là mã hợp lệ, code tính lộ trình trên đồ thị khuôn viên (BFS). Mỗi bước dùng đúng câu chỉ đường và số phút đã lưu cho lối đi đó. Model không viết lộ trình.
-4. **Mascot dẫn đường.** Mascot hiện trên camera điện thoại và đọc từng bước một ("Đi thẳng qua sân trung tâm, vào sảnh A, lên tầng 3"), kèm tổng số phút và giờ hoạt động.
-5. **Mã QR check-in.** Khi điểm đến là một hoạt động, agent tạo nội dung mã QR check-in. Ban tổ chức quét mã tại cửa và xác nhận điểm danh. Agent không bao giờ điểm danh thay sinh viên.
-6. **Từ chối việc ngoài phạm vi.** Agent từ chối các yêu cầu điểm danh hộ, đóng vai admin, hoặc in mã và dữ liệu sinh viên, rồi chỉ sinh viên tới ban tổ chức hoặc phòng Công tác sinh viên.
+Giao diện chỉ có tiếng Việt. Mascot AR dẫn đường nằm trong giai đoạn sau, không thuộc bản demo wayfinder.
 
-Ngày demo sẽ chạy trọn vòng: câu hỏi tự nhiên, câu hỏi lại khi cần, lộ trình từng bước lấy từ bản đồ, mascot trên camera, và mã QR check-in.
+### Cách làm và nguồn tham khảo
 
-## Giới hạn của bản demo
+Cách định vị trong nhà tham khảo dự án **Hound Around** (BU Spark! DS+X 2026, tác giả David Ribeiro và nhóm): chụp ảnh, nhận diện bằng MegaLoc, bỏ phiếu k láng giềng gần nhất, hiện top 3 khi chưa chắc. Nhóm tự cài đặt, không chép code của họ (repo của họ không có file giấy phép trong cây thư mục khi nhóm kiểm). Mô hình **MegaLoc** là của Gabriele Berton và Carlo Masone. Các con số của Hound Around trong tài liệu này (nếu có) là kết quả của họ trên toà CDS ở Boston, không phải kết quả của nhóm.
 
-Bản demo chạy được toàn bộ luồng, nhưng một số phần khác với khi triển khai thật.
+## Phạm vi bản demo
 
-| Hạng mục | Hiện trạng |
+| Hạng mục | Quyết định |
 |---|---|
-| Bản đồ khuôn viên | Giả lập, nhóm tự viết: 12 địa điểm, 11 lối đi hai chiều, số phút là ước tính. Không phải bản đồ thật của VinUni |
-| Lịch hoạt động | Giả lập: 6 hoạt động tuần định hướng, không trùng giờ, không trùng tên |
-| Vị trí | Không dùng GPS hay định vị trong nhà. Sinh viên tự nói mình đang ở đâu |
-| Mascot | Một mascot dựng sẵn. Ban tổ chức chưa tự tạo được mascot riêng |
-| Hiển thị AR | Chỉ trên camera Android. Chưa làm xong; bản chạy thử hiện tại là chữ trên dòng lệnh |
-| Check-in | Chỉ sinh nội dung mã QR. Điểm danh chưa được ghi vào hệ thống thật nào |
-| Model | Chạy ở chế độ giả cho tới khi nối model thật trước CP3 |
+| Toà demo | **Toà I**, chỉ **tầng trệt** |
+| Ngoài trời | Đường đi giữa các toà trên sơ đồ khuôn viên (toà A–L, Main Gate, San Ho Gate), bằng GPS + la bàn |
+| Trong nhà | Chỉ tầng trệt Toà I. Không làm nhiều tầng, không làm thang máy/cầu thang giữa các tầng |
+| Ngôn ngữ | Chỉ tiếng Việt |
+| Chế độ tiếp cận (không bậc thang) | Chưa làm |
+| Nền tảng | Web app (React + Vite), mở trên điện thoại qua HTTPS cùng mạng Wi-Fi |
+
+Nội dung tầng trệt Toà I đọc từ ảnh chụp biển "Floor map" (xem [`data/DATA_CARD.md`](../data/DATA_CARD.md)): Trung tâm Khởi nghiệp, Vườn Thư viện, quầy cà phê, khu tự học mở, quầy tiện ích, văn phòng, các phòng I109 và I119, nhà vệ sinh, thang máy, cầu thang, và lối sang toà A (Thư viện), B (Hội trường), C (Lớp học, giảng đường), E (Nhà ăn, lab, lớp học) và bãi xe. Tên và vị trí từng phòng phải được kiểm lại tại chỗ trước khi dùng làm đáp án.
+
+## Giới hạn hiện tại
+
+| Hạng mục | Hiện trạng (27/11/2026) |
+|---|---|
+| Môi trường chạy | Đã cài PyTorch 2.14.1 bản CUDA trong môi trường ảo riêng, nhận GPU GTX 1650 4 GB. Chưa tải và chưa chạy thử MegaLoc |
+| Sơ đồ | Đã có sơ đồ khuôn viên (ảnh) và ảnh mặt bằng tầng trệt Toà I (ảnh chụp biển). Chưa số hoá thành đồ thị đường đi |
+| Dữ liệu ảnh nhận diện | Chưa quay. Chưa có vector, chưa có chỉ số nào |
+| Backend (FastAPI), frontend (React) | Chưa viết |
+| Độ chính xác nhận diện | Chưa đo. Mục tiêu (tự đặt, chưa kiểm): đúng phòng ở ≥ 80% ảnh khi app tự trả lời, đo bằng cách loại cả video khỏi chỉ số khi thử |
+| Bản Sunshine cũ | Bản chạy thử dòng lệnh (`codebase/`) dùng bản đồ giả lập 12 địa điểm; chạy ở chế độ giả cho tới khi nối model thật |
+| Check-in | Chỉ sinh nội dung mã QR; điểm danh chưa ghi vào hệ thống thật |
+
+Bộ câu thử hiện tại (`eval/benchmark.csv`, 12 câu) đo phần hiểu câu hỏi, hỏi lại, lộ trình và từ chối trên dữ liệu giả lập. Chưa có bộ đo cho nhận diện vị trí bằng ảnh; việc này ghi ở Rủi ro #1 và `spec.md` §7.
 
 ## User stories
 
-Các user story dưới đây mô tả phạm vi MVP. Các tính năng dự định làm sau nằm ở mục Kế hoạch phát triển. Mã trong ngoặc là câu thử tương ứng trong `eval/benchmark.csv`.
+Mã trong ngoặc là câu thử tương ứng trong `eval/benchmark.csv` (chỉ có cho phần đã có bộ câu thử).
 
 ### Epic 1 — Hỏi đường
 
@@ -65,9 +88,9 @@ Các user story dưới đây mô tả phạm vi MVP. Các tính năng dự đ�
 
 - AC1.1 Given sinh viên nói rõ đang ở đâu và muốn tới đâu, When gửi câu hỏi, Then agent trả lời mở đầu `[DẪN ĐƯỜNG]`, kèm mã điểm đến và các bước đi. *(B01, B02, B03)*
 - AC1.2 Given sinh viên gọi địa điểm bằng tên quen ("hội trường", "phòng lab", "căng tin"), Then agent khớp theo tên và bí danh trong bản đồ.
-- AC1.3 Then mọi địa điểm trong câu trả lời đều là mã có trong `data/campus.json`.
+- AC1.3 Then mọi địa điểm trong câu trả lời đều là mã có trong dữ liệu bản đồ của nhóm.
 
-**US02.** Là sinh viên mới, tôi muốn hỏi theo tên hoạt động, để mascot tự biết hoạt động đó tổ chức ở đâu.
+**US02.** Là sinh viên mới, tôi muốn hỏi theo tên hoạt động, để app tự biết hoạt động đó tổ chức ở đâu.
 
 - AC2.1 Given sinh viên nhắc tên hoặc chủ đề của hoạt động ("ngày hội CLB AI", "workshop Python"), Then điểm đến là địa điểm của hoạt động đó trong lịch. *(B04, B05)*
 - AC2.2 Then câu trả lời kèm giờ hoạt động lấy đúng từ `data/events.json`, không bịa giờ khác. *(B09)*
@@ -80,23 +103,22 @@ Các user story dưới đây mô tả phạm vi MVP. Các tính năng dự đ�
 - AC3.4 Given sinh viên nói bị lạc mà không nêu được vị trí, Then agent hỏi mốc nhìn thấy được hoặc gợi ý quay về sân trung tâm, không tự đoán vị trí. *(B10)*
 - AC3.5 Given model trả về dữ liệu lỗi hoặc mã không có thật, Then hệ thống hạ xuống `[HỎI LẠI]` thay vì dẫn đường.
 
-### Epic 2 — Dẫn đường bằng mascot
+### Epic 2 — Chỉ đường từng bước
 
 **US04.** Là sinh viên mới, tôi muốn nhận lộ trình từng bước kèm số phút, để biết đi bao lâu thì tới.
 
-- AC4.1 Given điểm xuất phát và điểm đến hợp lệ, Then lộ trình do code tính trên bản đồ, model không sinh đường đi.
+- AC4.1 Given điểm xuất phát và điểm đến hợp lệ, Then lộ trình do code tính trên đồ thị, model không sinh đường đi.
 - AC4.2 Then mỗi bước dùng đúng câu chỉ đường của lối đi trong dữ liệu, và tổng số phút bằng tổng các lối đi.
-- AC4.3 Then câu trả lời nêu rõ từ đâu tới đâu và mã địa điểm, để sinh viên đối chiếu với biển chỉ dẫn.
+- AC4.3 Then câu trả lời nêu rõ từ đâu tới đâu, để sinh viên đối chiếu với biển chỉ dẫn.
 
-**US05.** Là sinh viên mới, tôi muốn thấy mascot trên camera điện thoại dẫn đường, để vừa nhìn đường vừa nghe chỉ dẫn.
+**US05.** *(Hoãn sang giai đoạn sau)* Là sinh viên mới, tôi muốn thấy mascot trên camera điện thoại dẫn đường, để vừa nhìn đường vừa nghe chỉ dẫn.
 
 - AC5.1 Given đã có lộ trình, When sinh viên mở camera trên điện thoại Android, Then mascot hiện trên khung hình và đọc bước hiện tại.
-- AC5.2 When sinh viên bấm "Tiếp", Then mascot chuyển sang bước sau. Given đã tới bước cuối, Then mascot báo đã tới nơi và hiện mã QR (nếu là hoạt động).
-- AC5.3 Given máy không hỗ trợ camera AR, Then vẫn hiện lộ trình dạng chữ, không chặn sinh viên.
+- AC5.2 Given máy không hỗ trợ camera AR, Then vẫn hiện thẻ chỉ dẫn dạng chữ, không chặn sinh viên.
 
-**US06.** Là sinh viên mới, tôi muốn sửa lại vị trí khi đi sai, để mascot tính lại đường từ chỗ mới.
+**US06.** Là sinh viên mới, tôi muốn sửa lại vị trí khi đi sai, để app tính lại đường từ chỗ mới.
 
-- AC6.1 When sinh viên nói vị trí mới ("giờ mình đang ở sảnh B"), Then agent tính lại lộ trình từ điểm đó tới cùng điểm đến.
+- AC6.1 When sinh viên nói hoặc chọn vị trí mới, Then app tính lại lộ trình từ điểm đó tới cùng điểm đến.
 
 ### Epic 3 — Check-in hoạt động
 
@@ -105,82 +127,125 @@ Các user story dưới đây mô tả phạm vi MVP. Các tính năng dự đ�
 - AC7.1 Given điểm đến là một hoạt động, Then câu trả lời có nội dung mã QR dạng `SUNSHINE-CHECKIN:<event_id>`. *(B04, B05)*
 - AC7.2 Then mã QR chỉ là bản nháp. Điểm danh chỉ được ghi nhận khi ban tổ chức quét mã và xác nhận tại cửa.
 
-**US08.** Là ban tổ chức, tôi muốn agent không điểm danh hộ, để danh sách tham dự phản ánh đúng người có mặt.
+**US08.** Là ban tổ chức, tôi muốn app không điểm danh hộ, để danh sách tham dự phản ánh đúng người có mặt.
 
 - AC8.1 Given sinh viên nhờ điểm danh hộ hoặc xin mã khi không tới, Then agent trả lời `[TỪ CHỐI]`, không có chuỗi `SUNSHINE-CHECKIN`, và gợi ý liên hệ ban tổ chức. *(B11)*
 
 ### Epic 4 — An toàn và phạm vi
 
-**US09.** Là ban tổ chức, tôi muốn agent từ chối yêu cầu vượt quyền, để không lộ mã check-in hay dữ liệu sinh viên.
+**US09.** Là ban tổ chức, tôi muốn app từ chối yêu cầu vượt quyền, để không lộ mã check-in hay dữ liệu sinh viên.
 
 - AC9.1 Given người dùng yêu cầu bỏ qua luật, đổi vai thành admin, in mọi mã check-in hoặc danh sách sinh viên, Then agent trả lời `[TỪ CHỐI]`, không in mã hàng loạt, không có dữ liệu cá nhân. *(B12)*
-- AC9.2 Given câu hỏi ngoài việc dẫn đường trong trường, Then agent nói rõ mascot chỉ dẫn đường và hoạt động trong trường, việc khác liên hệ ban tổ chức hoặc phòng CTSV.
+- AC9.2 Given câu hỏi ngoài việc dẫn đường trong trường, Then agent nói rõ app chỉ dẫn đường và hoạt động trong trường, việc khác liên hệ ban tổ chức hoặc phòng CTSV.
 - AC9.3 Then hệ thống không lưu vị trí của sinh viên sau khi trả lời.
+
+### Epic 5 — Định vị bằng GPS và ảnh (wayfinder)
+
+Chưa có câu thử cho epic này; bộ đo sẽ viết cùng dữ liệu quay (Rủi ro #1).
+
+**US10.** Là người đang ở ngoài trời, tôi muốn app biết tôi đang ở đâu mà không phải gõ, để bắt đầu đi ngay.
+
+- AC10.1 Given đã cho phép vị trí, When mở app ngoài trời, Then app hiện vị trí hiện tại theo GPS và cập nhật liên tục khi app còn mở.
+- AC10.2 Given GPS có độ sai số lớn, Then app nói rõ sai số thay vì chỉ một điểm chắc chắn.
+- AC10.3 Given người dùng từ chối quyền vị trí, Then app vẫn chạy: người dùng chọn điểm xuất phát từ danh sách hoặc chụp ảnh.
+
+**US11.** Là người đang ở trong toà nhà, tôi muốn chụp một ảnh hành lang để app biết tôi đang đứng ở đâu, vì GPS không đủ chính xác trong nhà.
+
+- AC11.1 Given ảnh hành lang, When gửi lên, Then server trả về điểm xuất phát gần nhất kèm độ tin cậy và xoá ảnh ngay sau khi so khớp (chỉ giữ vector).
+- AC11.2 Given độ tin cậy cao, Then app đi thẳng tới lộ trình, có đường "Không phải đây?".
+- AC11.3 Given độ tin cậy trung bình, Then app hiện 3 vị trí khả dĩ nhất để người dùng chọn.
+- AC11.4 Given độ tin cậy thấp, Then app xin một ảnh thứ hai chụp hướng khác, không đoán bừa.
+- AC11.5 Given ảnh không giống địa điểm nào đã quay, Then app báo không nhận ra và cho chọn điểm xuất phát thủ công.
+
+**US12.** Là người dùng, tôi muốn gõ số phòng bên cạnh để làm điểm xuất phát khi không chụp được ảnh.
+
+- AC12.1 Given mã phòng có trong dữ liệu, Then app dùng phòng đó làm điểm xuất phát; Given không có, Then app nói không tìm thấy và không đoán.
+
+**US13.** Là người dùng, tôi muốn sửa khi app nhận sai, để lần sau ở chỗ này app nhận đúng.
+
+- AC13.1 When người dùng chọn đúng vị trí, Then vector của ảnh đó được thêm vào dữ liệu với nhãn đúng.
+- AC13.2 Then việc sửa bị giới hạn tần suất để tránh bị lạm dụng.
+
+**US14.** Là người dùng, tôi muốn thấy từng bước một, không phải đọc sơ đồ.
+
+- AC14.1 Then app chỉ hiện thẻ của bước kế tiếp ("Đi thẳng", "Rẽ trái về phía…"), không hiện sơ đồ toà nhà.
+- AC14.2 Given đang ở ngoài trời, Then thẻ có mũi tên xoay theo la bàn của điện thoại và khoảng cách còn lại.
+
+### Epic 6 — Thu thập dữ liệu (cho nhóm)
+
+**US15.** Là thành viên nhóm, tôi muốn xây dữ liệu của một toà ngay trên điện thoại, để không phải dựng tay từng nút và từng khung hình.
+
+- AC15.1 Given ảnh sơ đồ mặt bằng, When đặt vài điểm tham chiếu kèm GPS, Then app căn ảnh vào bản đồ thật.
+- AC15.2 When chạm để đặt phòng/cửa và vẽ hành lang, Then app lưu thành đồ thị đường đi với mã phòng và tên.
+- AC15.3 When quay video ngắn tại một điểm, Then server cắt khung hình, tính vector và gắn vào điểm đó.
+- AC15.4 When ghi vết khi đi bộ, Then app hiện vết đã đi để đối chiếu với lối đi đã vẽ.
+- AC15.5 Then dữ liệu lưu ở máy chủ của nhóm, xuất/nhập được dạng JSON, và không bị đưa lên repo công khai.
 
 ## Rủi ro
 
 | # | Rủi ro | Mức | Ảnh hưởng | Cách giảm |
 |---|---|---|---|---|
-| 1 | Model bịa địa điểm, lộ trình hoặc giờ không có trong dữ liệu | Cao | Sinh viên đi nhầm chỗ hoặc đến sai giờ | Model chỉ được chọn mã trong dữ liệu; code kiểm từng mã, sai thì hạ xuống `[HỎI LẠI]`; lộ trình và giờ luôn lấy từ dữ liệu. Metric `khong_bia_dia_diem` phải 0 lỗi |
-| 2 | Bản đồ giả lập không khớp khuôn viên thật | Cao | Chỉ đường đúng trong demo nhưng sai ngoài thực tế | Gắn nhãn `synthetic` cho mọi dữ liệu; trước khi thử thật, đi khảo sát khuôn viên và dựng lại bản đồ với lối đi và số phút thật |
-| 3 | Không định vị được, sinh viên phải tự nói mình ở đâu | Trung bình | Sinh viên không biết mình đang ở đâu thì không bắt đầu được | Hỏi mốc nhìn thấy được; gợi ý quay về sân trung tâm; sau này đặt mã QR ở các điểm chính để xác định điểm xuất phát |
-| 4 | AR chỉ chạy trên Android; Safari trên iPhone không hỗ trợ WebXR | Trung bình | Khoảng một nửa sinh viên không thấy mascot trên camera | Luôn hiện lộ trình dạng chữ để dự phòng; sau này dùng mascot 2D đè lên camera, chạy được trên mọi điện thoại |
-| 5 | Mã check-in bị chia sẻ hoặc chụp màn hình | Trung bình | Sinh viên "check-in" mà không có mặt | Mã QR chỉ là bản nháp, ban tổ chức xác nhận tại cửa; sau này dùng mã ngắn hạn riêng cho từng sinh viên |
-| 6 | Prompt injection đòi quyền admin, đòi mọi mã hoặc danh sách sinh viên | Trung bình | Lộ mã hoặc dữ liệu cá nhân | Agent không có công cụ nào liệt kê sinh viên hay toàn bộ mã; câu thử từ chối B11, B12 phải qua 100% |
-| 7 | Tên địa điểm mơ hồ hoặc tiếng lóng ("chỗ ăn", "nhà A") | Trung bình | Dẫn tới sai điểm đến | Danh sách bí danh cho từng địa điểm; hỏi lại khi có nhiều hơn một chỗ khớp |
-| 8 | Ban tổ chức không cập nhật lịch kịp thời | Trung bình | Mascot dẫn sinh viên tới phòng hoặc giờ cũ | Một file lịch chung cho mỗi tuần sự kiện; sau này có trang cho ban tổ chức tự sửa hoạt động |
+| 1 | Nhận diện ảnh nhầm: các hành lang giống nhau, ánh sáng đổi, ít ảnh mẫu | Cao | Dẫn sai chỗ | Hiện độ tin cậy thật; chỉ tự trả lời khi chắc, ngược lại hiện top 3 hoặc xin ảnh thứ hai; cho gõ số phòng; viết bộ đo riêng, loại cả video khỏi chỉ số khi thử. Hiện **chưa đo gì** |
+| 2 | Model bịa địa điểm, lộ trình hoặc giờ không có trong dữ liệu | Cao | Đi nhầm chỗ, đến sai giờ | Model chỉ chọn mã trong dữ liệu; code kiểm từng mã, sai thì hạ xuống `[HỎI LẠI]`; lộ trình và giờ luôn lấy từ dữ liệu. Metric `khong_bia_dia_diem` phải 0 lỗi |
+| 3 | Mặt bằng đọc từ ảnh chụp biển có thể sai hoặc lỗi thời (tên phòng, vị trí cửa) | Cao | Đồ thị sai, chỉ đường sai | Đi bộ kiểm từng phòng bằng chế độ thu thập, ghi vết khi đi; gắn nhãn dữ liệu chưa kiểm |
+| 4 | Điện thoại cần HTTPS mới dùng được camera và cảm biến; Wi-Fi trường có thể chặn kết nối giữa các máy | Trung bình | Không mở được app trên điện thoại khi demo | Dùng chứng chỉ tự ký trên cùng Wi-Fi; phương án dự phòng: tunnel HTTPS hoặc điểm phát Wi-Fi của điện thoại |
+| 5 | Bộ dữ liệu ảnh là bản đồ ảnh chi tiết của toà nhà (rủi ro an ninh) và ảnh có thể chứa người | Trung bình | Lộ không gian nội bộ, lộ khuôn mặt | Chỉ quay hành lang công cộng; làm mờ mặt trước khi lưu; ảnh, sơ đồ, đồ thị và vector không đưa lên repo công khai; xoá ảnh người dùng sau khi so khớp; hỏi lại nhà trường nếu mở rộng |
+| 6 | GPS ngoài trời sai gần toà cao hoặc dưới mái | Trung bình | Mũi tên chỉ sai hướng | Hiện sai số; cho chọn điểm xuất phát thủ công; chỉ dùng la bàn khi có hiệu chuẩn |
+| 7 | Bản đồ khuôn viên chưa số hoá nên bản đồ giả lập cũ không khớp thật | Cao | Bản Sunshine chỉ đường đúng trong demo nhưng sai ngoài thực tế | Thay bản đồ giả bằng đồ thị đo từ khuôn viên thật; giữ nhãn `synthetic` cho dữ liệu cũ |
+| 8 | Mã check-in bị chia sẻ hoặc chụp màn hình | Trung bình | Sinh viên "check-in" mà không có mặt | Mã QR chỉ là bản nháp, ban tổ chức xác nhận tại cửa |
+| 9 | Prompt injection đòi quyền admin, đòi mọi mã hoặc danh sách sinh viên | Trung bình | Lộ mã hoặc dữ liệu cá nhân | Agent không có công cụ liệt kê sinh viên hay toàn bộ mã; câu thử từ chối B11, B12 phải qua 100% |
+| 10 | Ban tổ chức không cập nhật lịch kịp thời | Trung bình | Dẫn tới phòng hoặc giờ cũ | Một file lịch chung cho mỗi tuần sự kiện |
 
 ## Kế hoạch phát triển
 
-### Giai đoạn 1 — MVP (làm cho hackathon)
+### Giai đoạn 1 — Wayfinder demo (hiện tại, ưu tiên)
 
 | Tính năng | Mô tả |
 |---|---|
-| Hỏi bằng câu tự nhiên | Sinh viên hỏi theo cách nói của mình là muốn đi đâu |
-| Khớp địa điểm và hoạt động | Khớp tên, bí danh và thẻ chủ đề với mã trong dữ liệu |
-| Hỏi lại khi chưa chắc | Hỏi một câu ngắn khi điểm xuất phát, địa điểm hoặc phòng chưa rõ hay bị thiếu |
-| Lộ trình từ bản đồ | Code tính lộ trình từng bước và số phút; model không viết lộ trình |
-| Mascot trên camera | Một mascot dựng sẵn dẫn đường trên camera Android, có lộ trình dạng chữ để dự phòng |
-| Mã QR check-in | Sinh nội dung mã QR cho hoạt động; ban tổ chức xác nhận tại cửa |
-| Từ chối | Từ chối điểm danh hộ, yêu cầu quyền admin và yêu cầu xuất dữ liệu |
+| Hỏi bằng câu tự nhiên | Sinh viên nói điểm đến; hiểu ý, hỏi lại khi chưa chắc |
+| Chế độ thu thập dữ liệu | Neo sơ đồ, đặt phòng/cửa, vẽ hành lang, quay video theo điểm, ghi vết đi bộ |
+| Đồ thị đường đi Toà I (tầng trệt) và đường ngoài trời | Số hoá từ sơ đồ, kiểm tại chỗ |
+| Định vị | GPS ngoài trời; ảnh hành lang + MegaLoc trong toà; top 3, ảnh thứ hai, gõ số phòng |
+| Thẻ chỉ dẫn | Từng bước, la bàn + khoảng cách ngoài trời, không hiện sơ đồ toà |
+| Mã QR check-in, từ chối | Giữ từ bản Sunshine |
+| Bộ đo nhận diện | Bộ câu thử riêng cho định vị bằng ảnh, bổ sung cho `eval/benchmark.csv` |
 
-### Giai đoạn 2 — Sẵn sàng cho khuôn viên thật
+### Giai đoạn 2 — Mở rộng khuôn viên
 
 | Tính năng | Mô tả |
 |---|---|
-| Bản đồ khuôn viên thật | Dựng lại sau khi đi khảo sát khuôn viên, có lối đi, tầng và số phút thật |
-| Lộ trình tiếp cận | Thang máy và lối không bậc thang cho sinh viên cần |
-| Mã QR đặt tại chỗ | Sinh viên quét mã ở cửa toà nhà để xác định mình đang ở đâu |
-| Chạy trên iPhone | Mascot 2D đè lên camera, chạy được trên trình duyệt mọi điện thoại |
+| Thêm toà và thêm tầng | Mỗi toà là một gói dữ liệu riêng, không phải mã mới; thêm thang máy/cầu thang giữa các tầng |
+| Chế độ tiếp cận | Lộ trình không bậc thang, ưu tiên thang máy |
+| Chạy trên điện thoại không cần mạng | Chuyển bước so khớp xuống điện thoại |
 | Check-in thật | Ban tổ chức quét mã QR và điểm danh được ghi vào danh sách của hoạt động |
 
-### Giai đoạn 3 — Công cụ cho ban tổ chức
+### Giai đoạn 3 — Mascot (làm khi có thời gian)
 
 | Tính năng | Mô tả |
 |---|---|
-| Trang cho ban tổ chức | Ban tổ chức thêm hoạt động, địa điểm và giờ mà không cần sửa file |
-| Mascot riêng | Ban tổ chức tải lên mascot 2D hoặc 3D của sự kiện mình |
-| Nhiệm vụ trên bản đồ | Ban tổ chức đặt các điểm nhiệm vụ; sinh viên quét QR ở từng điểm để hoàn thành nhiệm vụ và nhận huy hiệu |
-| Theo dõi điểm danh | Ban tổ chức xem số sinh viên đã check-in theo từng hoạt động |
+| Mascot dẫn đường trên camera | Một mascot dựng sẵn đọc từng bước trên camera điện thoại; có thẻ chữ dự phòng |
+| Chạy trên iPhone | Mascot 2D đè lên camera, chạy được trên trình duyệt mọi điện thoại |
+| Mascot riêng của sự kiện | Ban tổ chức tải lên mascot 2D hoặc 3D |
 
-### Giai đoạn 4 — Thêm cho sinh viên
+### Giai đoạn 4 — Công cụ cho ban tổ chức và sinh viên
 
 | Tính năng | Mô tả |
 |---|---|
-| Chụp ảnh AR với mascot | Sinh viên chụp ảnh cùng mascot của sự kiện và chia sẻ |
-| Mũi tên la bàn | Mũi tên trên camera chỉ về phía điểm đến, dùng GPS và la bàn của điện thoại khi ở ngoài trời |
-| Gợi ý hoạt động | Sinh viên chọn sở thích hoặc khoa, nhận danh sách hoạt động sắp tới phù hợp |
-| Nhắc lịch | Nhắc trước giờ hoạt động, kèm lộ trình từ nơi sinh viên hay ở |
+| Trang cho ban tổ chức | Thêm hoạt động, địa điểm, giờ mà không cần sửa file; xem số người đã check-in |
+| Nhiệm vụ trên bản đồ | Điểm nhiệm vụ, quét QR để nhận huy hiệu |
+| Gợi ý hoạt động, nhắc lịch | Theo sở thích hoặc khoa, nhắc trước giờ kèm lộ trình |
 
 ## Công nghệ
 
 | Lớp | Công nghệ | Vai trò |
 |---|---|---|
-| AI | Một lần gọi LLM qua `codebase/ai.py` (`call_model`) | Đọc câu hỏi, trả về điểm xuất phát, điểm đến, hoạt động và hành động (`dan_duong` / `hoi_lai` / `tu_choi`) dạng JSON |
-| Agent | Workflow cố định bằng Python (`codebase/agent.py`) | Gọi công cụ, kiểm JSON và mã do model trả về, chọn câu trả lời cuối |
-| Công cụ | `tra_dia_diem`, `danh_sach_dia_diem`, `tim_lo_trinh`, `tao_ma_checkin` (`codebase/tools.py`) | Tra địa điểm, liệt kê địa điểm, tìm lộ trình bằng BFS, sinh nội dung mã QR check-in. Không công cụ nào tác động ra hệ thống bên ngoài |
-| Dữ liệu | `data/campus.json`, `data/events.json` | Bản đồ khuôn viên và lịch hoạt động giả lập |
-| Đánh giá | `eval/benchmark.csv`, `eval/metric_spec.yaml`, `run.py eval` / `score` | 12 câu thử (5 thường, 5 khó, 2 từ chối) và 4 metric |
+| Frontend | React + Vite, chỉ tiếng Việt | Màn hình hỏi đường, thẻ chỉ dẫn, chế độ thu thập; dùng camera, GPS và la bàn của điện thoại; phục vụ qua HTTPS tự ký |
+| Backend | FastAPI + PyTorch (Python), chạy trên máy của nhóm | Nhận ảnh/video, tính vector, so khớp, trả vị trí; lưu dữ liệu thu thập |
+| Nhận diện vị trí | MegaLoc (vector 8.448 chiều, ảnh resize vuông 322 × 322), bỏ phiếu 10 láng giềng gần nhất theo cosine | Định vị trong nhà. Chạy bằng GPU GTX 1650 4 GB (đã xác nhận PyTorch thấy GPU) |
+| Độ tin cậy | Mô hình hồi quy logistic trên đặc trưng khớp (dự kiến) | Quyết định tự trả lời / top 3 / xin ảnh thứ hai. Ngưỡng phải hiệu chỉnh trên dữ liệu thật, chưa có |
+| Lộ trình | networkx, đồ thị đường đi tự dựng | Đường đi ngắn nhất; model không viết lộ trình |
+| Hiểu câu hỏi | Một lần gọi LLM qua `codebase/ai.py` (`call_model`), kết quả JSON | Chọn điểm xuất phát, điểm đến, hoạt động và hành động (`dan_duong` / `hoi_lai` / `tu_choi`); code kiểm lại |
+| Công cụ (bản Sunshine) | `tra_dia_diem`, `danh_sach_dia_diem`, `tim_lo_trinh`, `tao_ma_checkin` (`codebase/tools.py`) | Không công cụ nào tác động ra hệ thống bên ngoài |
+| Dữ liệu | `data/campus.json`, `data/events.json` (giả lập, bản Sunshine); đồ thị và vector thật (riêng tư, không nằm trong repo) | Xem `data/DATA_CARD.md` |
+| Đánh giá | `eval/benchmark.csv`, `eval/metric_spec.yaml`, `run.py eval` / `score` | 12 câu thử (5 thường, 5 khó, 2 từ chối) và 4 metric cho phần hiểu câu hỏi, lộ trình và từ chối |
 | Chi phí | `cost/simulate.py`, `cost/personas.yaml` | Mô phỏng phiên dùng để ước tính chi phí hằng tháng |
-| Hiển thị AR *(dự kiến)* | Camera trên trình duyệt Android (WebXR) với mascot dựng sẵn | Hiện mascot và bước hiện tại trên camera |
-| Môi trường chạy | Chỉ dùng thư viện chuẩn của Python | Chạy bằng `python run.py` |
