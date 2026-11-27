@@ -12,6 +12,18 @@
 
 ---
 
+## Prototype web/PWA — VinUni AR Map
+
+Giao diện prototype nằm trong [`web/`](web/README.md): tìm phòng, luồng ảnh mẫu, dẫn đường giả lập, mascot và khu sự kiện CLB. Chạy độc lập với backend/giao diện thu thập ở `vinuni-wayfinder/`; chưa nối API định vị hoặc dữ liệu dùng chung, không thay thế bộ đánh giá hackathon.
+
+```sh
+cd web
+npm ci
+npm run dev
+```
+
+Cần Node.js 22.12+ (22.x). Mở http://localhost:5173; nếu cổng bận dùng `npm run dev -- --port 5174`. [Bàn giao nối backend](web/docs/backend-integration.md) · [Sự kiện và mascot](web/docs/club-events.md).
+
 ## Nhóm làm gì, khung làm gì
 
 | Nhóm quyết định và viết | Khung làm sẵn (không cần sửa) |
