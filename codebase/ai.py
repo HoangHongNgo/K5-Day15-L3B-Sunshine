@@ -17,6 +17,7 @@ Chế độ giả (mặc định khi .env chưa có MODEL_PROVIDER, hoặc MODEL
 Nối model thật: điền .env (chép từ .env.example), rồi viết nhánh gọi API ở dưới theo docs/connect-model.md
 (có ví dụ OpenAI, Claude, model chạy trên máy, và cách nối nhà cung cấp khác). Không dán API key vào file này.
 """
+import json
 import os
 
 from tracing import model_call
@@ -46,8 +47,21 @@ API_KEY = (os.environ.get("API_KEY") or "").strip()
 @model_call
 def call_model(system: str, user: str) -> dict:
     if MODEL_PROVIDER == "fake":
-        last = (user.strip().splitlines() or [""])[-1]
-        return {"text": "[câu trả lời giả — chưa nối model] " + last[:60], "model": "fake", "tokens_in": 0, "tokens_out": 0}
+        # Trả một đối tượng JSON giả cố định (không so khớp input) để luồng trong agent.py
+        # chạy trọn qua cả 4 bước (tra_dia_diem → model giả → chặn rủi ro → tim_lo_trinh + tao_ma_checkin).
+        mock_payload = {
+            "action": "dan_duong",
+            "from": "CONG_CHINH",
+            "to": "P_A305",
+            "event": "EV_PYTHON",
+            "message": "[câu trả lời giả — chưa nối model]",
+        }
+        return {
+            "text": json.dumps(mock_payload, ensure_ascii=False),
+            "model": "fake",
+            "tokens_in": 0,
+            "tokens_out": 0,
+        }
 
     # NHÓM VIẾT: gọi model thật ở đây (theo MODEL_PROVIDER, MODEL_NAME, API_KEY) rồi trả đúng 4 khoá.
     # Ví dụ chép được cho từng nhà cung cấp: docs/connect-model.md mục 2.

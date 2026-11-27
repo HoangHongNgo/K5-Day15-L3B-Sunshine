@@ -57,6 +57,22 @@ flowchart LR
 
 - **Sơ đồ định vị (wayfinder, phần mới — chưa cài đặt):** điểm xuất phát có thể đến từ ba nguồn thay cho việc sinh viên tự nói: GPS (ngoài trời) · ảnh hành lang → vector MegaLoc → 10 khung gần nhất bỏ phiếu → độ tin cậy → tự trả lời / top 3 / xin ảnh thứ hai · gõ số phòng. Kết quả thành mã địa điểm đưa vào `tim_lo_trinh` như trên. Ảnh bị xoá sau khi so khớp; chỉ giữ vector và dự đoán để người dùng sửa. Chi tiết ở `docs/PRD.md`.
 
+```mermaid
+flowchart LR
+  S["Nguồn vị trí hiện tại"] --> GPS["Ngoài trời: GPS điện thoại"]
+  S --> IMG["Trong nhà (Toà I, tầng trệt):<br/>chụp ảnh hành lang"]
+  S --> ROOM["Không chụp được:<br/>gõ số phòng gần nhất"]
+  IMG --> ML["MegaLoc vector<br/>→ 10 khung gần nhất bỏ phiếu<br/>(xoá ảnh sau so khớp)"]
+  ML --> CONF{"Độ tin cậy"}
+  CONF -- "cao" --> NODE["Mã điểm xuất phát (from_id)"]
+  CONF -- "trung bình" --> TOP3["Hiện top 3 để người dùng chọn"]
+  CONF -- "thấp / không nhận ra" --> RETRY["Xin ảnh thứ hai hoặc gõ số phòng"]
+  TOP3 --> NODE
+  GPS --> NODE
+  ROOM --> NODE
+  NODE --> ROUTE["Đưa vào tim_lo_trinh<br/>(nhánh dẫn đường ở sơ đồ trên)"]
+```
+
 - **Hình dạng:** [x] workflow cố định · [ ] một agent · [ ] nhiều agent — Chỉ có một quyết định cần AI (hiểu câu hỏi → from/to/hành động); tra cứu và tìm đường là việc tất định nên để code làm. Không chọn agent vì không cần AI tự chọn bước tiếp, và để model tự đi nhiều bước dễ bịa đường, khó đo.
 - **AI dựa vào đâu** — mỗi công cụ (khớp `codebase/tools.py`):
 
@@ -117,8 +133,12 @@ flowchart LR
 - Ai có thể bị hại nếu AI sai, và nhóm chặn thế nào: người dùng bị dẫn sai chỗ và trễ giờ — chặn bằng độ tin cậy thật, top 3, ảnh thứ hai và gõ số phòng; người cần lối đi không bậc thang chưa được phục vụ (chưa làm chế độ tiếp cận, ghi rõ ở "Không làm"); dữ liệu quay dự kiến chỉ ở chiều cao cầm tay nên chưa kiểm ở tầm ngồi xe lăn.
 
 ## §10. Phân công & changelog
-- Phân công có tên (theo chặng, chia cặp — guide "Cách chia việc"): __
-- Dùng AI vào việc gì (2–3 dòng; chi tiết `docs/ai-usage.md`):
+- Phân công có tên (theo `TEAMS.md` và `canvas.md`):
+  - **Ngô Hồng Hoàng** (Đội trưởng): chốt lát cắt, `spec.md`, `canvas.md`, slide và demo.
+  - **Nguyễn Văn Hải Quân**: bản chạy thử — workflow AI và code trong `codebase/`.
+  - **Nguyễn Ánh Dương**: `data/DATA_CARD.md`, bộ câu thử, `eval/` và mô phỏng chi phí `cost/`.
+  - **Nguyễn Minh Phương**: bằng chứng pain — phỏng vấn, khảo sát, `evidence/`.
+- Dùng AI vào việc gì (2–3 dòng; chi tiết `docs/ai-usage.md`): Nhóm dùng coding agent (Claude Code, Antigravity) để viết/sửa code bản chạy thử, rà soát và đồng bộ tài liệu (`PRD.md`, `spec.md`, `DATA_CARD.md`, `canvas.md`, `eval/README.md`). AI không bịa người phỏng vấn, trích dẫn hay số liệu; thành viên phụ trách từng phần đọc kiểm và chịu trách nhiệm giải trình.
 - Nhật ký thay đổi — **mọi thay đổi sau CP2 19:30 Thứ Sáu 27/11 phải có dòng ở đây**:
 
 **CP2 → CP4** (vd thu hẹp lát cắt, hỏi thêm người dùng, lần cải tiến trước lượt 2)

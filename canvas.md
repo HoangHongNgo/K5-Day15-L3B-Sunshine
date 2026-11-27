@@ -25,8 +25,8 @@
 **Người dùng.** Sinh viên mới VinUni · gặp trực tiếp trong lớp AI20K và quanh trường trong hai ngày.
 **Data.** Bản chạy thử hiện tại dùng bản đồ/lịch hoạt động giả lập (`synthetic`). Wayfinder dùng sơ đồ khuôn viên và mặt bằng tầng trệt Toà I do nhóm chụp từ sơ đồ/biển chỉ dẫn, cùng ảnh hành lang nhóm tự quay; ghi trong data/DATA_CARD.md. Dữ liệu quay không đưa lên repo công khai và không dùng dữ liệu cá nhân của ai.
 **Lát cắt.** Xem dòng 5 của bảng trên.
-**Công cụ của agent.** Chưa chốt (dự kiến: tra địa điểm/lịch, tính lộ trình, sinh mã QR check-in); input/output sẽ ghi ở spec.md.
-**Bộ câu thử.** Chưa dựng. Dự kiến 20–30 câu "đứng ở A, muốn tới B"; đạt khi chọn đúng điểm đến và lộ trình; phải hỏi lại khi câu mơ hồ và từ chối khi địa điểm không tồn tại.
+**Công cụ của agent.** Đã chốt 4 công cụ không tác động ra ngoài (`codebase/tools.py`, bảng chi tiết ở `spec.md` §4): `tra_dia_diem`, `danh_sach_dia_diem`, `tim_lo_trinh` (BFS trên đồ thị), và `tao_ma_checkin` (chỉ sinh nội dung QR nháp).
+**Bộ câu thử.** Đã dựng bản CP2 gồm 12 câu trong `eval/benchmark.csv` (5 `thuong`, 5 `kho`, 2 `tu_choi` có 2 câu tấn công) và 4 metric trong `eval/metric_spec.yaml`; chuẩn "đạt" chốt ở `spec.md` §7. Sẽ mở rộng lên 20–30 câu (≥1/3 từ người dùng / data thật) trước CP3.
 **Persona chi phí.** Chưa tính (sẽ ước lượng số sinh viên × số lần hỏi mỗi sự kiện).
 **Bẫy.** Làm cả hai phía (tạo mascot 3D cho ban tổ chức + dẫn đường) nên lát cắt quá to; sa vào AR/3D mà quên quyết định AI cần đo; không có bản đồ chuẩn để chấm đúng/sai.
 **An toàn.** AI không tự điểm danh thay sinh viên; không lưu vị trí cá nhân; ảnh người dùng gửi để định vị bị xoá sau khi so khớp; không tự đoán vị trí khi chưa chắc.
