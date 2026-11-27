@@ -1,63 +1,63 @@
-# Sunshine Mascot MVP — Product Requirements Document
+# Sunshine Mascot MVP — Tài liệu yêu cầu sản phẩm (PRD)
 
-> Team Sunshine · L3B · Track F. This PRD follows the scope locked in [`spec.md`](../spec.md) §4. Data is `synthetic` (see [`data/DATA_CARD.md`](../data/DATA_CARD.md)). Evidence numbers are filled in from [`evidence/`](../evidence/) once interviews and the survey are done. Nothing below is an invented figure.
+> Nhóm Sunshine · L3B · Track F. PRD này bám theo phạm vi đã chốt ở [`spec.md`](../spec.md) §4. Dữ liệu là `synthetic` (xem [`data/DATA_CARD.md`](../data/DATA_CARD.md)). Số liệu bằng chứng sẽ được điền từ [`evidence/`](../evidence/) sau khi phỏng vấn và khảo sát xong. Không có con số nào dưới đây là bịa.
 
-## Problems
+## Vấn đề
 
-New students at a university campus often cannot find where an activity is held. Orientation week packs many events into a few days (welcome ceremony, club fairs, workshops, sports, scholarship advice) across buildings, floors and rooms they have never seen.
+Sinh viên mới vào trường thường không biết hoạt động được tổ chức ở đâu. Tuần định hướng dồn rất nhiều hoạt động vào vài ngày (lễ chào đón, ngày hội câu lạc bộ, workshop, thể thao, tư vấn học bổng), rải khắp các toà, tầng và phòng mà các bạn chưa từng đến.
 
-Today they get there like this:
+Hiện nay các bạn tìm đường như sau:
 
-- They read the room code on a poster or a group chat ("P.A305", "Hội trường A1") without knowing which building or floor it is on.
-- They ask friends, security guards or whoever is nearby, and get different answers.
-- They open Google Maps, which shows the campus but not the building, the floor or the room.
-- If they are late, they walk around looking for signs, and some give up and miss the activity.
+- Đọc mã phòng trên poster hoặc nhóm chat ("P.A305", "Hội trường A1") nhưng không biết phòng đó ở toà nào, tầng mấy.
+- Hỏi bạn bè, bảo vệ hoặc người đi ngang, mỗi người chỉ một kiểu.
+- Mở Google Maps, thấy được khuôn viên nhưng không thấy toà, tầng hay phòng.
+- Nếu đã trễ, các bạn đi vòng tìm biển chỉ dẫn, có bạn bỏ cuộc và lỡ luôn hoạt động.
 
-Organisers feel the other side. They put effort into an event, but fewer students show up than registered, and taking attendance at the door is slow and done by hand.
+Phía ban tổ chức cũng gặp khó. Họ chuẩn bị công phu nhưng số sinh viên đến ít hơn số đăng ký, còn điểm danh ở cửa thì chậm và làm bằng tay.
 
-As a result, new students arrive late or miss activities that suit them, and organisers have no easy way to bring students to the right place at the right time.
+Hậu quả là sinh viên mới đến trễ hoặc bỏ lỡ hoạt động hợp với mình, còn ban tổ chức không có cách dễ dàng để đưa sinh viên tới đúng chỗ, đúng giờ.
 
-Evidence status: hypothesis. The team will interview at least 3 VinUni students (P1–P3) and survey at least 20 AI20K students, with at least 5 direct quotes. Results go in `evidence/summary.md` and replace this paragraph at CP2.
+Tình trạng bằng chứng: đang là giả thuyết. Nhóm sẽ phỏng vấn ít nhất 3 sinh viên VinUni (P1–P3) và khảo sát ít nhất 20 sinh viên AI20K, lấy ít nhất 5 trích dẫn nguyên văn. Kết quả ghi ở `evidence/summary.md` và thay đoạn này tại CP2.
 
-## Target users
+## Người dùng mục tiêu
 
-The primary users are new and first-year students attending an activity on campus for the first time. Event organisers (student clubs, the student affairs office) also benefit: students arrive on time, and check-in happens with a QR code instead of a paper list.
+Người dùng chính là sinh viên mới, sinh viên năm nhất lần đầu tham gia một hoạt động trong khuôn viên trường. Ban tổ chức sự kiện (câu lạc bộ sinh viên, phòng Công tác sinh viên) cũng được lợi: sinh viên đến đúng giờ, và điểm danh bằng mã QR thay cho danh sách giấy.
 
-## Solution
+## Giải pháp
 
-Sunshine is a campus mascot that guides students to activities. The student asks in their own words, for example "Mình ở căng tin, ngày hội CLB AI ở đâu?", and the mascot shows the way step by step on the phone camera, with the activity time and a check-in QR code.
+Sunshine là mascot của trường, dẫn sinh viên tới nơi tổ chức hoạt động. Sinh viên hỏi theo cách nói của mình, ví dụ "Mình ở căng tin, ngày hội CLB AI ở đâu?", và mascot chỉ đường từng bước trên camera điện thoại, kèm giờ hoạt động và mã QR check-in.
 
-One model call decides what the student means. Everything that must be correct (places, routes, times, check-in codes) comes from the campus data, and the model never invents a place, a route or a time.
+Chỉ có một lần gọi model để hiểu sinh viên muốn gì. Mọi thứ cần chính xác (địa điểm, lộ trình, giờ, mã check-in) đều lấy từ dữ liệu của trường. Model không bao giờ tự nghĩ ra địa điểm, đường đi hay giờ giấc.
 
-1. **Ask in natural language.** The student types or says where they are and where they want to go, either a place ("phòng lab", "thư viện") or an activity ("workshop Python"). The agent:
-   - matches the words against place names and aliases in the campus map ("hội trường" → `HT_A1`, "phòng lab" → `P_A305`);
-   - matches activity names and tags in the schedule, and sets the destination to the activity's own venue;
-   - may only choose place and event codes that exist in the data.
-2. **Ask back when unsure.** If the starting point is missing, the place is too vague, or the room does not exist (e.g. "C501"), the agent asks one short question instead of guessing. If the student is lost, it asks for a visible landmark or suggests going back to the central square.
-3. **Route from data, not from the model.** Once the start and destination are valid codes, code computes the route over the campus graph (BFS). Each step uses the direction sentence and minutes stored for that path. The model never writes the route.
-4. **Mascot shows the way.** The mascot appears on the phone camera and reads out the route one step at a time ("Đi thẳng qua sân trung tâm, vào sảnh A, lên tầng 3"), with the total minutes and the activity time.
-5. **Check-in QR.** For an activity, the agent creates the content of a check-in QR code. The organiser scans it at the door and confirms attendance. The agent never takes attendance on a student's behalf.
-6. **Refuse what is out of scope.** Requests to check in for someone else, to act as admin, or to list codes or student data are refused, and the student is pointed to the organiser or the student affairs office.
+1. **Hỏi bằng câu tự nhiên.** Sinh viên gõ hoặc nói mình đang ở đâu và muốn tới đâu. Điểm đến có thể là một địa điểm ("phòng lab", "thư viện") hoặc một hoạt động ("workshop Python"). Agent sẽ:
+   - so từ ngữ với tên và bí danh của địa điểm trong bản đồ ("hội trường" → `HT_A1`, "phòng lab" → `P_A305`);
+   - so với tên và thẻ chủ đề của hoạt động trong lịch, và lấy địa điểm của hoạt động đó làm điểm đến;
+   - chỉ được chọn mã địa điểm và mã hoạt động có trong dữ liệu.
+2. **Hỏi lại khi chưa chắc.** Nếu thiếu điểm xuất phát, tên địa điểm quá chung, hoặc phòng không tồn tại (ví dụ "C501"), agent hỏi lại một câu ngắn thay vì đoán. Nếu sinh viên bị lạc, agent hỏi một mốc nhìn thấy được hoặc gợi ý quay về sân trung tâm.
+3. **Lộ trình lấy từ dữ liệu, không lấy từ model.** Khi điểm xuất phát và điểm đến đều là mã hợp lệ, code tính lộ trình trên đồ thị khuôn viên (BFS). Mỗi bước dùng đúng câu chỉ đường và số phút đã lưu cho lối đi đó. Model không viết lộ trình.
+4. **Mascot dẫn đường.** Mascot hiện trên camera điện thoại và đọc từng bước một ("Đi thẳng qua sân trung tâm, vào sảnh A, lên tầng 3"), kèm tổng số phút và giờ hoạt động.
+5. **Mã QR check-in.** Khi điểm đến là một hoạt động, agent tạo nội dung mã QR check-in. Ban tổ chức quét mã tại cửa và xác nhận điểm danh. Agent không bao giờ điểm danh thay sinh viên.
+6. **Từ chối việc ngoài phạm vi.** Agent từ chối các yêu cầu điểm danh hộ, đóng vai admin, hoặc in mã và dữ liệu sinh viên, rồi chỉ sinh viên tới ban tổ chức hoặc phòng Công tác sinh viên.
 
-On demo day, the full loop runs: a natural-language question, a clarifying question when needed, step-by-step route from the map, the mascot on camera, and the check-in QR.
+Ngày demo sẽ chạy trọn vòng: câu hỏi tự nhiên, câu hỏi lại khi cần, lộ trình từng bước lấy từ bản đồ, mascot trên camera, và mã QR check-in.
 
-## Current demo limits
+## Giới hạn của bản demo
 
-The demo runs the full flow, but several parts differ from a real deployment.
+Bản demo chạy được toàn bộ luồng, nhưng một số phần khác với khi triển khai thật.
 
-| Area | Current state |
+| Hạng mục | Hiện trạng |
 |---|---|
-| Campus map | Synthetic, written by hand: 12 places, 11 two-way paths, minutes are estimates. Not a real VinUni map |
-| Event schedule | Synthetic: 6 orientation-week activities, no overlapping times or names |
-| Location | No GPS or indoor positioning. The student says where they are |
-| Mascot | One pre-made mascot. Organisers cannot create their own yet |
-| AR display | Android camera only. Not yet built; the current runnable demo is command-line text |
-| Check-in | Only the QR content is generated. Attendance is not written to any real system |
-| Model | Runs in mock mode until a real model is connected before CP3 |
+| Bản đồ khuôn viên | Giả lập, nhóm tự viết: 12 địa điểm, 11 lối đi hai chiều, số phút là ước tính. Không phải bản đồ thật của VinUni |
+| Lịch hoạt động | Giả lập: 6 hoạt động tuần định hướng, không trùng giờ, không trùng tên |
+| Vị trí | Không dùng GPS hay định vị trong nhà. Sinh viên tự nói mình đang ở đâu |
+| Mascot | Một mascot dựng sẵn. Ban tổ chức chưa tự tạo được mascot riêng |
+| Hiển thị AR | Chỉ trên camera Android. Chưa làm xong; bản chạy thử hiện tại là chữ trên dòng lệnh |
+| Check-in | Chỉ sinh nội dung mã QR. Điểm danh chưa được ghi vào hệ thống thật nào |
+| Model | Chạy ở chế độ giả cho tới khi nối model thật trước CP3 |
 
 ## User stories
 
-The user stories below describe the MVP scope. They are written in Vietnamese, as used by the team. Items planned for later releases are listed under Future plan. The test ID in brackets refers to `eval/benchmark.csv`.
+Các user story dưới đây mô tả phạm vi MVP. Các tính năng dự định làm sau nằm ở mục Kế hoạch phát triển. Mã trong ngoặc là câu thử tương ứng trong `eval/benchmark.csv`.
 
 ### Epic 1 — Hỏi đường
 
@@ -117,70 +117,70 @@ The user stories below describe the MVP scope. They are written in Vietnamese, a
 - AC9.2 Given câu hỏi ngoài việc dẫn đường trong trường, Then agent nói rõ mascot chỉ dẫn đường và hoạt động trong trường, việc khác liên hệ ban tổ chức hoặc phòng CTSV.
 - AC9.3 Then hệ thống không lưu vị trí của sinh viên sau khi trả lời.
 
-## Risks
+## Rủi ro
 
-| # | Risk | Level | Impact | Mitigation |
+| # | Rủi ro | Mức | Ảnh hưởng | Cách giảm |
 |---|---|---|---|---|
-| 1 | The model invents a place, route or time that is not in the data | High | Students walk to the wrong place or arrive at the wrong time | The model may only pick codes from the data; code checks every code and falls back to `[HỎI LẠI]`; routes and times always come from data. Metric `khong_bia_dia_diem` must be 0 failures |
-| 2 | The synthetic map does not match the real campus | High | Directions look right in the demo but are wrong on site | Label all data `synthetic`; before a real pilot, walk the campus and rebuild the map with real paths and minutes |
-| 3 | No location sensing; the student must say where they are | Medium | Students who do not know where they are cannot start | Ask for a visible landmark; suggest returning to the central square; later, QR markers at key points to set the start |
-| 4 | AR only works on Android; WebXR is not supported on iOS Safari | Medium | About half of students cannot see the mascot on camera | Always show the text route as fallback; later, 2D mascot overlay on the camera feed, which works on any phone |
-| 5 | Check-in codes can be shared or screenshotted | Medium | Students "check in" without attending | The QR is only a draft; the organiser confirms at the door. Later, a short-lived code per student |
-| 6 | Prompt injection asks for admin powers, all codes or student lists | Medium | Leak of codes or personal data | Agent has no tool that lists students or all codes; refusal tests B11, B12 must pass 100% |
-| 7 | Vague or slang place names ("chỗ ăn", "nhà A") | Medium | Wrong destination | Alias list per place; ask back when more than one place matches |
-| 8 | Organisers do not keep the schedule up to date | Medium | Mascot sends students to an old room or time | One shared schedule file per event week; later, an organiser page to edit events |
+| 1 | Model bịa địa điểm, lộ trình hoặc giờ không có trong dữ liệu | Cao | Sinh viên đi nhầm chỗ hoặc đến sai giờ | Model chỉ được chọn mã trong dữ liệu; code kiểm từng mã, sai thì hạ xuống `[HỎI LẠI]`; lộ trình và giờ luôn lấy từ dữ liệu. Metric `khong_bia_dia_diem` phải 0 lỗi |
+| 2 | Bản đồ giả lập không khớp khuôn viên thật | Cao | Chỉ đường đúng trong demo nhưng sai ngoài thực tế | Gắn nhãn `synthetic` cho mọi dữ liệu; trước khi thử thật, đi khảo sát khuôn viên và dựng lại bản đồ với lối đi và số phút thật |
+| 3 | Không định vị được, sinh viên phải tự nói mình ở đâu | Trung bình | Sinh viên không biết mình đang ở đâu thì không bắt đầu được | Hỏi mốc nhìn thấy được; gợi ý quay về sân trung tâm; sau này đặt mã QR ở các điểm chính để xác định điểm xuất phát |
+| 4 | AR chỉ chạy trên Android; Safari trên iPhone không hỗ trợ WebXR | Trung bình | Khoảng một nửa sinh viên không thấy mascot trên camera | Luôn hiện lộ trình dạng chữ để dự phòng; sau này dùng mascot 2D đè lên camera, chạy được trên mọi điện thoại |
+| 5 | Mã check-in bị chia sẻ hoặc chụp màn hình | Trung bình | Sinh viên "check-in" mà không có mặt | Mã QR chỉ là bản nháp, ban tổ chức xác nhận tại cửa; sau này dùng mã ngắn hạn riêng cho từng sinh viên |
+| 6 | Prompt injection đòi quyền admin, đòi mọi mã hoặc danh sách sinh viên | Trung bình | Lộ mã hoặc dữ liệu cá nhân | Agent không có công cụ nào liệt kê sinh viên hay toàn bộ mã; câu thử từ chối B11, B12 phải qua 100% |
+| 7 | Tên địa điểm mơ hồ hoặc tiếng lóng ("chỗ ăn", "nhà A") | Trung bình | Dẫn tới sai điểm đến | Danh sách bí danh cho từng địa điểm; hỏi lại khi có nhiều hơn một chỗ khớp |
+| 8 | Ban tổ chức không cập nhật lịch kịp thời | Trung bình | Mascot dẫn sinh viên tới phòng hoặc giờ cũ | Một file lịch chung cho mỗi tuần sự kiện; sau này có trang cho ban tổ chức tự sửa hoạt động |
 
-## Future plan
+## Kế hoạch phát triển
 
-### Stage 1 — MVP (built for the hackathon)
+### Giai đoạn 1 — MVP (làm cho hackathon)
 
-| Feature | What it does |
+| Tính năng | Mô tả |
 |---|---|
-| Natural-language question | The student asks in their own words where to go |
-| Place and activity matching | Matches names, aliases and activity tags to codes in the data |
-| Ask back when unsure | One short question when the start, the place or the room is unclear or missing |
-| Route from the map | Code computes the step-by-step route and minutes; the model never writes it |
-| Mascot on camera | One pre-made mascot shows the route on an Android camera, with a text fallback |
-| Check-in QR | Generates the QR content for an activity; the organiser confirms at the door |
-| Refusals | Refuses check-in for others, admin requests and data dumps |
+| Hỏi bằng câu tự nhiên | Sinh viên hỏi theo cách nói của mình là muốn đi đâu |
+| Khớp địa điểm và hoạt động | Khớp tên, bí danh và thẻ chủ đề với mã trong dữ liệu |
+| Hỏi lại khi chưa chắc | Hỏi một câu ngắn khi điểm xuất phát, địa điểm hoặc phòng chưa rõ hay bị thiếu |
+| Lộ trình từ bản đồ | Code tính lộ trình từng bước và số phút; model không viết lộ trình |
+| Mascot trên camera | Một mascot dựng sẵn dẫn đường trên camera Android, có lộ trình dạng chữ để dự phòng |
+| Mã QR check-in | Sinh nội dung mã QR cho hoạt động; ban tổ chức xác nhận tại cửa |
+| Từ chối | Từ chối điểm danh hộ, yêu cầu quyền admin và yêu cầu xuất dữ liệu |
 
-### Stage 2 — Ready for a real campus
+### Giai đoạn 2 — Sẵn sàng cho khuôn viên thật
 
-| Feature | What it does |
+| Tính năng | Mô tả |
 |---|---|
-| Real campus map | Rebuilt from a walk of the real campus, with real paths, floors and minutes |
-| Accessible routes | Lifts and step-free paths for students who need them |
-| QR markers on site | Students scan a marker at a building entrance to set where they are |
-| Works on iPhone | 2D mascot overlaid on the camera feed, so it runs on any phone browser |
-| Real check-in | Organiser scans the QR and attendance is written to the event's list |
+| Bản đồ khuôn viên thật | Dựng lại sau khi đi khảo sát khuôn viên, có lối đi, tầng và số phút thật |
+| Lộ trình tiếp cận | Thang máy và lối không bậc thang cho sinh viên cần |
+| Mã QR đặt tại chỗ | Sinh viên quét mã ở cửa toà nhà để xác định mình đang ở đâu |
+| Chạy trên iPhone | Mascot 2D đè lên camera, chạy được trên trình duyệt mọi điện thoại |
+| Check-in thật | Ban tổ chức quét mã QR và điểm danh được ghi vào danh sách của hoạt động |
 
-### Stage 3 — Tools for organisers
+### Giai đoạn 3 — Công cụ cho ban tổ chức
 
-| Feature | What it does |
+| Tính năng | Mô tả |
 |---|---|
-| Organiser page | Organisers add events, venues and times without editing files |
-| Custom mascot | Organisers upload their own 2D or 3D mascot for their event |
-| Quests on the map | Organisers place checkpoints; students scan QR at each point to complete a quest and earn badges |
-| Attendance view | Organisers see how many students checked in, by event |
+| Trang cho ban tổ chức | Ban tổ chức thêm hoạt động, địa điểm và giờ mà không cần sửa file |
+| Mascot riêng | Ban tổ chức tải lên mascot 2D hoặc 3D của sự kiện mình |
+| Nhiệm vụ trên bản đồ | Ban tổ chức đặt các điểm nhiệm vụ; sinh viên quét QR ở từng điểm để hoàn thành nhiệm vụ và nhận huy hiệu |
+| Theo dõi điểm danh | Ban tổ chức xem số sinh viên đã check-in theo từng hoạt động |
 
-### Stage 4 — More for students
+### Giai đoạn 4 — Thêm cho sinh viên
 
-| Feature | What it does |
+| Tính năng | Mô tả |
 |---|---|
-| AR photo with the mascot | Students take a photo with the event mascot and share it |
-| Compass arrow | An arrow on the camera points toward the destination, using GPS and the phone's compass outdoors |
-| Event suggestions | Students pick interests or their faculty and get a list of upcoming activities that fit |
-| Reminders | A reminder before an activity, with the route from where the student usually is |
+| Chụp ảnh AR với mascot | Sinh viên chụp ảnh cùng mascot của sự kiện và chia sẻ |
+| Mũi tên la bàn | Mũi tên trên camera chỉ về phía điểm đến, dùng GPS và la bàn của điện thoại khi ở ngoài trời |
+| Gợi ý hoạt động | Sinh viên chọn sở thích hoặc khoa, nhận danh sách hoạt động sắp tới phù hợp |
+| Nhắc lịch | Nhắc trước giờ hoạt động, kèm lộ trình từ nơi sinh viên hay ở |
 
-## Technology
+## Công nghệ
 
-| Layer | Technology | Role |
+| Lớp | Công nghệ | Vai trò |
 |---|---|---|
-| AI | One LLM call through `codebase/ai.py` (`call_model`) | Reads the question and returns start, destination, event and action (`dan_duong` / `hoi_lai` / `tu_choi`) as JSON |
-| Agent | Python fixed workflow (`codebase/agent.py`) | Calls tools, validates the model's JSON and codes, picks the final answer |
-| Tools | `tra_dia_diem`, `danh_sach_dia_diem`, `tim_lo_trinh`, `tao_ma_checkin` (`codebase/tools.py`) | Place lookup, place list, BFS route, check-in QR content. None act on outside systems |
-| Data | `data/campus.json`, `data/events.json` | Synthetic campus map and activity schedule |
-| Evaluation | `eval/benchmark.csv`, `eval/metric_spec.yaml`, `run.py eval` / `score` | 12 test cases (5 normal, 5 hard, 2 refusal) and 4 metrics |
-| Cost | `cost/simulate.py`, `cost/personas.yaml` | Simulated sessions to estimate monthly cost |
-| AR display *(planned)* | Android browser camera (WebXR) with a pre-made mascot | Shows the mascot and the current step on camera |
-| Runtime | Python standard library only | Runs with `python run.py` |
+| AI | Một lần gọi LLM qua `codebase/ai.py` (`call_model`) | Đọc câu hỏi, trả về điểm xuất phát, điểm đến, hoạt động và hành động (`dan_duong` / `hoi_lai` / `tu_choi`) dạng JSON |
+| Agent | Workflow cố định bằng Python (`codebase/agent.py`) | Gọi công cụ, kiểm JSON và mã do model trả về, chọn câu trả lời cuối |
+| Công cụ | `tra_dia_diem`, `danh_sach_dia_diem`, `tim_lo_trinh`, `tao_ma_checkin` (`codebase/tools.py`) | Tra địa điểm, liệt kê địa điểm, tìm lộ trình bằng BFS, sinh nội dung mã QR check-in. Không công cụ nào tác động ra hệ thống bên ngoài |
+| Dữ liệu | `data/campus.json`, `data/events.json` | Bản đồ khuôn viên và lịch hoạt động giả lập |
+| Đánh giá | `eval/benchmark.csv`, `eval/metric_spec.yaml`, `run.py eval` / `score` | 12 câu thử (5 thường, 5 khó, 2 từ chối) và 4 metric |
+| Chi phí | `cost/simulate.py`, `cost/personas.yaml` | Mô phỏng phiên dùng để ước tính chi phí hằng tháng |
+| Hiển thị AR *(dự kiến)* | Camera trên trình duyệt Android (WebXR) với mascot dựng sẵn | Hiện mascot và bước hiện tại trên camera |
+| Môi trường chạy | Chỉ dùng thư viện chuẩn của Python | Chạy bằng `python run.py` |
