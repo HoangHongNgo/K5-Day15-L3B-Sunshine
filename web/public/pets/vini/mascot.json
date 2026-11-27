@@ -1,0 +1,17 @@
+{
+  "id": "vini",
+  "displayName": "Vini",
+  "description": "Cáo áo đỏ, bạn đồng hành thử nghiệm của VinUni AR Map.",
+  "format": "pose-atlas",
+  "image": "/pets/vini/poses.webp",
+  "columns": 3,
+  "rows": 2,
+  "cellWidth": 512,
+  "cellHeight": 512,
+  "poses": ["idle", "wave", "point-right", "wait", "walk", "celebrate"],
+  "animation": "CSS motion; left guidance mirrors the pointing pose",
+  "source": "OpenAI Images API",
+  "modelRequested": "gpt-image-2",
+  "quality": "medium",
+  "is3DModel": false
+}
