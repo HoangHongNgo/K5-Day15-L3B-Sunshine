@@ -4,17 +4,17 @@
 
 *Lát cắt = phần nhỏ nhất làm xong được trong hackathon: một người dùng · một việc · một quyết định AI · một kết quả.*
 
-**Lát cắt của nhóm:** một sinh viên mới hoặc khách trong khuôn viên VinUni (Gia Lâm) · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định mình đang đứng ở đâu (GPS ngoài trời, nhận diện ảnh hành lang trong Toà I tầng trệt) và nên dẫn đường / hỏi lại / từ chối · app đưa thẻ chỉ dẫn từng bước. Mascot AR dẫn đường làm sau.
+**Lát cắt của nhóm:** một sinh viên mới hoặc khách trong khuôn viên VinUni (Gia Lâm) · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định mình đang đứng ở đâu (GPS ngoài trời, nhận diện ảnh hành lang trong tầng trệt Toà G và Toà I) và nên dẫn đường / hỏi lại / từ chối · mascot dẫn đường bằng thẻ chỉ dẫn từng bước. Mascot là hình 2D như prototype `web/`; AR neo không gian làm sau.
 
-**Trạng thái (27/11/2026):** bản chạy thử dòng lệnh trong `codebase/` (hiểu câu hỏi, lộ trình, từ chối, dữ liệu giả lập) chạy được ở chế độ giả. Phần wayfinder (GPS, nhận diện ảnh bằng MegaLoc, thẻ chỉ dẫn, chế độ thu thập dữ liệu trên điện thoại) **chưa viết xong**; chưa có dữ liệu quay và chưa có số đo độ chính xác. Yêu cầu và kế hoạch: [docs/PRD.md](docs/PRD.md) · thiết kế: [spec.md](spec.md) · dữ liệu: [data/DATA_CARD.md](data/DATA_CARD.md).
+**Trạng thái (28/11/2026):** bản chạy thử dòng lệnh trong `codebase/` (hiểu câu hỏi, lộ trình, từ chối, dữ liệu giả lập) chạy được ở chế độ giả. Backend wayfinder (`vinuni-wayfinder/backend/`: nhận diện ảnh bằng MegaLoc, tìm đường trên đồ thị OpenStreetMap, thẻ chỉ dẫn, chế độ thu thập) **chạy được trên laptop**. Giao diện chính `web/` có mascot nhưng **chưa nối backend**. Chưa thử trên điện thoại, chưa thu thập đủ dữ liệu và chưa có số đo độ chính xác. Yêu cầu và kế hoạch: [docs/PRD.md](docs/PRD.md) · thiết kế: [spec.md](spec.md) · dữ liệu: [data/DATA_CARD.md](data/DATA_CARD.md).
 
 **Tham khảo:** cách định vị trong nhà tham khảo dự án Hound Around (BU Spark! DS+X 2026); mô hình nhận diện vị trí MegaLoc của Gabriele Berton và Carlo Masone. Nhóm tự cài đặt, không chép code. Dữ liệu quay (ảnh, sơ đồ, đồ thị, vector) không nằm trong repo công khai.
 
 ---
 
-## Prototype web/PWA — VinUni AR Map
+## Giao diện chính `web/` — VinUni AR Map
 
-Giao diện prototype nằm trong [`web/`](web/README.md): tìm phòng, luồng ảnh mẫu, dẫn đường giả lập, mascot và khu sự kiện CLB. Chạy độc lập với backend/giao diện thu thập ở `vinuni-wayfinder/`; chưa nối API định vị hoặc dữ liệu dùng chung, không thay thế bộ đánh giá hackathon.
+[`web/`](web/README.md) là **giao diện chính duy nhất** của app: tìm phòng, luồng ảnh, dẫn đường cùng mascot, khu sự kiện CLB. Màn Chỉ đường và Thu thập của `vinuni-wayfinder/frontend/` sẽ được thiết kế lại theo style này và chuyển sang đây. Hiện `web/` vẫn chạy bằng dữ liệu mẫu, **chưa nối API định vị/tìm đường** của `vinuni-wayfinder/backend/`; không thay thế bộ đánh giá hackathon.
 
 ```sh
 cd web
@@ -101,8 +101,10 @@ Nhóm dùng stack khác (Node, Streamlit, notebook…): sửa hàm `run_app()` t
 |---|---|---|
 | Lời gọi AI ở quyết định trung tâm | **Thật** (bắt buộc từ CP3) | Model: ____ |
 | Hiểu câu hỏi, lộ trình, từ chối (`codebase/`) | Chạy được ở **chế độ giả**; model thật chưa nối | Dữ liệu bản đồ và lịch là `synthetic` |
-| Wayfinder: GPS, nhận diện ảnh (MegaLoc), thẻ chỉ dẫn, chế độ thu thập | **Chưa viết xong** | Môi trường PyTorch + GPU đã chạy; chưa có dữ liệu quay, chưa có số đo |
-| Sơ đồ và mặt bằng Toà I | Thật, **chưa số hoá** | Ảnh sơ đồ; phải đi bộ kiểm trước khi dùng làm đáp án |
+| Backend wayfinder: GPS, nhận diện ảnh (MegaLoc), thẻ chỉ dẫn, chế độ thu thập | **Thật**, chạy trên laptop | Chưa thử trên điện thoại; chưa thu thập đủ dữ liệu; chưa có số đo độ chính xác |
+| Giao diện `web/` (mascot, tìm phòng, sự kiện CLB) | Giao diện thật, **dữ liệu mẫu** | Tên phòng, tuyến đường, kết quả nhận diện là fixture cho tới khi nối backend |
+| Đồ thị khuôn viên | Thật, từ OpenStreetMap, **chưa kiểm tại chỗ** | Cổng và cửa toà suy từ OSM; Toà K chưa có |
+| Đồ thị tầng trệt Toà G, Toà I | Thật, vẽ từ ảnh bảng sơ đồ, **chưa kiểm tại chỗ** | Phải đi bộ kiểm trước khi dùng làm đáp án |
 
 ## Dùng AI vào việc gì
 

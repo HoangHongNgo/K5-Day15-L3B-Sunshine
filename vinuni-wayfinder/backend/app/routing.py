@@ -1,6 +1,6 @@
 """Đồ thị đường đi + sinh thẻ chỉ dẫn từng bước (tiếng Việt).
 
-Quy tắc (CLAUDE.md): rẽ khi góc >= 45°, >= 150° là quay lại; khúc cua nhỏ hơn gộp vào
+Quy tắc (CLAUDE.md ở gốc repo): rẽ khi góc >= 45°, >= 150° là quay lại; khúc cua nhỏ hơn gộp vào
 bước trước; phòng đích dọc hành lang -> "ở bên trái/phải"; tối đa 3 mốc đi ngang qua.
 """
 from __future__ import annotations

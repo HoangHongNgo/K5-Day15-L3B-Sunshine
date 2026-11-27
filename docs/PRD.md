@@ -3,6 +3,8 @@
 > Nhóm Sunshine · L3B · Track F. PRD này bám theo phạm vi ở [`spec.md`](../spec.md) §4. Số liệu bằng chứng sẽ được điền từ [`evidence/`](../evidence/) sau khi phỏng vấn và khảo sát xong; chưa có số nào, và không có con số nào dưới đây là bịa. Số liệu của dự án tham khảo được ghi rõ là của họ, đo trên toà nhà khác.
 >
 > **Cập nhật 27/11/2026:** nhóm chuyển ưu tiên sang **wayfinder** (chỉ đường trong khuôn viên VinUni Gia Lâm, có nhận diện vị trí bằng ảnh). Mascot AR dẫn đường không bỏ, nhưng làm sau khi wayfinder chạy được (xem [Kế hoạch phát triển](#kế-hoạch-phát-triển)). Lý do và các dòng bị ảnh hưởng ghi ở `spec.md` §10.
+>
+> **Cập nhật 28/11/2026:** phạm vi trong nhà gồm **Toà G và Toà I** (tầng trệt). **Mascot dẫn đường quay lại bản demo** dưới dạng hình 2D đi kèm thẻ chỉ dẫn như prototype [`web/`](../web/README.md) (không làm AR neo không gian). `web/` là giao diện chính duy nhất; backend `vinuni-wayfinder/` lo định vị và tìm đường. Xem `spec.md` §10.
 
 ## Vấn đề
 
@@ -35,7 +37,7 @@ Wayfinder là web app mở trên điện thoại, không cần cài đặt và k
    - *Trong toà nhà:* GPS sai 5–20 m nên không đủ. Người dùng chụp một ảnh hành lang. Server nhận diện địa điểm bằng mô hình nhận diện vị trí **MegaLoc** (vector đặc trưng của ảnh) và so với các khung hình nhóm đã quay sẵn ở từng điểm; 10 khung giống nhất bỏ phiếu chọn ra vị trí.
    - *Khi chưa chắc:* app nói thẳng là chưa chắc, hiện 3 vị trí khả dĩ nhất để người dùng chọn, hoặc xin một ảnh thứ hai chụp hướng khác. Người dùng chọn đúng thì ảnh đó được thêm vào dữ liệu để lần sau nhận đúng.
    - *Không chụp được ảnh:* người dùng gõ số phòng ngay bên cạnh để làm điểm xuất phát.
-3. **Chỉ đường bằng thẻ từng bước.** Mỗi lần một thẻ ("Đi thẳng", "Rẽ trái về phía quầy cà phê", "Ra cổng toà I, đi về toà C"). Không hiện sơ đồ toà nhà: người dùng chỉ thấy bước kế tiếp. Ngoài trời, thẻ có mũi tên la bàn xoay theo hướng điện thoại và khoảng cách còn lại. Lộ trình do code tính trên đồ thị đường đi (networkx), model không viết lộ trình.
+3. **Mascot chỉ đường bằng thẻ từng bước.** Mascot (Vini mặc định; sự kiện CLB có mascot riêng) đi kèm từng thẻ. Mỗi lần một thẻ ("Đi thẳng", "Rẽ trái về phía quầy cà phê", "Ra cổng toà I, đi về toà C"). Không hiện sơ đồ toà nhà: người dùng chỉ thấy bước kế tiếp. Ngoài trời, thẻ có mũi tên la bàn xoay theo hướng điện thoại và khoảng cách còn lại. Lộ trình do code tính trên đồ thị đường đi (networkx; ngoài trời dựng từ OpenStreetMap), model không viết lộ trình.
 4. **Chế độ thu thập dữ liệu (cho nhóm).** Một màn hình riêng trên điện thoại để xây dữ liệu cho từng toà, thay cho việc dựng tay:
    - neo ảnh sơ đồ mặt bằng vào bản đồ thật bằng vài điểm GPS;
    - chạm để đặt phòng và cửa, nhập mã/tên phòng;
@@ -45,7 +47,9 @@ Wayfinder là web app mở trên điện thoại, không cần cài đặt và k
    Dữ liệu lưu trên máy chủ của nhóm, có nút xuất/nhập JSON để sao lưu.
 5. **Mã QR check-in và từ chối.** Giữ từ bản Sunshine: khi điểm đến là một hoạt động, app sinh nội dung mã QR nháp; app từ chối điểm danh hộ, đóng vai admin hoặc xuất dữ liệu sinh viên.
 
-Giao diện chỉ có tiếng Việt. Mascot AR dẫn đường nằm trong giai đoạn sau, không thuộc bản demo wayfinder.
+6. **Sự kiện CLB.** Ban tổ chức tạo sự kiện, chọn địa điểm và mascot; người mở link sự kiện được mascot của sự kiện dẫn tới đúng phòng. Trong prototype, sự kiện mới lưu trên trình duyệt (`localStorage`), chưa có tài khoản hay dữ liệu chung.
+
+Giao diện chỉ có tiếng Việt. Mascot trong bản demo là hình 2D; AR neo không gian (mascot đứng đúng chỗ trong không gian qua camera) để giai đoạn sau.
 
 ### Cách làm và nguồn tham khảo
 
@@ -55,23 +59,25 @@ Cách định vị trong nhà tham khảo dự án **Hound Around** (BU Spark! D
 
 | Hạng mục | Quyết định |
 |---|---|
-| Toà demo | **Toà I**, chỉ **tầng trệt** |
-| Ngoài trời | Đường đi giữa các toà trên sơ đồ khuôn viên (toà A–L, Main Gate, San Ho Gate), bằng GPS + la bàn |
-| Trong nhà | Chỉ tầng trệt Toà I. Không làm nhiều tầng, không làm thang máy/cầu thang giữa các tầng |
+| Toà demo | **Toà G và Toà I**, chỉ **tầng trệt** |
+| Ngoài trời | Đường đi giữa các toà trên đồ thị dựng từ OpenStreetMap (toà A–J, cổng chính, cổng San Hô), bằng GPS + la bàn. Toà K chưa có trong OSM |
+| Trong nhà | Tầng trệt Toà G và Toà I. Không làm nhiều tầng, không làm thang máy/cầu thang giữa các tầng |
+| Mascot | Hình 2D dẫn đường cùng thẻ chỉ dẫn và phủ lên camera; không AR neo không gian |
 | Ngôn ngữ | Chỉ tiếng Việt |
 | Chế độ tiếp cận (không bậc thang) | Chưa làm |
-| Nền tảng | Web app (React + Vite), mở trên điện thoại qua HTTPS cùng mạng Wi-Fi |
+| Nền tảng | Web app/PWA `web/` (React + TypeScript + Vite), mở trên điện thoại qua HTTPS; backend FastAPI chạy trên laptop của nhóm |
 
-Nội dung tầng trệt Toà I đọc từ ảnh chụp biển "Floor map" (xem [`data/DATA_CARD.md`](../data/DATA_CARD.md)): Trung tâm Khởi nghiệp, Vườn Thư viện, quầy cà phê, khu tự học mở, quầy tiện ích, văn phòng, các phòng I109 và I119, nhà vệ sinh, thang máy, cầu thang, và lối sang toà A (Thư viện), B (Hội trường), C (Lớp học, giảng đường), E (Nhà ăn, lab, lớp học) và bãi xe. Tên và vị trí từng phòng phải được kiểm lại tại chỗ trước khi dùng làm đáp án.
+Tầng trệt Toà G đọc từ ảnh bảng "Fire Evacuation Plan": phòng G101–G107, hai khu nhà vệ sinh, hai thang máy, hai cầu thang bộ; cửa toà đã nối với đường ngoài trời theo GPS đo tại chỗ. Nội dung tầng trệt Toà I đọc từ ảnh chụp biển "Floor map" (xem [`data/DATA_CARD.md`](../data/DATA_CARD.md)): Trung tâm Khởi nghiệp, Vườn Thư viện, quầy cà phê, khu tự học mở, quầy tiện ích, văn phòng, các phòng I109 và I119, nhà vệ sinh, thang máy, cầu thang, và lối sang toà A (Thư viện), B (Hội trường), C (Lớp học, giảng đường), E (Nhà ăn, lab, lớp học) và bãi xe. Tên và vị trí từng phòng phải được kiểm lại tại chỗ trước khi dùng làm đáp án.
 
 ## Giới hạn hiện tại
 
-| Hạng mục | Hiện trạng (27/11/2026) |
+| Hạng mục | Hiện trạng (28/11/2026) |
 |---|---|
-| Môi trường chạy | Đã cài PyTorch 2.14.1 bản CUDA trong môi trường ảo riêng, nhận GPU GTX 1650 4 GB. Chưa tải và chưa chạy thử MegaLoc |
-| Sơ đồ | Đã có sơ đồ khuôn viên (ảnh) và ảnh mặt bằng tầng trệt Toà I (ảnh chụp biển). Chưa số hoá thành đồ thị đường đi |
-| Dữ liệu ảnh nhận diện | Chưa quay. Chưa có vector, chưa có chỉ số nào |
-| Backend (FastAPI), frontend (React) | Chưa viết |
+| Môi trường chạy | PyTorch 2.14.1 bản CUDA trên GPU GTX 1650 4 GB; MegaLoc chạy được, ~73 ms/ảnh (đo trên máy nhóm, 27/11/2026) |
+| Sơ đồ | Đồ thị khuôn viên dựng từ OpenStreetMap (~290 điểm, có toạ độ GPS); đồ thị Toà G và Toà I vẽ từ ảnh bảng sơ đồ. Tất cả **chưa đi bộ kiểm** |
+| Dữ liệu ảnh nhận diện | Mới có dữ liệu thử; chưa quay đủ ở Toà G và Toà I, chưa có chỉ số độ chính xác nào |
+| Backend (FastAPI) | Đã có: định vị bằng ảnh, tìm đường, thẻ chỉ dẫn, thu thập, dữ liệu dùng chung trên Supabase (riêng tư). Mới kiểm trên laptop |
+| Frontend | `web/` (giao diện chính, có mascot và sự kiện CLB) đang chạy bằng dữ liệu fixture, **chưa nối backend**. Màn Chỉ đường và Thu thập cũ ở `vinuni-wayfinder/frontend/` chạy được, sẽ chuyển sang `web/`. **Chưa thử trên điện thoại** |
 | Độ chính xác nhận diện | Chưa đo. Mục tiêu (tự đặt, chưa kiểm): đúng phòng ở ≥ 80% ảnh khi app tự trả lời, đo bằng cách loại cả video khỏi chỉ số khi thử |
 | Bản Sunshine cũ | Bản chạy thử dòng lệnh (`codebase/`) dùng bản đồ giả lập 12 địa điểm; chạy ở chế độ giả cho tới khi nối model thật |
 | Check-in | Chỉ sinh nội dung mã QR; điểm danh chưa ghi vào hệ thống thật |
@@ -111,10 +117,11 @@ Mã trong ngoặc là câu thử tương ứng trong `eval/benchmark.csv` (chỉ
 - AC4.2 Then mỗi bước dùng đúng câu chỉ đường của lối đi trong dữ liệu, và tổng số phút bằng tổng các lối đi.
 - AC4.3 Then câu trả lời nêu rõ từ đâu tới đâu, để sinh viên đối chiếu với biển chỉ dẫn.
 
-**US05.** *(Hoãn sang giai đoạn sau)* Là sinh viên mới, tôi muốn thấy mascot trên camera điện thoại dẫn đường, để vừa nhìn đường vừa nghe chỉ dẫn.
+**US05.** Là sinh viên mới, tôi muốn có mascot dẫn mình đi từng bước, để thấy thân thiện và dễ theo hơn đọc chữ.
 
-- AC5.1 Given đã có lộ trình, When sinh viên mở camera trên điện thoại Android, Then mascot hiện trên khung hình và đọc bước hiện tại.
-- AC5.2 Given máy không hỗ trợ camera AR, Then vẫn hiện thẻ chỉ dẫn dạng chữ, không chặn sinh viên.
+- AC5.1 Given đã có lộ trình, Then mascot (Vini mặc định) hiện cùng thẻ của bước hiện tại; Given mở từ link một sự kiện hợp lệ, Then dùng mascot của sự kiện đó.
+- AC5.2 Given máy không mở được camera, Then vẫn hiện mascot và thẻ chỉ dẫn dạng chữ, không chặn sinh viên.
+- AC5.3 *(Giai đoạn sau)* Mascot neo đúng vị trí trong không gian qua camera (AR).
 
 **US06.** Là sinh viên mới, tôi muốn sửa lại vị trí khi đi sai, để app tính lại đường từ chỗ mới.
 
@@ -204,9 +211,10 @@ Chưa có câu thử cho epic này; bộ đo sẽ viết cùng dữ liệu quay 
 |---|---|
 | Hỏi bằng câu tự nhiên | Sinh viên nói điểm đến; hiểu ý, hỏi lại khi chưa chắc |
 | Chế độ thu thập dữ liệu | Neo sơ đồ, đặt phòng/cửa, vẽ hành lang, quay video theo điểm, ghi vết đi bộ |
-| Đồ thị đường đi Toà I (tầng trệt) và đường ngoài trời | Số hoá từ sơ đồ, kiểm tại chỗ |
+| Đồ thị đường đi Toà G, Toà I (tầng trệt) và đường ngoài trời | Ngoài trời từ OpenStreetMap, trong nhà số hoá từ sơ đồ; kiểm tại chỗ |
 | Định vị | GPS ngoài trời; ảnh hành lang + MegaLoc trong toà; top 3, ảnh thứ hai, gõ số phòng |
-| Thẻ chỉ dẫn | Từng bước, la bàn + khoảng cách ngoài trời, không hiện sơ đồ toà |
+| Thẻ chỉ dẫn + mascot | Từng bước, mascot 2D đi kèm, la bàn + khoảng cách ngoài trời, không hiện sơ đồ toà |
+| Một giao diện | Nối `web/` vào backend; chuyển màn Chỉ đường và Thu thập sang `web/` theo cùng style |
 | Mã QR check-in, từ chối | Giữ từ bản Sunshine |
 | Bộ đo nhận diện | Bộ câu thử riêng cho định vị bằng ảnh, bổ sung cho `eval/benchmark.csv` |
 
@@ -219,13 +227,12 @@ Chưa có câu thử cho epic này; bộ đo sẽ viết cùng dữ liệu quay 
 | Chạy trên điện thoại không cần mạng | Chuyển bước so khớp xuống điện thoại |
 | Check-in thật | Ban tổ chức quét mã QR và điểm danh được ghi vào danh sách của hoạt động |
 
-### Giai đoạn 3 — Mascot (làm khi có thời gian)
+### Giai đoạn 3 — Mascot nâng cao (làm khi có thời gian)
 
 | Tính năng | Mô tả |
 |---|---|
-| Mascot dẫn đường trên camera | Một mascot dựng sẵn đọc từng bước trên camera điện thoại; có thẻ chữ dự phòng |
-| Chạy trên iPhone | Mascot 2D đè lên camera, chạy được trên trình duyệt mọi điện thoại |
-| Mascot riêng của sự kiện | Ban tổ chức tải lên mascot 2D hoặc 3D |
+| Mascot AR neo không gian | Mascot đứng đúng chỗ trong không gian qua camera và đọc từng bước; có thẻ chữ dự phòng |
+| Mascot riêng của sự kiện, dùng chung | Ban tổ chức tải lên mascot 2D hoặc 3D, lưu trên máy chủ có tài khoản CLB thay cho lưu trên trình duyệt |
 
 ### Giai đoạn 4 — Công cụ cho ban tổ chức và sinh viên
 
@@ -239,11 +246,12 @@ Chưa có câu thử cho epic này; bộ đo sẽ viết cùng dữ liệu quay 
 
 | Lớp | Công nghệ | Vai trò |
 |---|---|---|
-| Frontend | React + Vite, chỉ tiếng Việt | Màn hình hỏi đường, thẻ chỉ dẫn, chế độ thu thập; dùng camera, GPS và la bàn của điện thoại; phục vụ qua HTTPS tự ký |
-| Backend | FastAPI + PyTorch (Python), chạy trên máy của nhóm | Nhận ảnh/video, tính vector, so khớp, trả vị trí; lưu dữ liệu thu thập |
+| Frontend | `web/`: React 19 + TypeScript + Vite + Three.js, PWA, chỉ tiếng Việt | Tìm phòng, mascot, thẻ chỉ dẫn, sự kiện CLB, chế độ thu thập (đang chuyển sang); dùng camera, GPS và la bàn của điện thoại qua HTTPS |
+| Backend | FastAPI + PyTorch (Python), chạy trên máy của nhóm | Nhận ảnh/video, tính vector, so khớp, trả vị trí và thẻ chỉ dẫn; lưu dữ liệu thu thập |
+| Dữ liệu dùng chung | Supabase (project riêng tư, chỉ khoá service đọc/ghi) | Đồ thị, phòng, vector, ảnh sơ đồ dùng chung giữa các máy của nhóm; thiếu cấu hình thì backend dùng file cục bộ |
 | Nhận diện vị trí | MegaLoc (vector 8.448 chiều, ảnh resize vuông 322 × 322), bỏ phiếu 10 láng giềng gần nhất theo cosine | Định vị trong nhà. Chạy bằng GPU GTX 1650 4 GB (đã xác nhận PyTorch thấy GPU) |
-| Độ tin cậy | Mô hình hồi quy logistic trên đặc trưng khớp (dự kiến) | Quyết định tự trả lời / top 3 / xin ảnh thứ hai. Ngưỡng phải hiệu chỉnh trên dữ liệu thật, chưa có |
-| Lộ trình | networkx, đồ thị đường đi tự dựng | Đường đi ngắn nhất; model không viết lộ trình |
+| Độ tin cậy | Tỉ lệ phiếu thắng, ngưỡng heuristic (tự ước tính); hồi quy logistic khi có dữ liệu | Quyết định tự trả lời / top 3 / xin ảnh thứ hai. Ngưỡng phải hiệu chỉnh trên dữ liệu thật, chưa có |
+| Lộ trình | networkx; đồ thị ngoài trời từ OpenStreetMap (ODbL, ghi nguồn khi hiển thị), trong nhà tự dựng | Đường đi ngắn nhất; model không viết lộ trình |
 | Hiểu câu hỏi | Một lần gọi LLM qua `codebase/ai.py` (`call_model`), kết quả JSON | Chọn điểm xuất phát, điểm đến, hoạt động và hành động (`dan_duong` / `hoi_lai` / `tu_choi`); code kiểm lại |
 | Công cụ (bản Sunshine) | `tra_dia_diem`, `danh_sach_dia_diem`, `tim_lo_trinh`, `tao_ma_checkin` (`codebase/tools.py`) | Không công cụ nào tác động ra hệ thống bên ngoài |
 | Dữ liệu | `data/campus.json`, `data/events.json` (giả lập, bản Sunshine); đồ thị và vector thật (riêng tư, không nằm trong repo) | Xem `data/DATA_CARD.md` |

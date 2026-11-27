@@ -26,28 +26,28 @@
 | Nhãn | `synthetic` |
 | Giới hạn | giờ và tên hoạt động là giả; không có hoạt động trùng giờ / trùng tên |
 
-## Dataset 3 · Sơ đồ khuôn viên và mặt bằng tầng trệt Toà I (wayfinder)
+## Dataset 3 · Sơ đồ khuôn viên và mặt bằng tầng trệt Toà G, Toà I (wayfinder)
 
 | | |
 |---|---|
 | Dùng để làm gì | dựng đồ thị đường đi (nút: cửa, ngã rẽ, cửa phòng, thang máy, cầu thang, lối ra; cạnh: đoạn hành lang) cho `tim_lo_trinh` · danh sách phòng/địa điểm · đáp án cho bộ đo wayfinder |
-| Từ đâu | (a) **sơ đồ khuôn viên**: từ 28/11/2026 lấy từ **OpenStreetMap** (footprint toà A–J, đường đi bộ, lối vào, cổng), truy vấn qua Overpass bằng `vinuni-wayfinder/backend/tools/build_osm_campus.py`; dữ liệu © OpenStreetMap contributors, giấy phép ODbL — phải ghi nguồn khi hiển thị. Trước đó là ảnh sơ đồ sự kiện có toà A–L, cổng chính (Main Gate), cổng San Ho (San Ho Gate), sân chính (đã thay, không còn dùng); (b) **mặt bằng tầng trệt Toà I**: ảnh chụp biển "Floor map" của VinUniversity dán trong toà, do thành viên nhóm chụp. Cả hai là ảnh, giữ ở `vinuni-wayfinder/maps/` trên máy nhóm (`campus-map.webp` và `toa-I-tang-tret.webp`, lưu 27/11/2026); thư mục này **bị `.gitignore` chặn nên không lên repo công khai** |
-| Xử lý những bước gì | chưa có. Dự kiến: neo ảnh vào bản đồ thật bằng điểm GPS, đặt phòng/cửa và vẽ hành lang bằng chế độ thu thập trên điện thoại, đi bộ kiểm lại |
-| Số dòng / số đoạn | chưa số hoá. Từ ảnh biển đọc được các khu: Trung tâm Khởi nghiệp, Vườn Thư viện, quầy cà phê, khu tự học mở, quầy tiện ích, văn phòng, phòng I109 và I119, nhà vệ sinh, thang máy, cầu thang; lối sang toà A, B, C, E và bãi xe |
-| Phiên bản / ngày lấy | 27/11/2026 |
+| Từ đâu | (a) **sơ đồ khuôn viên**: từ 28/11/2026 lấy từ **OpenStreetMap** (footprint toà A–J, đường đi bộ, lối vào, cổng), truy vấn qua Overpass bằng `vinuni-wayfinder/backend/tools/build_osm_campus.py`; dữ liệu © OpenStreetMap contributors, giấy phép ODbL — phải ghi nguồn khi hiển thị. Trước đó là ảnh sơ đồ sự kiện có toà A–L, cổng chính (Main Gate), cổng San Ho (San Ho Gate), sân chính (đã thay, không còn dùng); (b) **mặt bằng tầng trệt Toà I**: ảnh chụp biển "Floor map" của VinUniversity dán trong toà, do thành viên nhóm chụp; (c) **mặt bằng tầng trệt Toà G**: ảnh chụp bảng "Fire Evacuation Plan" trong toà, do thành viên nhóm chụp. Ảnh giữ ở `vinuni-wayfinder/maps/` trên máy nhóm (`campus-osm.webp`, `campus-map.webp` cũ, `toa-I-tang-tret.webp`, `toa-G-tang-tret.webp`, lưu 27–28/11/2026); đồ thị dùng chung nằm trong project Supabase riêng tư của nhóm; thư mục này **bị `.gitignore` chặn nên không lên repo công khai** |
+| Xử lý những bước gì | khuôn viên: dựng đồ thị đi bộ trong ranh giới trường từ OSM, rút gọn khúc cua nhỏ, gắn cổng và cửa toà vào đỉnh đường gần nhất. Toà G, Toà I: vẽ điểm và hành lang trên ảnh bằng chế độ thu thập; Toà G neo bằng 3 điểm GPS đo tại chỗ (sai số 4,9 m). Còn lại: đi bộ kiểm từng điểm |
+| Số dòng / số đoạn | khuôn viên ~290 điểm, ~400 cạnh; Toà G 33 điểm (phòng G101–G107, 2 khu WC, 2 thang máy, 2 cầu thang); toàn bộ dữ liệu dùng chung lúc kiểm 28/11/2026: 355 điểm, 476 đường nối, 27 phòng. Toà I — từ ảnh biển đọc được các khu: Trung tâm Khởi nghiệp, Vườn Thư viện, quầy cà phê, khu tự học mở, quầy tiện ích, văn phòng, phòng I109 và I119, nhà vệ sinh, thang máy, cầu thang; lối sang toà A, B, C, E và bãi xe |
+| Phiên bản / ngày lấy | 27/11/2026 (ảnh), 28/11/2026 (đồ thị OSM, Toà G) |
 | Nhãn | `thật — chưa kiểm`; không phải `synthetic` |
-| Giới hạn | ảnh biển chụp nghiêng, có chói; chữ nhỏ (ví dụ tên phòng I119, I109) có thể đọc sai; biển có thể không cập nhật; ảnh biển không có kích thước thật; **phải đi bộ kiểm từng phòng trước khi dùng làm đáp án** |
+| Giới hạn | ảnh biển chụp nghiêng, có chói; chữ nhỏ (ví dụ tên phòng I119, I109) có thể đọc sai; biển có thể không cập nhật; ảnh biển không có kích thước thật (tỉ lệ Toà G 0,04 m/px là *(tự ước tính)*); cổng và cửa toà ngoài trời suy từ OSM, không phải cửa thật; Toà K không có trong OSM; tên cửa Toà G theo hướng trên bảng, có thể lệch hướng thật; **phải đi bộ kiểm từng phòng trước khi dùng làm đáp án** |
 
 ## Dataset 4 · Ảnh và video hành lang để nhận diện vị trí (wayfinder)
 
 | | |
 |---|---|
 | Dùng để làm gì | tính vector MegaLoc cho từng điểm, làm chỉ số tra cứu khi người dùng chụp ảnh; chia train/test theo video để đo |
-| Từ đâu | nhóm tự quay bằng điện thoại ở hành lang công cộng của Toà I, tầng trệt, qua chế độ thu thập: chạm điểm trên sơ đồ rồi quay 10–15 giây xoay nhiều hướng |
-| Xử lý những bước gì | dự kiến: cắt khung hình (khoảng 40 khung/điểm), làm mờ khuôn mặt, bỏ khung mờ/trùng, tính vector; chỉ vector và nhãn được dùng khi chạy |
-| Số dòng / số đoạn | **chưa quay** — chưa có khung hình, chưa có vector, chưa có số nào |
-| Phiên bản / ngày lấy | chưa có |
-| Nhãn | `thật — chưa quay` |
+| Từ đâu | nhóm tự quay bằng điện thoại ở hành lang công cộng tầng trệt Toà G và Toà I, qua chế độ thu thập: chạm điểm trên sơ đồ rồi quay 10–15 giây xoay nhiều hướng |
+| Xử lý những bước gì | backend cắt khoảng 40 khung rõ nét/điểm, tính vector MegaLoc rồi xoá video gốc; chỉ vector và nhãn được dùng khi chạy. Làm mờ khuôn mặt: dự kiến, chưa cài |
+| Số dòng / số đoạn | 240 vector trong kho dùng chung (đếm 28/11/2026), là dữ liệu thử ban đầu; **chưa quay đủ** ở Toà G và Toà I, chưa có số đo độ chính xác |
+| Phiên bản / ngày lấy | 28/11/2026 (bản thử) |
+| Nhãn | `thật — đang thu thập` |
 | Giới hạn | dự kiến quay ở chiều cao cầm tay, chưa phủ tầm ngồi xe lăn; thay đổi ánh sáng và đông người có thể làm sai; các hành lang giống nhau dễ nhầm |
 | Riêng tư / an ninh | chỉ quay hành lang công cộng, bỏ khu dịch vụ và khu hạn chế; **không đưa ảnh, video, đồ thị hay vector lên repo công khai** (một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh); tên ảnh không chứa thông tin cá nhân |
 

@@ -1,4 +1,4 @@
-# AI SPEC — Wayfinder chỉ đường trong khuôn viên VinUni (mascot AR làm sau) · Nhóm Sunshine · Phòng __ · Zone __
+# AI SPEC — Wayfinder chỉ đường trong khuôn viên VinUni (mascot dẫn đường) · Nhóm Sunshine · Phòng __ · Zone __
 
 > Mốc nộp: §7 chốt chuẩn "đạt" tại **CP2 19:30 Thứ Sáu 27/11** · §0–§7 nộp **CP3 10:00 Thứ Bảy 28/11** · đủ §0–§10 **CP4 14:30 Thứ Bảy 28/11** · §10 changelog ghi tiếp đến **23:59 Thứ Bảy 28/11**.
 > Đầu mỗi mục ghi bước guide (`02-guide.md` trong repo đề) chỉ cách điền. Mỗi mục ngắn, có số và nguồn; chi tiết để ở file được trỏ tới. Xoá dòng hướng dẫn trong ngoặc vuông khi điền xong.
@@ -33,10 +33,10 @@ Data BTC cấp đã dùng (nếu có — không commit nguyên file): không (tr
 - **Hound Around** (BU Spark! DS+X 2026, app web chỉ đường trong toà CDS của Đại học Boston; nguồn: trang Devpost của dự án và repo GitHub công khai `DxubleBTW/Hound-Around`): đáng học — nhận diện vị trí bằng một ảnh hành lang, nói thẳng khi chưa chắc (top 3 hoặc xin ảnh thứ hai) thay vì đoán, và cho gõ số phòng khi không chụp được; đáng né — chỉ nhận diện sau khi chụp ảnh, không theo dõi liên tục, và dữ liệu quay phải làm tay cho từng toà; mình khác — thêm GPS ngoài trời giữa các toà, thêm màn thu thập dữ liệu ngay trên điện thoại, và dữ liệu là toà của VinUni. Nhóm tự cài đặt, không chép code (repo đó không có giấy phép khi nhóm kiểm). Số liệu độ chính xác của họ chỉ để tham khảo, đo trên toà khác.
 
 ## §4. Thiết kế *(guide 2.2, 3.2)*
-- **Lát cắt MỘT CÂU** *(cập nhật 27/11/2026, xem §10)*: Một sinh viên mới hoặc khách đang ở trong khuôn viên VinUni · hỏi đường tới một phòng/địa điểm/hoạt động bằng câu tự nhiên · AI quyết định (a) mình đang đứng ở đâu — GPS ngoài trời, nhận diện ảnh hành lang trong toà (chỉ tầng trệt Toà I) — và (b) nên dẫn đường / hỏi lại / từ chối · app đưa thẻ chỉ dẫn từng bước và mã QR check-in của hoạt động (nếu có).
+- **Lát cắt MỘT CÂU** *(cập nhật 28/11/2026, xem §10)*: Một sinh viên mới hoặc khách đang ở trong khuôn viên VinUni · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định (a) mình đang đứng ở đâu — GPS ngoài trời, nhận diện ảnh hành lang trong toà (tầng trệt Toà G và Toà I) — và (b) nên dẫn đường / hỏi lại / từ chối · mascot dẫn đường bằng thẻ chỉ dẫn từng bước, kèm mã QR check-in của hoạt động (nếu có).
 - Không làm (≥3 điều):
-  1. Mascot AR dẫn đường trên camera: **hoãn**, làm khi wayfinder chạy được (trước đây là phần chính của lát cắt).
-  2. Nhiều tầng, thang máy / cầu thang giữa các tầng, và các toà khác ngoài Toà I khi nhận diện trong nhà.
+  1. AR neo không gian (mascot đứng đúng chỗ trong không gian 3D qua camera). Mascot trong bản demo là hình 2D đi kèm thẻ chỉ dẫn và phủ lên camera, như prototype `web/`.
+  2. Nhiều tầng, thang máy / cầu thang giữa các tầng, và các toà khác ngoài Toà G, Toà I khi nhận diện trong nhà.
   3. Chế độ tiếp cận (lộ trình không bậc thang) và giao diện tiếng Anh.
   4. Ghi nhận điểm danh vào hệ thống thật (chỉ sinh nội dung mã QR).
   5. Gợi ý hoạt động "hợp với mình" theo sở thích; nhiệm vụ / trò chơi AR.
@@ -60,7 +60,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   S["Nguồn vị trí hiện tại"] --> GPS["Ngoài trời: GPS điện thoại"]
-  S --> IMG["Trong nhà (Toà I, tầng trệt):<br/>chụp ảnh hành lang"]
+  S --> IMG["Trong nhà (Toà G, Toà I, tầng trệt):<br/>chụp ảnh hành lang"]
   S --> ROOM["Không chụp được:<br/>gõ số phòng gần nhất"]
   IMG --> ML["MegaLoc vector<br/>→ 10 khung gần nhất bỏ phiếu<br/>(xoá ảnh sau so khớp)"]
   ML --> CONF{"Độ tin cậy"}
@@ -94,7 +94,7 @@ flowchart LR
   | G11 — giải thích vì sao | output nêu rõ từ đâu tới đâu, mã địa điểm, số phút và từng bước, để sinh viên đối chiếu biển chỉ dẫn |
   | G1/G2 — nói rõ làm được gì | lời từ chối nói mascot chỉ dẫn đường trong trường, việc khác liên hệ BTC / phòng CTSV |
 
-- Phần nào còn giả: bản đồ và lịch trong `codebase/` là `synthetic` (`data/DATA_CARD.md`); model đang ở chế độ giả (chưa nối model thật, sẽ nối trước CP3); bản chạy thử trong `codebase/` là dòng lệnh. Phần wayfinder (`vinuni-wayfinder/`: backend FastAPI + MegaLoc, giao diện React) **đã có mã chạy thử trên laptop** (định vị bằng ảnh, thẻ chỉ dẫn, chế độ thu thập), nhưng **chưa thử trên điện thoại** (camera, GPS, la bàn, HTTPS), **chưa thu thập dữ liệu thật** tại Toà I và **chưa có số đo độ chính xác**; đồ thị đường đi mới là bản seed 25 điểm ngoài trời + 30 điểm Toà I, tất cả chưa kiểm tại chỗ. Mascot AR hoãn.
+- Phần nào còn giả: bản đồ và lịch trong `codebase/` là `synthetic` (`data/DATA_CARD.md`); model đang ở chế độ giả (chưa nối model thật, sẽ nối trước CP3); bản chạy thử trong `codebase/` là dòng lệnh. Phần wayfinder (`vinuni-wayfinder/backend/`: FastAPI + MegaLoc) **đã có mã chạy thử trên laptop** (định vị bằng ảnh, thẻ chỉ dẫn, chế độ thu thập), nhưng **chưa thử trên điện thoại** (camera, GPS, la bàn, HTTPS), **chưa thu thập dữ liệu thật** và **chưa có số đo độ chính xác**; đồ thị campus dựng từ OpenStreetMap (~290 điểm), Toà G và Toà I vẽ từ ảnh bảng sơ đồ, tất cả chưa kiểm tại chỗ. Giao diện chính là prototype `web/` (mascot, tìm phòng, sự kiện CLB), hiện **vẫn chạy bằng dữ liệu fixture, chưa nối backend**; giao diện cũ `vinuni-wayfinder/frontend/` sẽ được chuyển sang `web/` rồi bỏ.
 
 ## §5. Chỗ khó — 4 lớp + ≥6 kịch bản + 2 tấn công *(guide 2.3)*
 
@@ -148,6 +148,7 @@ flowchart LR
 | 27/11/2026 | Đổi ưu tiên của lát cắt (§4): từ "mascot AR dẫn đường trên camera, bản đồ giả lập, người dùng tự nói vị trí" sang **wayfinder** — định vị bằng GPS ngoài trời và ảnh hành lang trong toà (Toà I, tầng trệt), thẻ chỉ dẫn từng bước, chế độ thu thập dữ liệu trên điện thoại. Mascot AR chuyển sang giai đoạn sau. Cập nhật `docs/PRD.md`, `canvas.md`, `data/DATA_CARD.md`, `README.md`; thêm Hound Around vào §3 và viết §9. **Không sửa** chuẩn "đạt" §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Quyết định của nhóm: chỉ đường chính xác tới đúng phòng thật có giá trị hơn mascot, và GPS không đủ trong nhà. Bộ câu thử hiện tại vẫn đo đúng phần hiểu câu hỏi, lộ trình và từ chối của luồng này; **chưa có bộ đo cho nhận diện bằng ảnh** — cần quyết định có thêm câu thử mới hay không, không thêm im lặng vào bộ cũ |
 | 27/11/2026 | Cập nhật mô tả trạng thái wayfinder ở §4 và §9: từ "chưa cài đặt / chưa viết xong" sang "đã có mã chạy thử trên laptop, chưa thử trên điện thoại, chưa thu thập dữ liệu thật, chưa có số đo". Chỉ sửa mô tả, **không sửa** §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Trạng thái cũ không còn đúng với `vinuni-wayfinder/CLAUDE.md` (Tiến độ). Không đổi chuẩn "đạt" hay câu thử |
 | 28/11/2026 | Wayfinder: sơ đồ khuôn viên chuyển từ ảnh sơ đồ vẽ tay sang **dữ liệu OpenStreetMap** (toà A–J, lối đi bộ, cổng) có toạ độ GPS thật, nên GPS ngoài trời dùng được. Cập nhật `data/DATA_CARD.md` (Dataset 3, nguồn và giấy phép ODbL). Công cụ dựng nằm ở `vinuni-wayfinder/backend/tools/build_osm_campus.py`. **Không sửa** §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Sơ đồ cũ không có toạ độ GPS (0 neo) nên không chỉ đường ngoài trời được từ vị trí thật. Đồ thị mới vẫn `verified: false` — chưa đi bộ kiểm; Tòa K chưa có trong OSM nên tạm bỏ khỏi danh sách đích |
+| 28/11/2026 | (1) Phạm vi trong nhà mở từ Toà I sang **Toà G và Toà I** (tầng trệt). (2) **Mascot dẫn đường đưa trở lại bản demo** dưới dạng hình 2D đi kèm thẻ chỉ dẫn như prototype `web/` (không làm AR neo không gian). (3) `web/` thành **giao diện chính duy nhất**: màn Chỉ đường và Thu thập của `vinuni-wayfinder/frontend/` thiết kế lại theo style `web/` và chuyển code sang đó; backend wayfinder giữ vai trò định vị (MegaLoc) và tìm đường (OSM). Cập nhật §4, `docs/PRD.md`, `README.md`, `canvas.md`, `data/DATA_CARD.md` (Dataset 3–4), `CLAUDE.md` gốc repo (thay `vinuni-wayfinder/CLAUDE.md`, đã xoá). **Không sửa** §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Quyết định của nhóm: Toà G được thu thập trước và đã có đồ thị nối GPS thật; prototype `web/` đã có mascot và luồng dẫn đường nên dùng làm giao diện chung thay vì giữ hai frontend. Bộ câu thử không đổi; vẫn chưa có bộ đo cho nhận diện bằng ảnh |
 
 **Sau CP4 (đến 23:59 Thứ Bảy 28/11)** (sửa theo góp ý — không sửa chuẩn "đạt", câu thử, số bằng chứng, kết quả các lượt đã chạy)
 

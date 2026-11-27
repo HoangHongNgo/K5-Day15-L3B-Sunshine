@@ -3,7 +3,7 @@
 Web app chỉ đường tới phòng trong campus VinUni (demo: **Tòa I, tầng trệt**). Ngoài trời dùng GPS; trong nhà chụp ảnh
 hành lang để nhận diện vị trí bằng [MegaLoc](https://github.com/gmberton/MegaLoc) (kNN bỏ phiếu, học từ lần sửa sai) —
 theo cách tiếp cận của [Hound Around](https://github.com/DxubleBTW/Hound-Around). Người dùng chỉ thấy thẻ chỉ dẫn từng bước,
-không thấy sơ đồ tòa. Chi tiết yêu cầu và quyết định: [`CLAUDE.md`](CLAUDE.md).
+không thấy sơ đồ tòa. Chi tiết yêu cầu và quyết định: [`CLAUDE.md`](../CLAUDE.md) ở gốc repo.
 
 > **Dữ liệu không nằm trong repo** (repo công khai): ảnh sơ đồ, đồ thị đường đi thật, video/khung hình và vector nằm ở
 > `maps/` và `backend/data/`, đã bị `.gitignore` chặn. Muốn chạy, cần xin bản `maps/` từ nhóm.
