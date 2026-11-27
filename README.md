@@ -6,23 +6,23 @@
 
 **Lát cắt của nhóm:** một sinh viên mới hoặc khách trong khuôn viên VinUni (Gia Lâm) · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định mình đang đứng ở đâu (GPS ngoài trời, nhận diện ảnh hành lang trong tầng trệt Toà G và Toà I) và nên dẫn đường / hỏi lại / từ chối · mascot dẫn đường bằng thẻ chỉ dẫn từng bước. Mascot là hình 2D như prototype `web/`; AR neo không gian làm sau.
 
-**Trạng thái (28/11/2026):** bản chạy thử dòng lệnh trong `codebase/` (hiểu câu hỏi, lộ trình, từ chối, dữ liệu giả lập) chạy được ở chế độ giả. Backend wayfinder (`vinuni-wayfinder/backend/`: nhận diện ảnh bằng MegaLoc, tìm đường trên đồ thị OpenStreetMap, thẻ chỉ dẫn, chế độ thu thập) **chạy được trên laptop**. Giao diện chính `web/` có mascot nhưng **chưa nối backend**. Chưa thử trên điện thoại, chưa thu thập đủ dữ liệu và chưa có số đo độ chính xác. Yêu cầu và kế hoạch: [docs/PRD.md](docs/PRD.md) · thiết kế: [spec.md](spec.md) · dữ liệu: [data/DATA_CARD.md](data/DATA_CARD.md).
+**Trạng thái (28/11/2026):** bản chạy thử dòng lệnh trong `codebase/` (hiểu câu hỏi, lộ trình, từ chối, dữ liệu giả lập) chạy được ở chế độ giả. Backend wayfinder (`vinuni-wayfinder/backend/`: nhận diện ảnh bằng MegaLoc, tìm đường trên đồ thị OpenStreetMap, thẻ chỉ dẫn, chế độ thu thập) và frontend hợp nhất (`vinuni-wayfinder/frontend/`, đã gộp `web/` vào và nối API backend) **chạy được trên laptop**. Chưa thử trên điện thoại, chưa thu thập đủ dữ liệu và chưa có số đo độ chính xác. Yêu cầu và kế hoạch: [docs/PRD.md](docs/PRD.md) · thiết kế: [spec.md](spec.md) · dữ liệu: [data/DATA_CARD.md](data/DATA_CARD.md).
 
 **Tham khảo:** cách định vị trong nhà tham khảo dự án Hound Around (BU Spark! DS+X 2026); mô hình nhận diện vị trí MegaLoc của Gabriele Berton và Carlo Masone. Nhóm tự cài đặt, không chép code. Dữ liệu quay (ảnh, sơ đồ, đồ thị, vector) không nằm trong repo công khai.
 
 ---
 
-## Giao diện chính `web/` — VinUni AR Map
+## Frontend hợp nhất (`vinuni-wayfinder/frontend/`) — VinUni AR Map & Wayfinder
 
-[`web/`](web/README.md) là **giao diện chính duy nhất** của app: tìm phòng, luồng ảnh, dẫn đường cùng mascot, khu sự kiện CLB. Màn Chỉ đường và Thu thập của `vinuni-wayfinder/frontend/` sẽ được thiết kế lại theo style này và chuyển sang đây. Hiện `web/` vẫn chạy bằng dữ liệu mẫu, **chưa nối API định vị/tìm đường** của `vinuni-wayfinder/backend/`; không thay thế bộ đánh giá hackathon.
+Toàn bộ giao diện web đã được gộp về [`vinuni-wayfinder/frontend/`](vinuni-wayfinder/frontend/README.md) và tổ chức theo từng feature (`src/features/`): khám phá khuôn viên 3D, tìm phòng, định vị bằng ảnh/GPS, thẻ chỉ dẫn từng bước cùng mascot, khu sự kiện CLB và màn hình Thu thập (`/thu-thap` hoặc `/#thu-thap`), kết nối trực tiếp với backend FastAPI ở `vinuni-wayfinder/backend/`. Không thay thế bộ đánh giá hackathon.
 
 ```sh
-cd web
+cd vinuni-wayfinder/frontend
 npm ci
 npm run dev
 ```
 
-Cần Node.js 22.12+ (22.x). Mở http://localhost:5173; nếu cổng bận dùng `npm run dev -- --port 5174`. [Bàn giao nối backend](web/docs/backend-integration.md) · [Sự kiện và mascot](web/docs/club-events.md).
+Cần Node.js 22+. Mở http://localhost:5173; nếu cổng bận dùng `npm run dev -- --port 5174`. [Chi tiết kết nối backend](vinuni-wayfinder/frontend/docs/backend-integration.md) · [Sự kiện và mascot](vinuni-wayfinder/frontend/docs/club-events.md).
 
 ## Nhóm làm gì, khung làm gì
 

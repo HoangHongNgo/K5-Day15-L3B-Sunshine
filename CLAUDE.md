@@ -1,8 +1,17 @@
 # Sunshine — VinUni Wayfinder · CLAUDE.md
 
-> Cập nhật 28/11/2026. File này là **CLAUDE.md duy nhất** của repo: mô tả dự án, quyết định đã chốt và chi tiết kỹ thuật
-> wayfinder (gộp từ `vinuni-wayfinder/CLAUDE.md` cũ, đã xoá). Luật của khung hackathon ở [`AGENTS.md`](AGENTS.md) vẫn áp
-> dụng đầy đủ. Quyết định ở đây đổi thì cập nhật `docs/PRD.md` và `spec.md` (changelog §10).
+> Cập nhật 28/11/2026. File này là **CLAUDE.md duy nhất** của repo: mô tả dự án, quyết định đã chốt, quy trình TDD bắt buộc và chi tiết kỹ thuật wayfinder (gộp từ `vinuni-wayfinder/CLAUDE.md` cũ, đã xoá). Luật của khung hackathon ở [`AGENTS.md`](AGENTS.md) vẫn áp dụng đầy đủ. Quyết định ở đây đổi thì cập nhật `docs/PRD.md` và `spec.md` (changelog §10).
+
+## Quy trình bắt buộc: Viết test trước khi làm (TDD)
+
+Mọi AI coding agent và thành viên khi thêm feature hoặc sửa lỗi **BẮT BUỘC** làm theo vòng `Red → Green → Refactor`:
+
+1. **Red:** Viết unit/integration test mô tả hành vi mong đợi (hoặc tái hiện lỗi) trước khi viết code triển khai; chạy test và xác nhận test **fail**.
+2. **Green:** Triển khai code gọn gàng đúng phạm vi feature (`vinuni-wayfinder/frontend/src/features/<feature>/`, `vinuni-wayfinder/backend/app/`, hoặc `codebase/`), chạy test thấy **pass**.
+3. **Refactor & kiểm tra:** Trước khi commit/push hoặc kết thúc task, chạy đầy đủ:
+   - Frontend: `cd vinuni-wayfinder/frontend && npm test && npm run build`
+   - Khung Python / eval: `python3 run.py check` (và `pytest` nếu sửa code Python).
+- Đặt test cạnh từng feature (`src/features/<feature>/*.test.ts`, `server/*.test.ts`, `tests/test_*.py`). Không xoá/tắt test để làm xanh build.
 
 ## Dự án là gì
 
@@ -17,31 +26,35 @@ https://github.com/HoangHongNgo/K5-Day15-L3B-Sunshine. Thành viên và phần v
   (repo đó không có giấy phép).
 - **Phạm vi demo:** tầng trệt **Tòa G và Tòa I** + đường ngoài trời giữa các tòa. Không làm nhiều tầng, thang máy,
   chế độ không bậc thang. Giao diện **chỉ tiếng Việt**.
-- **Mascot:** dùng để dẫn đường như trong `web/` (Vini mặc định; sự kiện CLB có mascot riêng). Mascot là sprite 2D phủ
+- **Mascot:** dùng để dẫn đường (Vini mặc định; sự kiện CLB có mascot riêng). Mascot là sprite 2D phủ
   lên thẻ/camera, **chưa phải AR neo không gian**.
 
-## Ba phần của repo và hướng hợp nhất
+## Kiến trúc repo (đã hợp nhất frontend theo feature)
 
 | Thư mục | Vai trò | Trạng thái |
 |---|---|---|
-| `web/` | **Giao diện chính duy nhất** (React 19 + TypeScript + Vite 7 + Three.js, PWA). Tìm phòng, ảnh, dẫn đường, mascot, sự kiện CLB | Đang chạy bằng dữ liệu fixture, **chưa nối backend**. Điểm nối: [`web/docs/backend-integration.md`](web/docs/backend-integration.md) |
+| `vinuni-wayfinder/frontend/` | **Giao diện chính duy nhất** (React 19 + TypeScript + Vite 7 + Three.js, PWA — đã gộp `web/` vào và bỏ thư mục `web/`). Gồm khám phá 3D, tìm phòng, ảnh/MegaLoc, dẫn đường, mascot, sự kiện CLB và màn Thu thập (`/thu-thap` / `#thu-thap`) | **Đã nối backend** qua `src/features/wayfinder/` và proxy `vite.config.ts` (giữ fallback mô phỏng khi ngoại tuyến). Chi tiết: [`vinuni-wayfinder/frontend/docs/backend-integration.md`](vinuni-wayfinder/frontend/docs/backend-integration.md) |
 | `vinuni-wayfinder/backend/` | **Nguồn sự thật cho định vị và tìm đường**: FastAPI + MegaLoc (GPU), đồ thị OSM, `routing.py` sinh thẻ chỉ dẫn, Supabase dùng chung | Chạy được trên laptop; chưa có số đo độ chính xác thật |
-| `vinuni-wayfinder/frontend/` | Giao diện cũ (React 18 JS): màn Chỉ đường và màn Thu thập `#thu-thap` | **Sẽ bỏ.** Các màn này được thiết kế lại theo style `web/` và chuyển code về `web/`; dùng tạm tới khi `web/` có bản thay thế |
 | `codebase/`, `run.py`, `eval/`, `cost/`… | Khung chấm hackathon: workflow AI hiểu câu hỏi → dẫn đường / hỏi lại / từ chối (dữ liệu `synthetic`) | Chạy ở chế độ giả; giữ hợp đồng `answer(text)` để `eval`/`simulate` chạy |
 
+Cấu trúc feature trong `vinuni-wayfinder/frontend/src/`:
+- `App.tsx`, `main.tsx` — chỉ giữ layout khung và `<Routes>`, không nhồi logic nghiệp vụ của từng feature vào đây.
+- `shared/` — `brand.ts`, `usePwa.ts`, `FavoritesContext.tsx`, `ui.tsx`, `styles/` (`tokens.css`, `base.css`, `styles.css`, `glass.css`), `lib/` (`geo.js`, `sensors.js`, `image.js`, `text.js`).
+- `features/wayfinder/` — API client, adapter, fallback catalog, `WayfinderContext` (+ `data.test.ts`, `wayfinderApi.test.ts`).
+- `features/explore/` — mô hình 3D, `ExploreMap`, trang chi tiết/đã lưu/giới thiệu.
+- `features/navigation/` — lập tuyến (`/di-den`), chọn vị trí (`/vi-tri`), dẫn đường từng bước (`/hanh-trinh`).
+- `features/localization/` — Camera AR + MegaLoc (`/anh`), luồng ảnh mẫu (`/anh-mau`).
+- `features/mascot/` — `Mascot`, `MascotStudio`.
+- `features/events/` — sự kiện CLB, mascot theo sự kiện (+ `events.test.ts`).
+- `features/collect/` — giao diện thu thập & sửa đồ thị (`/thu-thap`, CSS scoped trong `.collect-page`).
+
 Khi làm frontend:
-- **Thiết kế theo `web/`**: dùng token/màu/chữ ở `web/src/tokens.css`, `brand.ts`, `glass.css`, font Be Vietnam Pro, icon
-  `lucide-react`, bố cục ưu tiên điện thoại. Không mang style của `vinuni-wayfinder/frontend` sang.
-- **Logic định vị/tìm đường lấy từ backend wayfinder**, không viết lại ở client: `GET /api/destinations`,
-  `POST /api/locate` (+ `previous` cho ảnh thứ hai), `POST /api/correct`, `GET /api/spots/search`, `GET /api/route`.
-  Thay fixture trong `web/src/data.ts`, `PhotoFlow.tsx` bằng adapter gọi API; tham khảo client sẵn có
-  `vinuni-wayfinder/frontend/src/api.js`.
-- Proxy dev trong `web/vite.config.ts` chỉ các endpoint wayfinder, **không đè `/api/mascot/*`**. Điện thoại cần HTTPS
-  (camera, GPS, la bàn) và cùng origin để tránh mixed content.
-- Màn Thu thập (sửa đồ thị, neo GPS, quay video, ghi vết) chỉ cho nhóm, đặt sau route riêng; người dùng thường **không bao
-  giờ thấy sơ đồ/đồ thị tòa nhà**, chỉ thấy thẻ chỉ dẫn.
+- Dùng token/màu/chữ ở `src/shared/styles/tokens.css`, `src/shared/brand.ts`, `src/shared/styles/glass.css`, font Be Vietnam Pro, icon `lucide-react`, bố cục ưu tiên điện thoại.
+- **Logic định vị/tìm đường lấy từ backend wayfinder**, không viết lại ở client: `GET /api/destinations`, `POST /api/locate` (+ `previous` cho ảnh thứ hai), `POST /api/correct`, `GET /api/spots/search`, `GET /api/route`.
+- Proxy dev trong `vinuni-wayfinder/frontend/vite.config.ts` chỉ proxy các endpoint wayfinder + thu thập, **không đè `/api/mascot/*`**. Điện thoại cần HTTPS (camera, GPS, la bàn) và cùng origin để tránh mixed content.
+- Màn Thu thập (`/thu-thap`) chỉ cho nhóm; người dùng thường **không bao giờ thấy sơ đồ/đồ thị tòa nhà**, chỉ thấy thẻ chỉ dẫn.
 - Lỗi backend (`no_index`, `no_path`, `too_far`…) hiện màn lỗi + chọn lại, **không âm thầm rơi về kết quả mock**.
-- Máy này có Node 18.14.2; `web/` cần Node 22.12+ → phải nâng Node (hoặc dùng nvm) trước khi chạy/build `web/`.
+- Frontend cần Node 22+.
 
 ## Định vị trong nhà (pipeline theo Hound Around)
 
@@ -99,16 +112,13 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
 
 ## Môi trường máy dev
 
-- Windows 11, PowerShell, Python 3.13, Node 18.14.2 (cần nâng lên 22 cho `web/`). GPU GTX 1650 4 GB: MegaLoc ~73 ms/ảnh,
-  load lần đầu ~2 phút.
-- Venv `vinuni-wayfinder/backend/.venv` (torch 2.14.1+cu126). Đặt `TORCH_HOME=backend/.torch` và
-  `HF_HOME=backend/.torch/hf` để dùng cache model trong dự án (trọng số ~870 MB). Model:
-  `torch.hub.load('gmberton/MegaLoc', 'get_trained_model', trust_repo=True)`; nên ghim commit để vector không đổi.
+- Backend: Python 3.12/3.13, venv `vinuni-wayfinder/backend/.venv` (torch CUDA). GPU GTX 1650 4 GB: MegaLoc ~73 ms/ảnh, load lần đầu ~2 phút.
+- Đặt `TORCH_HOME=backend/.torch` và `HF_HOME=backend/.torch/hf` để dùng cache model trong dự án (trọng số ~870 MB). Model: `torch.hub.load('gmberton/MegaLoc', 'get_trained_model', trust_repo=True)`.
+- Frontend: Node 22+, `cd vinuni-wayfinder/frontend && npm ci && npm run dev`.
 
 ## Việc còn lại
 
-- [ ] Nối `web/` vào backend wayfinder; chuyển màn Chỉ đường + Thu thập sang `web/` theo style mới, rồi bỏ
-  `vinuni-wayfinder/frontend/`.
+- [x] Nối frontend vào backend wayfinder, gộp `web/` vào `vinuni-wayfinder/frontend/` và tổ chức theo feature (`src/features/`).
 - [ ] Thử end-to-end trên điện thoại (HTTPS, camera, GPS, la bàn) — chưa thử lần nào.
 - [ ] Thu thập dữ liệu thật ở Tòa G và Tòa I; đi bộ kiểm đồ thị campus OSM, tên/vị trí phòng, hướng tên cửa Tòa G.
 - [ ] Bộ đo nhận diện bằng ảnh + hiệu chỉnh ngưỡng (thêm vào bộ chính là quyết định của nhóm, không thêm im lặng).
@@ -124,16 +134,15 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
 - Từ chối việc ngoài chỉ đường: điểm danh hộ, vào khu có khoá, lấy thông tin người khác, đổi luật/vai trò
   (prompt injection) → `[TỪ CHỐI]` + chỉ tới BTC / phòng CTSV. Mã check-in chỉ là nội dung QR nháp, BTC xác nhận tại cửa.
 - `POST /api/correct` chỉ gọi sau hành động xác nhận rõ ràng của người dùng (không gọi khi mount component).
-- Tạo mascot bằng AI (`web/server/mascotApi.ts`, OpenAI) chỉ chạy ở Vite dev localhost; key nằm ở `web/.env.local`,
-  **không dùng tiền tố `VITE_`**. Lên production phải là API máy chủ có quyền CLB và quota.
+- Tạo mascot bằng AI (`vinuni-wayfinder/frontend/server/mascotApi.ts`, OpenAI) chỉ chạy ở Vite dev localhost; key nằm ở `vinuni-wayfinder/frontend/.env.local`, **không dùng tiền tố `VITE_`**. Lên production phải là API máy chủ có quyền CLB và quota.
 - Mọi số liệu độ chính xác/thời gian phải có nguồn đo thật; `estSeconds` (1,2 m/s) là ước tính, ghi rõ như vậy.
 
 ## Luật dữ liệu và bảo mật (repo công khai)
 
 - **Không commit** ảnh/video hành lang, ảnh sơ đồ/mặt bằng tòa nhà, đồ thị đường đi thật (`seed-site.json`, `site.json`),
   vector (`*.npz`), khung hình: `vinuni-wayfinder/maps/`, `backend/data/`, `backend/.venv/`, `backend/.torch/` đã bị
-  `.gitignore` chặn. Chỉ commit code và doc. Fixture trong `web/` phải là dữ liệu minh hoạ, không phải đồ thị thật.
-- **Không commit** `.env`, `web/.env.local`, `backend/.env`, API key. Khoá `SUPABASE_SERVICE_KEY` bỏ qua RLS: không
+  `.gitignore` chặn. Chỉ commit code và doc. Fixture trong `src/features/wayfinder/data.ts` phải là dữ liệu minh hoạ, không phải đồ thị thật.
+- **Không commit** `.env`, `.env.*` (chỉ commit `.env.example`), API key, `supabase/.temp/`. Khoá `SUPABASE_SERVICE_KEY` bỏ qua RLS: không
   đưa vào Git, frontend, biến `VITE_*`, chat hay log; mỗi người xin qua kênh riêng của nhóm.
 - Ảnh người dùng gửi để định vị bị xoá ngay sau khi embed; không lưu GPS của người dùng sau khi trả lời. Ảnh gửi lên phải
   thu nhỏ và xoá EXIF trước khi upload. Quay ở hành lang công cộng, tránh mặt người.
@@ -145,13 +154,11 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
 
 ## Chạy
 
-```powershell
-python run.py; python run.py check          # khung hackathon (chế độ giả)
+```bash
+python3 run.py && python3 run.py check                     # khung hackathon (chế độ giả)
+cd vinuni-wayfinder/backend && uvicorn app.main:app --port 8000
+cd vinuni-wayfinder/frontend && npm ci && npm test && npm run build && npm run dev
 ```
-
-Backend wayfinder và frontend cũ: xem [`vinuni-wayfinder/README.md`](vinuni-wayfinder/README.md) (cấu hình preview ở
-`D:\VinAI\Hackathon\.claude\launch.json`). Giao diện `web/`: `cd web; npm ci; npm run dev` (Node 22), kiểm bằng
-`npm test`, `npm run build`, `npm run verify*`.
 
 ## Mốc
 

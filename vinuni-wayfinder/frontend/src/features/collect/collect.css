@@ -1,0 +1,68 @@
+/* Scoped styles for the Wayfinder Collector (/thu-thap) so it never collides with AR Map styles. */
+.collect-main { max-width: none !important; padding: 12px 16px 32px !important; }
+.collect-page {
+  --wf-navy: #14284b;
+  --wf-navy-2: #233f72;
+  --wf-red: #c8102e;
+  --wf-bg: #f4f6fa;
+  --wf-card: #ffffff;
+  --wf-text: #14213d;
+  --wf-muted: #5b6577;
+  --wf-line: #dfe4ec;
+  color: var(--wf-text);
+  background: var(--wf-bg);
+  border-radius: 16px;
+  padding: 12px;
+}
+.collect-page * { box-sizing: border-box; }
+.collect-page button, .collect-page input, .collect-page select { font: inherit; color: inherit; }
+.collect-page h4 { margin: 16px 0 6px; font-size: 15px; font-weight: 700; }
+.collect-page .muted { color: var(--wf-muted); }
+.collect-page .small { font-size: 13px; }
+.collect-page .alert { background: #fde8eb; color: #8a0b1f; border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.collect-page .hint { background: #eef4ff; color: #1d3b7a; padding: 8px 10px; border-radius: 8px; margin: 6px 0; font-size: 14px; }
+.collect-page .card { background: var(--wf-card); border-radius: 16px; padding: 18px; border: 1px solid var(--wf-line); }
+.collect-page .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--wf-line); background: var(--wf-card); color: var(--wf-text); cursor: pointer; text-decoration: none; }
+.collect-page .btn:disabled { opacity: .45; cursor: not-allowed; }
+.collect-page .btn.primary { background: var(--wf-navy); color: #fff; border-color: var(--wf-navy); }
+.collect-page .btn.small { padding: 6px 10px; font-size: 14px; }
+.collect-page .btn.ghost { opacity: .6; }
+.collect-page .link { background: none; border: none; color: var(--wf-navy-2); padding: 4px; cursor: pointer; text-decoration: underline; }
+.collect-page .row { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
+.collect-page .row > .btn { flex: 1; }
+.collect-page .row.wrap { flex-wrap: wrap; }
+.collect-page .row.between { justify-content: space-between; }
+
+.collect-page .collect { display: grid; gap: 8px; }
+.collect-page .toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--wf-bg); padding: 4px 0; z-index: 4; }
+.collect-page .toolbar select { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--wf-line); background: var(--wf-card); color: var(--wf-text); }
+.collect-page .chip { border: 1px solid var(--wf-line); background: var(--wf-card); color: var(--wf-text); border-radius: 999px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+.collect-page .chip.on { background: var(--wf-navy); color: #fff; border-color: var(--wf-navy); }
+.collect-page .grow { flex: 1; }
+.collect-page .canvas { overflow: auto; height: 58vh; border: 1px solid var(--wf-line); border-radius: 10px; background: #fff; }
+.collect-page .sheet { position: relative; }
+.collect-page .sheet img, .collect-page .sheet svg, .collect-page .noimg { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
+.collect-page .noimg { display: grid; place-items: center; color: #888; background: repeating-linear-gradient(45deg, #f3f3f3 0 20px, #fafafa 20px 40px); }
+.collect-page .edge { stroke: #2563eb; opacity: .8; }
+.collect-page .edge.unverified { stroke-dasharray: 8 6; opacity: .6; }
+.collect-page .trace { fill: none; stroke: #ef4444; opacity: .7; }
+.collect-page .anchor { fill: #22c55e; stroke: #064e3b; }
+.collect-page .pending { fill: none; stroke: #22c55e; }
+.collect-page .nlabel { text-anchor: middle; fill: #111; paint-order: stroke; stroke: #fff; stroke-width: 3px; font-weight: 600; pointer-events: none; }
+.collect-page .badge { fill: #111; paint-order: stroke; stroke: #fff; stroke-width: 3px; pointer-events: none; }
+.collect-page .panel .box { background: var(--wf-card); border: 1px solid var(--wf-line); border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+.collect-page .panel label { display: grid; gap: 4px; margin: 8px 0; font-size: 14px; }
+.collect-page .panel label.check { display: flex; gap: 8px; align-items: center; }
+.collect-page .panel input:not([type=checkbox]), .collect-page .panel select { padding: 8px; border-radius: 8px; border: 1px solid var(--wf-line); background: var(--wf-bg); color: var(--wf-text); }
+.collect-page .sub { border-left: 3px solid var(--wf-line); padding-left: 10px; }
+.collect-page .panel .anchorbox { border: 2px solid #22c55e; }
+.collect-page .mini { list-style: none; padding: 0; margin: 4px 0; font-size: 14px; display: grid; gap: 2px; }
+.collect-page .thumbs { display: flex; gap: 4px; overflow-x: auto; }
+.collect-page .thumbs img { height: 70px; border-radius: 6px; }
+@media (min-width: 1000px) {
+  .collect-page .collect { grid-template-columns: 1fr 380px; grid-template-areas: 'bar bar' 'msg msg' 'map panel'; }
+  .collect-page .toolbar { grid-column: 1 / -1; }
+  .collect-page .collect > .alert, .collect-page .collect > .hint { grid-column: 1 / -1; }
+  .collect-page .canvas { height: calc(100vh - 170px); }
+  .collect-page .panel { max-height: calc(100vh - 170px); overflow: auto; }
+}
