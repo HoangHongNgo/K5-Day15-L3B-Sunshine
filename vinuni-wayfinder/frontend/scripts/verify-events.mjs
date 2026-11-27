@@ -45,12 +45,13 @@ try {
   await page.getByRole('link', { name: /Chưa biết mình đang ở đâu/ }).click()
   await page.getByRole('link', { name: /Chụp ảnh xung quanh/ }).click()
   await expect(page.locator('.camera-mascot [data-mascot=vini]')).toBeVisible()
-  await page.getByRole('link', { name: 'Dùng ảnh mẫu' }).click()
-  await page.getByRole('link', { name: /Kiến trúc khuôn viên.*Thử ảnh này/ }).click()
-  await page.getByRole('heading', { name: 'Đây có phải nơi bạn đang đứng?' }).waitFor()
-  await page.getByRole('button', { name: /Đúng, mình đang ở đây/ }).click()
+  await page.getByRole('link', { name: 'Chọn vị trí bằng tên phòng' }).click()
+  await page.getByRole('link', { name: 'Sảnh Toà I', exact: true }).click()
   assert.equal(new URL(page.url()).searchParams.get('event'), eventId)
   await expect(page.locator('.journey-preview [data-mascot=vini]')).toBeVisible()
+  if (await page.getByRole('button', { name: 'Thẻ chỉ đường', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Thẻ chỉ đường', exact: true }).click()
+  }
   await page.getByRole('button', { name: 'Xem hành trình' }).click()
   await page.getByRole('button', { name: 'Đã tới Khởi nghiệp' }).click()
   await page.reload()

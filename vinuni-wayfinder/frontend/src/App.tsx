@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowDownToLine, Bookmark, CheckCheck, Compass, HelpCircle, MapPin, Navigation, Pause, Play, Share, ShieldCheck, Smartphone, WifiOff, X } from 'lucide-react'
+import { Bookmark, Compass, HelpCircle, MapPin, Navigation, WifiOff, X } from 'lucide-react'
 import { usePwa } from './shared/usePwa'
 import { useFavorites } from './shared/FavoritesContext'
-import { Brand, IconButton, Modal, NotFound } from './shared/ui'
+import { Brand, IconButton, NotFound } from './shared/ui'
 import { useWayfinder } from './features/wayfinder/WayfinderContext'
 import { ExplorePage, PlaceDetailPage, SavedPage, AboutPage } from './features/explore/ExplorePages'
 import { PlanRoutePage } from './features/navigation/PlanRoutePage'
@@ -27,12 +27,19 @@ function RouteFocus() {
   return null
 }
 
+const motionPreference = () => window.matchMedia('(prefers-reduced-motion: reduce)')
+const prefersReducedMotion = () => motionPreference().matches
+function subscribeToMotion(change: () => void) {
+  const preference = motionPreference()
+  preference.addEventListener('change', change)
+  return () => preference.removeEventListener('change', change)
+}
+
 export default function App() {
   const { isLive, places } = useWayfinder()
   const { mascot } = useEventJourney()
   const { storageError, visibleCount } = useFavorites()
-  const [motionPaused, setMotionPaused] = useState(false)
-  const [installOpen, setInstallOpen] = useState(false)
+  const motionPaused = useSyncExternalStore(subscribeToMotion, prefersReducedMotion)
   const pwa = usePwa()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -47,8 +54,6 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [navigate])
 
-  useEffect(() => { setInstallOpen(false) }, [pathname])
-
   const nav = (
     <>
       <NavLink to="/" end className={!isNavigation && pathname !== '/da-luu' ? 'nav-item active' : 'nav-item'}><Compass size={21} /><span>Bản đồ</span></NavLink>
@@ -58,27 +63,27 @@ export default function App() {
   )
 
   return (
-    <MotionContext.Provider value={{ paused: motionPaused, toggle: () => setMotionPaused(p => !p) }}>
+    <MotionContext.Provider value={{ paused: motionPaused }}>
       <a href="#main-content" className="skip-link" onClick={e => { e.preventDefault(); document.getElementById('main-content')?.focus() }}>Đến nội dung chính</a>
-      <header className="site-header">
-        <div className="header-inner">
-          <Brand />
-          <nav className="desktop-nav" aria-label="Điều hướng chính">{nav}</nav>
-          <div className="header-actions">
-            <span className="campus-label"><MapPin size={16} /><span>VinUniversity</span></span>
-            <IconButton label={motionPaused ? `Bật chuyển động ${mascot.name}` : `Dừng chuyển động ${mascot.name}`} onClick={() => setMotionPaused(p => !p)} pressed={motionPaused}>{motionPaused ? <Play size={18} /> : <Pause size={18} />}</IconButton>
-            <IconButton label={pwa.installed ? 'Ứng dụng đã được cài' : 'Cài VinUni AR Map'} onClick={() => setInstallOpen(true)}><Smartphone size={21} /></IconButton>
-            <Link className="icon-button help-link" to="/ve-ung-dung" aria-label="Thông tin bản trải nghiệm"><HelpCircle size={21} /></Link>
+      {!isJourney && <>
+        <header className="site-header">
+          <div className="header-inner">
+            <Brand />
+            <nav className="desktop-nav" aria-label="Điều hướng chính">{nav}</nav>
+            <div className="header-actions">
+              <span className="campus-label"><MapPin size={16} /><span>VinUniversity</span></span>
+              <Link className="icon-button help-link" to="/ve-ung-dung" aria-label="Thông tin bản trải nghiệm"><HelpCircle size={21} /></Link>
+            </div>
+          </div>
+        </header>
+        <div className="app-statusbar">
+          <div>
+            <span><MapPin size={14} aria-hidden="true" />{isLive ? 'VinUni Wayfinder · trực tiếp' : 'Bản trải nghiệm · mô phỏng'}</span>
+            <span className="statusbar-detail">{isLive ? `${places.length} điểm đến` : 'Toà I, tầng trệt'}</span>
+            <span className="statusbar-right">{!pwa.online ? <><WifiOff size={14} />Đang ngoại tuyến</> : `Đi cùng ${mascot.name}`}</span>
           </div>
         </div>
-      </header>
-      <div className="app-statusbar">
-        <div>
-          <span><MapPin size={14} aria-hidden="true" />{isLive ? 'VinUni Wayfinder · trực tiếp' : 'Bản trải nghiệm · mô phỏng'}</span>
-          <span className="statusbar-detail">{isLive ? `${places.length} điểm đến` : 'Toà I, tầng trệt'}</span>
-          <span className="statusbar-right">{!pwa.online ? <><WifiOff size={14} />Đang ngoại tuyến</> : `Đi cùng ${mascot.name}`}</span>
-        </div>
-      </div>
+      </>}
       {(!pwa.online || pwa.error || storageError) && (
         <div className="system-message" role="status">
           {!pwa.online ? 'Bạn đang ngoại tuyến. Tìm kiếm và tuyến mẫu vẫn dùng được; tour của trường cần mạng.' : pwa.error || (storageError ? 'Chưa thể lưu lâu dài trên thiết bị này. Danh sách chỉ được giữ trong phiên hiện tại.' : '')}
@@ -119,13 +124,6 @@ export default function App() {
         <RouteFocus />
       </main>
       {!isJourney && !isClub && !isCollect && <nav className="bottom-nav" aria-label="Điều hướng trên điện thoại">{nav}</nav>}
-      {installOpen && (
-        <Modal title={pwa.installed ? 'Đã cài VinUni AR Map' : 'Cài VinUni AR Map'} onClose={() => setInstallOpen(false)}>
-          <div className="install-hero"><span className="install-logo"><MapPin size={42} strokeWidth={1.6} /></span><p>Mở nhanh từ màn hình chính,<br />tiếp tục khám phá khi mất mạng.</p></div>
-          {pwa.installed ? <p className="inline-feedback"><CheckCheck size={22} />Ứng dụng đang ở chế độ đã cài.</p> : pwa.prompt ? <button className="button button-primary full-width" onClick={() => void pwa.install()} disabled={pwa.installing} aria-busy={pwa.installing}><ArrowDownToLine size={20} />{pwa.installing ? 'Đang mở trình cài…' : 'Cài VinUni AR Map'}</button> : <><p>Cài từ menu trình duyệt:</p><ol className="install-steps"><li><Share size={19} /><span><strong>iPhone / iPad</strong>Mở trong Safari, chọn Chia sẻ, rồi “Thêm vào Màn hình chính”.</span></li><li><Smartphone size={19} /><span><strong>Android / máy tính</strong>Mở menu Chrome, chọn “Cài đặt ứng dụng” hoặc “Thêm vào Màn hình chính” nếu có.</span></li></ol><p className="helper-text">Cài đặt cần HTTPS hoặc localhost. Nếu chưa thấy tuỳ chọn, bạn vẫn dùng được ngay trên web.</p></>}
-          <p className="privacy-note"><ShieldCheck size={16} />Không cần tài khoản để bắt đầu.</p>
-        </Modal>
-      )}
     </MotionContext.Provider>
   )
 }

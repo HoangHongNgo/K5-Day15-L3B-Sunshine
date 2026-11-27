@@ -9,7 +9,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH 
 const base = process.env.PROTOTYPE_URL || 'http://localhost:5173'
 await mkdir('artifacts', { recursive: true })
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' })
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'no-preference' })
   const page = await context.newPage()
   page.setDefaultTimeout(7000)
   const errors = []
@@ -45,13 +45,13 @@ try {
     await expect(button).toHaveAttribute('aria-pressed', 'false')
     await expect.poll(async () => still.equals(await canvas.screenshot())).toBe(true)
   }
-  // The global motion control must also pause model animation and camera rotation.
+  // The device motion setting must also pause model animation and camera rotation.
   await page.getByRole('button', { name: 'Vẫy tay', exact: true }).click()
-  await page.getByRole('button', { name: 'Dừng chuyển động Vini', exact: true }).click()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(page.getByRole('button', { name: 'Vẫy tay', exact: true })).toBeDisabled()
   const pausedFrame = await canvas.screenshot()
   assert.ok(pausedFrame.equals(await canvas.screenshot()), 'Global pause must stop the model')
-  await page.getByRole('button', { name: 'Bật chuyển động Vini', exact: true }).click()
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.getByRole('button', { name: 'Dừng động tác', exact: true }).click()
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Tải mô hình .GLB' }).click()

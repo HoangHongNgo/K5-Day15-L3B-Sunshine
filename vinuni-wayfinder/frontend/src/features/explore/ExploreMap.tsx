@@ -1,6 +1,6 @@
 import { lazy, Suspense, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CalendarDays, ArrowDown, ArrowUpRight, BookOpen, Camera, ChevronDown, ChevronRight, Coffee, Compass, DoorOpen, ImagePlus, Layers, Leaf, Lightbulb, List, MapPin, Navigation, Search, SlidersHorizontal, X, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ArrowDown, ArrowUpRight, BookOpen, Camera, ChevronDown, ChevronRight, Coffee, Compass, DoorOpen, Layers, Leaf, Lightbulb, List, MapPin, Navigation, Search, SlidersHorizontal, X, type LucideIcon } from 'lucide-react'
 import { categories, type Category, type Place } from '../wayfinder/data'
 import { FeaturedEventsStrip } from '../events/FeaturedEventsStrip'
 import { Mascot } from '../mascot/Mascot'
@@ -49,7 +49,7 @@ export default function ExploreMap({ save, onHello }: { save: (place: Place) => 
     <div className="scene-heading"><span><Layers size={16} />Toà trung tâm VinUni</span><small>Minh hoạ theo ảnh · Kéo để xoay</small></div>
     {!filtered && !listOpen && <>
       <div className="map-entry-actions"><button className="mobile-list-toggle glass-pill" onClick={() => setListOpen(true)}><List size={17} />Danh sách</button>
-      <Link className="sample-map-action" to={`/anh-mau?to=${place.id}`}><ImagePlus size={17} /><span>Thử ảnh mẫu</span></Link><Link className="events-map-action" to="/su-kien"><CalendarDays size={17} /><span>Sự kiện</span></Link></div>
+      <Link className="sample-map-action" to={`/anh?to=${place.id}`}><Camera size={17} /><span>Định vị bằng ảnh</span></Link><Link className="events-map-action" to="/su-kien"><CalendarDays size={17} /><span>Sự kiện</span></Link></div>
       <div className="scene-caption"><span className="live-dot" />MÔ HÌNH MINH HOẠ</div>
       <section className="destination-card" aria-label="Địa điểm đang chọn">
         <div className="destination-top"><div className={`destination-icon tone-${place.category}`}><PlaceIcon size={27} strokeWidth={1.4} /></div><div className="destination-copy"><span>{categories.find(c => c.id === place.category)?.label} <span>·</span> {place.building ?? 'Toà I'}</span><h2>{place.name}</h2></div>{save(place)}</div>

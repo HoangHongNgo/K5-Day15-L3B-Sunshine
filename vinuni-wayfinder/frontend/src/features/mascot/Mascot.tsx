@@ -3,7 +3,7 @@ import { useEventJourney } from '../events/EventContext'
 import type { MascotAsset } from '../events/events'
 import { MascotPortrait } from './MascotPortrait'
 
-export const MotionContext = createContext({ paused: false, toggle: () => {} })
+export const MotionContext = createContext({ paused: false })
 export type MascotMood = 'idle' | 'right' | 'left' | 'walk' | 'wave' | 'jump' | 'wait'
 
 // Six generated poses in a 3 × 2 atlas. Both directions share the pointing

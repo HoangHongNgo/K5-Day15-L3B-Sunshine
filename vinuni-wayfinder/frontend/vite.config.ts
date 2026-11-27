@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), mascotApi(), VitePWA({
       registerType: 'prompt',
-      includeAssets: ['icons/*.png', 'favicon.svg', 'images/*.webp', 'pets/vini/*', 'pets/boba/*'],
+      includeAssets: ['icons/*.png', 'images/*.webp', 'pets/vini/*', 'pets/boba/*'],
       manifest: {
         id: '/',
         name: brand.name,

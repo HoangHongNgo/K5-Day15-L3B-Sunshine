@@ -8,12 +8,15 @@ import { Mascot } from '../mascot/Mascot'
 import { findRoute } from '../wayfinder/data'
 import { ApiError, splitRouteSteps, wayfinderApi, type BackendRouteResponse } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
+import { JourneyModeButton, preferredJourneyMode, rememberJourneyMode, type JourneyMode } from './JourneyModeButton'
 
 export function PlanRoutePage() {
   const { places, getPlace, isLive } = useWayfinder()
   const { link } = useEventJourney()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  const [mode, setMode] = useState(preferredJourneyMode)
+  function chooseMode(next: JourneyMode) { setMode(next); rememberJourneyMode(next) }
   const rawFrom = params.get('from') ?? ''
   const fromLabel = params.get('fromLabel') ?? ''
   const lat = parseCoord(params.get('lat'))
@@ -74,7 +77,15 @@ export function PlanRoutePage() {
     const next = new URLSearchParams(params)
     next.set(key, value)
     if (key === 'from') { next.delete('fromLabel'); next.delete('lat'); next.delete('lng') }
-    if (key === 'to') next.delete('event')
+    if (key === 'to') { next.delete('event'); next.delete('stop') }
+    const start = next.get('from')
+    const destination = next.get('to')
+    if (mode === 'camera' && (!to || (!from && !hasGps)) && destination && (start || hasGps)
+      && (isLive || (start && findRoute(start, destination)))) {
+      next.set('mode', mode)
+      navigate(link(`/hanh-trinh?${next}`))
+      return
+    }
     setParams(next, { replace: true })
   }
 
@@ -87,7 +98,8 @@ export function PlanRoutePage() {
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!canSubmit) return
-    const q = new URLSearchParams({ to })
+    const q = new URLSearchParams({ to, mode })
+    if (params.has('stop')) q.set('stop', params.get('stop')!)
     if (hasGps) {
       q.set('lat', String(lat))
       q.set('lng', String(lng))
@@ -105,8 +117,9 @@ export function PlanRoutePage() {
         <section className="plan-form">
           <EventJourneyBadge />
           <h1 tabIndex={-1}>Mình đi từ đâu?</h1>
-          <p className="page-intro">Chọn điểm xuất phát và điểm đến tại VinUni.</p>
+          <p className="page-intro">{mode === 'camera' ? 'Chọn hai điểm để mở camera dẫn đường.' : 'Chọn điểm xuất phát và điểm đến tại VinUni.'}</p>
           <form onSubmit={submit}>
+            <div className="plan-mode"><JourneyModeButton current={mode} onChange={chooseMode} /></div>
             <div className="route-inputs">
               <div className="route-connection" aria-hidden="true"><span /><i /><MapPin size={18} /></div>
               <div className="route-fields">
@@ -139,7 +152,7 @@ export function PlanRoutePage() {
             {!isLive && from && to && !mockRoute && <p className="error-message" role="alert">Chưa có đường nối hai địa điểm này. Hãy chọn một điểm khác.</p>}
             {!hasGps && from && from === to && <p className="inline-feedback"><CheckCheck size={19} />Bạn đã chọn cùng một địa điểm.</p>}
             <button className="button button-primary full-width" type="submit" disabled={!canSubmit}>
-              <Footprints size={20} />{!hasGps && from && from === to ? 'Xác nhận đang ở đây' : 'Xem hành trình'}<ArrowRight size={19} />
+              <Footprints size={20} />{!hasGps && from && from === to ? 'Xác nhận đang ở đây' : mode === 'camera' ? 'Bắt đầu với camera' : 'Xem hành trình'}<ArrowRight size={19} />
             </button>
           </form>
           <DemoNote />

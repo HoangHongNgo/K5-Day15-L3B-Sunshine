@@ -47,6 +47,7 @@ try {
   report.checks.push('Accent-insensitive search, empty state, saved places persist across reload')
 
   await page.goto(`${base}/di-den?to=i109`)
+  await page.getByRole('button', { name: 'Thẻ chỉ đường', exact: true }).click()
   await page.getByLabel('Điểm xuất phát', { exact: true }).selectOption('lobby')
   await screenshot('plan-390')
   await page.getByRole('button', { name: 'Xem hành trình' }).click()
@@ -85,11 +86,7 @@ try {
   audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
   report.accessibility.push({ screen: 'plan', violations: audit.violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) })) })
 
-  await page.getByRole('button', { name: 'Cài VinUni AR Map', exact: true }).click()
-  await page.getByRole('dialog').waitFor()
-  await screenshot('install-390')
-  await page.keyboard.press('Escape')
-  assert.equal(await page.getByRole('dialog').count(), 0)
+  assert.equal(await page.getByRole('button', { name: /Cài VinUni AR Map|Dừng chuyển động Vini/ }).count(), 0)
   const manifest = await page.evaluate(async () => (await fetch('/manifest.webmanifest')).json())
   assert.equal(manifest.display, 'standalone')
   assert.equal(manifest.lang, 'vi')

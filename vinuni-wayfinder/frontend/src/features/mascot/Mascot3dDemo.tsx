@@ -237,7 +237,7 @@ export function MascotModelViewer({ mascot, eventId }: { mascot: MascotAsset; ev
         <button aria-pressed={motion === 'talk'} disabled={!ready || paused} onClick={() => chooseMotion('talk')}><MessageCircle size={17} />Mở miệng nói</button>
         <button disabled={!ready || !motion} onClick={() => chooseMotion(null)}><Square size={14} />Dừng động tác</button>
       </div>
-      <p className="mascot3d-motion-status" role="status">{paused ? 'Chuyển động đang tạm dừng bằng nút trên đầu trang.' : motion ? `${mascot.name} đang ${{wave:'vẫy tay', jump:'nhảy', dance:'múa xoay', talk:'mở miệng nói'}[motion]}.` : ''}</p>
+      <p className="mascot3d-motion-status" role="status">{paused ? 'Chuyển động đang tạm dừng theo cài đặt giảm chuyển động của thiết bị.' : motion ? `${mascot.name} đang ${{wave:'vẫy tay', jump:'nhảy', dance:'múa xoay', talk:'mở miệng nói'}[motion]}.` : ''}</p>
       <div className="mascot3d-controls" aria-label="Điều khiển góc nhìn">
         <div><button onClick={() => chooseView('front')} disabled={!ready}>Mặt trước</button><button onClick={() => chooseView('back')} disabled={!ready}>Mặt sau</button><button aria-label="Đặt lại góc nhìn" onClick={() => chooseView('reset')} disabled={!ready}><RotateCcw size={17} /></button></div>
         <button aria-pressed={rotating} onClick={() => { spin.current(!rotating); setRotating(!rotating) }} disabled={!ready || paused}>{rotating ? <Pause size={16} /> : <RotateCw size={16} />}Tự xoay</button>

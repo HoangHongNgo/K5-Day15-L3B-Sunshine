@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, ArrowUp, Check, ChevronLeft, DoorOpen, Footprints, LoaderCircle, MapPin, Navigation2, RotateCcw, Volume2, VolumeX, X, type LucideIcon } from 'lucide-react'
 import { DemoNote, EmptyState, IconButton, Modal, NotFound, parseCoord } from '../../shared/ui'
 import { SaveButton } from '../../shared/FavoritesContext'
@@ -10,6 +10,8 @@ import { Mascot } from '../mascot/Mascot'
 import { findRoute, type Turn } from '../wayfinder/data'
 import { ApiError, splitRouteSteps, stepDirection, wayfinderApi, type BackendRouteResponse, type StepDirection } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
+import { JourneyCamera } from './JourneyCamera'
+import { JourneyModeButton, rememberJourneyMode, type JourneyMode } from './JourneyModeButton'
 import { resolveArrivalContext } from './eventArrival'
 
 const turnIcons: Record<Turn, LucideIcon> = { straight: ArrowUp, left: ArrowLeft, right: ArrowRight }
@@ -20,7 +22,12 @@ const stepDirLabels: Record<StepDirection, string> = { straight: 'Đi thẳng', 
 export function JourneyPage() {
   const { getPlace, isLive } = useWayfinder()
   const { event, link } = useEventJourney()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
+  const mode = params.get('mode') === 'camera' ? 'camera' : 'card'
+  function chooseMode(next: JourneyMode) {
+    rememberJourneyMode(next)
+    setParams(old => { const q = new URLSearchParams(old); q.set('mode', next); return q }, { replace: true })
+  }
   const rawFrom = params.get('from') ?? ''
   const fromLabel = params.get('fromLabel') ?? ''
   const rawTo = params.get('to') ?? ''
@@ -31,7 +38,6 @@ export function JourneyPage() {
   const hasGps = isLive && lat !== undefined && lng !== undefined
   const fromPlace = getPlace(rawFrom)
   const toPlace = getPlace(rawTo)
-  const navigate = useNavigate()
 
   const [liveRoute, setLiveRoute] = useState<BackendRouteResponse | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
@@ -89,17 +95,22 @@ export function JourneyPage() {
     setSpeechMessage(''); setSpeaking(true); window.speechSynthesis.speak(utterance)
   }
 
-  function buildStepUrl(nextStep: number) {
-    const q = new URLSearchParams({ to: rawTo, buoc: String(nextStep) })
-    if (hasGps) { q.set('lat', String(lat)); q.set('lng', String(lng)) }
-    else if (rawFrom) { q.set('from', rawFrom); if (fromLabel) q.set('fromLabel', fromLabel) }
-    return link(`/hanh-trinh?${q}`)
-  }
-
   function goStep(next: number) {
-    navigate(buildStepUrl(next), { replace: true })
+    const q = new URLSearchParams(params)
+    q.set('buoc', String(next))
+    setParams(q, { replace: true })
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
+
+  const backQuery = new URLSearchParams(params)
+  backQuery.delete('buoc')
+  const exitDialog = showExit && <Modal title="Dừng hành trình?" onClose={() => setShowExit(false)}>
+    <p>Bạn có thể bắt đầu lại bất kỳ lúc nào.</p>
+    <div className="dialog-actions"><button className="button button-quiet" onClick={() => setShowExit(false)}>Tiếp tục đi</button>
+      <Link className="button button-primary" to={`/di-den?${backQuery}`}>Dừng hành trình</Link></div>
+  </Modal>
+  const cameraControls = { onStep: goStep, onMode: chooseMode, onExit: () => setShowExit(true) }
+  const modeButton = <div className="card-mode"><JourneyModeButton current="card" onChange={chooseMode} /></div>
 
   if (isLive) {
     if (!rawTo || (!rawFrom && !hasGps)) return <NotFound title="Chưa có hành trình này" description="Chọn lại điểm xuất phát và điểm đến để bắt đầu." />
@@ -115,17 +126,13 @@ export function JourneyPage() {
     const mascotMood = arrived ? 'jump' : dir === 'left' ? 'left' : dir === 'right' ? 'right' : dir === 'back' ? 'wait' : 'walk'
     const progress = travelSteps.length ? Math.round((step / travelSteps.length) * 100) : 100
     const startDisplay = fromLabel || liveRoute.start
-    const stopBackQuery = new URLSearchParams({ to: rawTo })
-    if (hasGps) { stopBackQuery.set('lat', String(lat)); stopBackQuery.set('lng', String(lng)) }
-    else if (rawFrom) { stopBackQuery.set('from', rawFrom); if (fromLabel) stopBackQuery.set('fromLabel', fromLabel) }
+    if (!arrived && mode === 'camera') return <><JourneyCamera {...cameraControls} live
+      destination={liveRoute.destination} step={step} direction={stepDirLabels[dir]} icon={Direction} mood={mascotMood} instruction={curStep.text}
+      waypoints={travelSteps.map(s => ({ label: s.target.label || s.text, meters: s.meters, approx: s.approx }))} />{exitDialog}</>
 
     return (
       <div className="focused-page journey-page">
-        <div className="journey-top">
-          <button className="back-link" onClick={() => setShowExit(true)}><X size={19} />Kết thúc</button>
-          <span>{liveRoute.totalMeters > 0 ? `Tổng ${liveRoute.totalMeters} m` : 'VinUni Wayfinder'}</span>
-          {speechAvailable && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(curStep?.text ?? arrivalStep?.text ?? `Bạn đã tới ${liveRoute.destination}.`)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
-        </div>
+        {!arrived && modeButton}
         <EventJourneyBadge />
         <div className="active-journey-layout">
           <section className="active-direction" aria-live="polite">
@@ -154,7 +161,7 @@ export function JourneyPage() {
                       filename={`checkin-${event.id}`}
                     />
                     {arrivalCtx.nextStop && arrivalCtx.nextStopRoute && (
-                      <Link to={arrivalCtx.nextStopRoute} className="button button-primary full-width">
+                      <Link to={`${arrivalCtx.nextStopRoute}&mode=${mode}`} className="button button-primary full-width">
                         Đi tiếp tới trạm kế tiếp: {arrivalCtx.nextStop.label}<ArrowRight size={19} />
                       </Link>
                     )}
@@ -179,7 +186,12 @@ export function JourneyPage() {
             <p className="timeline-note">Tuyến đường được tính từ đồ thị VinUni Wayfinder.</p>
           </aside>
         </div>
-        {showExit && <Modal title="Dừng hành trình?" onClose={() => setShowExit(false)}><p>Bạn có thể bắt đầu lại bất kỳ lúc nào.</p><div className="dialog-actions"><button className="button button-quiet" onClick={() => setShowExit(false)}>Tiếp tục đi</button><Link className="button button-primary" to={`/di-den?${stopBackQuery}`}>Dừng hành trình</Link></div></Modal>}
+        <div className="journey-top">
+          <button className="back-link" onClick={() => setShowExit(true)}><X size={19} />Kết thúc</button>
+          <span>{liveRoute.totalMeters > 0 ? `Tổng ${liveRoute.totalMeters} m` : 'VinUni Wayfinder'}</span>
+          {speechAvailable && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(curStep?.text ?? arrivalStep?.text ?? `Bạn đã tới ${liveRoute.destination}.`)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
+        </div>
+        {exitDialog}
       </div>
     )
   }
@@ -195,13 +207,14 @@ export function JourneyPage() {
   const current = getPlace(step === 0 ? from.id : route[step - 1].to)!
   const progress = route.length ? Math.round((step / route.length) * 100) : 100
 
+  if (!arrived && mode === 'camera') return <><JourneyCamera {...cameraControls} live={false}
+    destination={to.name} step={step} direction={turnLabels[edge.turn]} icon={Direction}
+    mood={edge.turn === 'straight' ? 'walk' : edge.turn} instruction={edge.instruction}
+    waypoints={route.map(e => ({ label: getPlace(e.to)?.name || e.to }))} />{exitDialog}</>
+
   return (
     <div className="focused-page journey-page">
-      <div className="journey-top">
-        <button className="back-link" onClick={() => setShowExit(true)}><X size={19} />Kết thúc</button>
-        <span>Tuyến minh hoạ</span>
-        {speechAvailable && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(edge?.instruction ?? `Bạn đã tới ${to.name}.`)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
-      </div>
+      {!arrived && modeButton}
       <EventJourneyBadge />
       <div className="active-journey-layout">
         <section className="active-direction" aria-live="polite">
@@ -224,7 +237,7 @@ export function JourneyPage() {
                     filename={`checkin-${event.id}`}
                   />
                   {arrivalCtx.nextStop && arrivalCtx.nextStopRoute && (
-                    <Link to={arrivalCtx.nextStopRoute} className="button button-primary full-width">
+                    <Link to={`${arrivalCtx.nextStopRoute}&mode=${mode}`} className="button button-primary full-width">
                       Đi tiếp tới trạm kế tiếp: {arrivalCtx.nextStop.label}<ArrowRight size={19} />
                     </Link>
                   )}
@@ -237,7 +250,12 @@ export function JourneyPage() {
         </section>
         <aside className="journey-timeline"><div className="section-heading"><h2>Hành trình của bạn</h2><Footprints size={21} /></div><p>Bạn xác nhận sau mỗi chặng.</p><ol className="timeline">{[from, ...route.map(e => getPlace(e.to)!)].map((place, index) => <li key={place.id} className={index < step ? 'complete' : index === step ? 'current' : ''}><span className="timeline-marker">{index < step ? <Check size={15} /> : index === step ? <Navigation2 size={15} /> : index}</span><div><strong>{place.name}</strong><small>{index === step ? arrived ? 'Đã tới nơi' : 'Mốc đã xác nhận' : index === 0 ? 'Điểm xuất phát' : index === route.length ? 'Điểm đến' : 'Điểm đi qua'}</small></div></li>)}</ol><p className="timeline-note">Tuyến mẫu không theo dõi vị trí trực tiếp.</p></aside>
       </div>
-      {showExit && <Modal title="Dừng hành trình mẫu?" onClose={() => setShowExit(false)}><p>Bạn có thể bắt đầu lại bất kỳ lúc nào.</p><div className="dialog-actions"><button className="button button-quiet" onClick={() => setShowExit(false)}>Tiếp tục đi</button><Link className="button button-primary" to={`/di-den?from=${from.id}&to=${to.id}`}>Dừng hành trình</Link></div></Modal>}
+      <div className="journey-top">
+        <button className="back-link" onClick={() => setShowExit(true)}><X size={19} />Kết thúc</button>
+        <span>Tuyến minh hoạ</span>
+        {speechAvailable && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(edge?.instruction ?? `Bạn đã tới ${to.name}.`)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
+      </div>
+      {exitDialog}
     </div>
   )
 }

@@ -24,7 +24,7 @@ export function parseCoord(value: string | null): number | undefined {
 export function Brand() {
   return (
     <Link to="/" className="brand" aria-label={`${brand.name}, về Bản đồ`}>
-      <span className="brand-mark"><MapPin aria-hidden="true" size={26} strokeWidth={1.8} /></span>
+      <img className="brand-mark" src="/icons/icon-192.png" width={42} height={42} alt="" />
       <span>VinUni <span className="brand-product">AR Map</span><span className="brand-tagline">Khám phá khuôn viên</span></span>
     </Link>
   )

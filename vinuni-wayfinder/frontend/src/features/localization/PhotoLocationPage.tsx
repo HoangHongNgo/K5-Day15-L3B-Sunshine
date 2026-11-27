@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Camera, Check, CheckCheck, ChevronRight, ImagePlus, Info, LoaderCircle, MapPin, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Camera, Check, CheckCheck, ChevronRight, Info, LoaderCircle, MapPin, ShieldCheck } from 'lucide-react'
 import { BackLink } from '../../shared/ui'
 import { useEventJourney } from '../events/EventContext'
 import { ApiError, prepPhotoBlob, wayfinderApi, type BackendLocateResponse } from '../wayfinder/wayfinderApi'
@@ -24,8 +24,8 @@ export function PhotoLocationPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
+  useEffect(() => () => abortRef.current?.abort(), [])
   useEffect(() => () => {
-    abortRef.current?.abort()
     if (preview.startsWith('blob:')) URL.revokeObjectURL(preview)
   }, [preview])
 
@@ -110,7 +110,7 @@ export function PhotoLocationPage() {
       <div className={`camera-preview ${preview ? 'has-image' : ''}`} hidden={!preview}>
         {preview ? <><img src={preview} alt="Ảnh vị trí bạn vừa chọn" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setError('Không đọc được ảnh này. Hãy chọn một ảnh khác.'); setPreview('') }} />{loading && <span role="status" className="image-loading">Đang mở ảnh…</span>}</> : <><div className="camera-reticle"><Camera size={46} strokeWidth={1.2} aria-hidden="true" /></div><p>Đưa biển tên phòng vào khung hình</p></>}
       </div>
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="visually-hidden" tabIndex={-1} onChange={selectPhoto} aria-label="Chọn ảnh vị trí" />
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="visually-hidden" tabIndex={-1} onChange={selectPhoto} aria-label="Chọn ảnh vị trí" />
       {error && <p className="error-message" role="alert">{error}</p>}
       {isLive && locating && <div className="locating-status" role="status"><LoaderCircle size={19} className="recognition-spinner" /><span>Đang định vị bằng máy chủ…</span></div>}
 
@@ -151,7 +151,6 @@ export function PhotoLocationPage() {
 
       <div className="photo-actions">
         <button className="button button-quiet" onClick={() => fileRef.current?.click()}><Camera size={20} />{awaitingSecond ? 'Chọn ảnh góc thứ 2' : preview ? 'Chọn ảnh khác' : 'Chọn ảnh có sẵn'}</button>
-        <Link className="button button-quiet" to={link(`/anh-mau${to ? `?to=${to}` : ''}`)}><ImagePlus size={19} />Dùng ảnh mẫu</Link>
       </div>
       {preview && <button className="text-link" onClick={() => resetCapture(false)}>Mở lại camera AR<Camera size={17} /></button>}
       {!isLive && <div className="photo-status" role="status"><Info size={20} /><div><strong>{preview ? 'Ảnh đã chọn, chưa nhận diện vị trí' : 'Bạn đang thử luồng chụp ảnh'}</strong><p>Nhận diện tự động chưa sẵn sàng. Hãy chọn điểm xuất phát để tiếp tục.</p></div></div>}

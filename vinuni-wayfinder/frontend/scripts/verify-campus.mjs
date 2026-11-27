@@ -50,7 +50,7 @@ try {
   await page.locator('.map-result').getByRole('button', { name: /Quầy cà phê Toà I/ }).click()
   await page.locator('.destination-card').getByRole('heading', { name: 'Quầy cà phê' }).waitFor()
   assert.equal(await select.inputValue(), 'all')
-  await page.getByRole('link', { name: 'Thử ảnh mẫu' }).click()
+  await page.getByRole('link', { name: 'Định vị bằng ảnh' }).click()
   assert.equal(new URL(page.url()).searchParams.get('to'), 'coffee')
   report.checks.push('No place/photo pins or filter chips, including with old saved pins; right-side dropdown filters with search and preserves URL; photo flow keeps chosen destination')
 
@@ -66,6 +66,9 @@ try {
   await page.getByRole('button', { name: 'Đúng, mình đang ở đây' }).click()
   assert.equal(await page.getByLabel('Điểm xuất phát', { exact: true }).inputValue(), 'lobby')
   assert.equal(await page.getByLabel('Điểm đến', { exact: true }).inputValue(), 'i109')
+  if (await page.getByRole('button', { name: 'Thẻ chỉ đường', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Thẻ chỉ đường', exact: true }).click()
+  }
   await page.getByRole('button', { name: 'Xem hành trình' }).click()
   await page.getByRole('heading', { name: 'Đi thẳng', exact: true }).waitFor()
   report.checks.push('Sample photo → visible locating → disclosed mock result → explicit confirmation → route with correct origin and destination')
@@ -134,6 +137,9 @@ try {
   await page.getByRole('heading', { name: 'Đây có phải nơi bạn đang đứng?' }).waitFor()
   await page.reload({ waitUntil: 'networkidle' })
   await page.getByRole('button', { name: 'Đúng, mình đang ở đây' }).click()
+  if (await page.getByRole('button', { name: 'Thẻ chỉ đường', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Thẻ chỉ đường', exact: true }).click()
+  }
   await page.getByRole('button', { name: 'Xem hành trình' }).click()
   await page.getByRole('heading', { name: 'Đi thẳng', exact: true }).waitFor()
   await context.setOffline(false)

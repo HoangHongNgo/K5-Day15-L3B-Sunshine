@@ -36,13 +36,9 @@ try {
  await page.emulateMedia({reducedMotion:'no-preference'})
  await page.waitForTimeout(400)
  assert.notEqual(await sprite.evaluate(e=>getComputedStyle(e).transform),fixed)
- await page.getByRole('button',{name:'Dừng chuyển động Vini'}).click()
- await page.waitForTimeout(30)
- const paused = await sprite.evaluate(e=>getComputedStyle(e).transform)
- await page.waitForTimeout(450)
- assert.equal(await sprite.evaluate(e=>getComputedStyle(e).transform),paused)
+ assert.equal(await page.getByRole('button',{name:'Dừng chuyển động Vini'}).count(),0)
  await page.emulateMedia({reducedMotion:'reduce'})
- report.checks.push('Generated Vini asset is used; CSS motion runs, reduced motion and explicit pause stop it')
+ report.checks.push('Vini animates and respects the device motion preference without a header control')
  const routes=['/','/dia-diem/i109','/di-den?from=lobby&to=i109','/vi-tri','/anh','/hanh-trinh?from=lobby&to=i109','/da-luu','/ve-ung-dung']
  for(const route of routes) {
   await page.goto(`${base}${route}`,{waitUntil:'networkidle'})
@@ -77,10 +73,9 @@ try {
  await page.reload({waitUntil:'networkidle'})
  await page.getByRole('button',{name:'Mở camera AR',exact:true}).click()
  await page.getByRole('alert').filter({hasText:'Bạn chưa cấp quyền camera'}).waitFor()
- await page.getByRole('link',{name:'Dùng ảnh mẫu'}).click()
- await page.getByRole('heading',{name:'Thử định vị từ một tấm ảnh'}).waitFor()
- await page.getByRole('link',{name:/Kiến trúc khuôn viên.*Thử ảnh này/}).click()
- await page.getByRole('heading',{name:'Đây có phải nơi bạn đang đứng?'}).waitFor()
+ await page.getByLabel('Chọn ảnh vị trí').setInputFiles('public/icons/icon-192.png')
+ await page.getByRole('img',{name:'Ảnh vị trí bạn vừa chọn'}).waitFor()
+ await page.getByRole('link',{name:'Chọn vị trí bằng tên phòng'}).waitFor()
  report.checks.push('Camera denial offers photo/manual fallback without a fabricated location result')
  const shots = [['/',390,'v2-mobile'],['/',1440,'v2-desktop'],['/anh',390,'v2-camera'],['/di-den?from=lobby&to=i109',390,'v2-plan'],['/hanh-trinh?from=lobby&to=i109',390,'v2-journey'],['/hanh-trinh?from=lobby&to=i109&buoc=3',390,'v2-arrived']]
  for(const [route,width,name] of shots) {
