@@ -1,6 +1,6 @@
 """Supabase (PostgREST + Storage) bằng httpx. Chỉ chạy trong backend.
 
-Cấu hình qua biến môi trường hoặc file `backend/.env` (đã bị gitignore):
+Cấu hình qua biến môi trường hoặc file `.env` ở gốc repo (đã bị gitignore):
     SUPABASE_URL=https://<project-ref>.supabase.co
     SUPABASE_SERVICE_KEY=<secret key>      # khoá riêng, KHÔNG đưa vào frontend / Git / chat
 Thiếu một trong hai thì backend chạy chế độ cục bộ (file trong backend/data/).
@@ -10,27 +10,13 @@ Mọi bảng đều bật RLS và không có policy: chỉ khoá service mới �
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from urllib.parse import quote
 
 import httpx
 
-BACKEND = Path(__file__).resolve().parents[1]
+from .env import load_root_env
 
-
-def _load_env():
-    p = BACKEND / '.env'
-    if not p.exists():
-        return
-    for line in p.read_text(encoding='utf-8-sig').splitlines():
-        line = line.strip()
-        if not line or line.startswith('#') or '=' not in line:
-            continue
-        k, v = line.split('=', 1)
-        os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
-
-
-_load_env()
+load_root_env()
 URL = (os.getenv('SUPABASE_URL') or '').strip().rstrip('/')
 KEY = (os.getenv('SUPABASE_SERVICE_KEY') or '').strip()
 ENABLED = bool(URL and KEY)

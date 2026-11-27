@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { loadEnv, type Plugin } from 'vite'
+import type { Plugin } from 'vite'
 import { chooseChromaKey, mascotCutout } from './mascotCutout'
+import { resolveServerEnv } from './rootEnv'
 
 // Development-only API: never included in the browser bundle or production
 // deployment. Production requires authenticated club accounts and quotas first.
@@ -19,8 +20,8 @@ export function mascotApi(): Plugin {
     return JSON.parse(result)
   }
   return { name: 'local-mascot-api', apply: 'serve', configureServer(server) {
-    // Load only in Node. These values are never added to Vite's client define.
-    const apiKey = process.env.OPENAI_API_KEY || loadEnv(server.config.mode, server.config.root, '').OPENAI_API_KEY
+    // Load only in Node from repo root .env (fallback frontend/). Never added to Vite's client define.
+    const apiKey = resolveServerEnv('OPENAI_API_KEY', { frontendRoot: server.config.root, mode: server.config.mode })
     server.middlewares.use(async (req, res, next) => {
       const path = req.url?.split('?')[0]
       if (path !== '/api/mascot/status' && path !== '/api/mascot/generate') return next()

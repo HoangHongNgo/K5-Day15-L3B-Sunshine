@@ -105,8 +105,7 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
 
 - Project **vinwayfinder** (riêng tư): điểm, đường nối, phòng, vết đi bộ, vector (bảng `embeddings`, float16 bytea), ảnh
   (kho `maps`, `frames`). Mọi bảng bật RLS, **không có policy**; chỉ khoá service đọc/ghi.
-- Backend tự chuyển chế độ: có `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` trong `backend/.env` thì dùng Supabase, thiếu thì
-  dùng `backend/data/`. `GET /api/health` trả `storage`. Khi có `.env`, sửa tay `site.json` sẽ không lên Supabase.
+- Backend tự chuyển chế độ: có `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` trong file `.env` ở gốc repo (mẫu ở `.env.example`) thì dùng Supabase, thiếu thì dùng `backend/data/`. `GET /api/health` trả `storage`. Khi có `.env`, sửa tay `site.json` sẽ không lên Supabase.
 - Lưu sơ đồ qua SQL `save_site(base_version, payload)`: người khác đã lưu thì 409 `version_conflict`. Vector nạp vào bộ
   nhớ lúc khởi động và đồng bộ ~20 s (8448 chiều vượt giới hạn chỉ mục pgvector). DELETE qua API phải có WHERE.
 
@@ -134,7 +133,7 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
 - Từ chối việc ngoài chỉ đường: điểm danh hộ, vào khu có khoá, lấy thông tin người khác, đổi luật/vai trò
   (prompt injection) → `[TỪ CHỐI]` + chỉ tới BTC / phòng CTSV. Mã check-in chỉ là nội dung QR nháp, BTC xác nhận tại cửa.
 - `POST /api/correct` chỉ gọi sau hành động xác nhận rõ ràng của người dùng (không gọi khi mount component).
-- Tạo mascot bằng AI (`vinuni-wayfinder/frontend/server/mascotApi.ts`, OpenAI) chỉ chạy ở Vite dev localhost; key nằm ở `vinuni-wayfinder/frontend/.env.local`, **không dùng tiền tố `VITE_`**. Lên production phải là API máy chủ có quyền CLB và quota.
+- Tạo mascot bằng AI (`vinuni-wayfinder/frontend/server/mascotApi.ts`, OpenAI) chỉ chạy ở Vite dev localhost; key `OPENAI_API_KEY` nằm trong file `.env` duy nhất ở gốc repo, **không dùng tiền tố `VITE_`**. Lên production phải là API máy chủ có quyền CLB và quota.
 - Mọi số liệu độ chính xác/thời gian phải có nguồn đo thật; `estSeconds` (1,2 m/s) là ước tính, ghi rõ như vậy.
 
 ## Luật dữ liệu và bảo mật (repo công khai)

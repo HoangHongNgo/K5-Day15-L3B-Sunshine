@@ -10,23 +10,24 @@ Hợp đồng (giữ nguyên để khung đo được token):
     cũng được, khung tự cộng token.
     Lỗi gọi model (hết lượt, sai key, mất mạng): cứ để exception bay ra — khung ghi lỗi vào cột error.
 
-Chế độ giả (mặc định khi .env chưa có MODEL_PROVIDER, hoặc MODEL_PROVIDER=fake):
-    trả một câu giả cố định, model "fake", token 0 — để luồng chạy hết từ trước CP2 (guide bước 3.2).
-    Lượt `run.py eval` / `run.py simulate` chạy bằng model giả KHÔNG được tính.
-
-Nối model thật: điền .env (chép từ .env.example), rồi viết nhánh gọi API ở dưới theo docs/connect-model.md
-(có ví dụ OpenAI, Claude, model chạy trên máy, và cách nối nhà cung cấp khác). Không dán API key vào file này.
+Đọc cấu hình từ file `.env` ở thư mục gốc repo (mẫu ở `.env.example`):
+    MODEL_PROVIDER=codex   # codex / openai / fake
+    MODEL_NAME=6.2-sol
+    API_KEY=...            # dự phòng OPENAI_API_KEY nếu API_KEY để trống
 """
 import json
 import os
+import urllib.error
+import urllib.request
 
 from tracing import model_call
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+URL_OPENAI = "https://api.openai.com/v1/chat/completions"
 
 
 def load_env(path=os.path.join(ROOT, ".env")):
-    """Đọc file .env (KEY=VALUE mỗi dòng) vào biến môi trường, không ghi đè biến đã có. Khung — không cần sửa."""
+    """Đọc file .env (KEY=VALUE mỗi dòng) vào biến môi trường, không ghi đè biến đã có."""
     if not os.path.exists(path):
         return
     with open(path, encoding="utf-8-sig") as f:
@@ -35,13 +36,54 @@ def load_env(path=os.path.join(ROOT, ".env")):
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, value = line.split("=", 1)
-            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+            k = key.strip()
+            v = value.strip().strip('"').strip("'")
+            if k and v:
+                os.environ.setdefault(k, v)
 
 
 load_env()
 MODEL_PROVIDER = (os.environ.get("MODEL_PROVIDER") or "fake").strip().lower()
-MODEL_NAME = (os.environ.get("MODEL_NAME") or "").strip()
-API_KEY = (os.environ.get("API_KEY") or "").strip()
+MODEL_NAME = (os.environ.get("MODEL_NAME") or "6.2-sol").strip()
+API_KEY = (os.environ.get("API_KEY") or os.environ.get("OPENAI_API_KEY") or "").strip()
+MODEL_BASE_URL = (os.environ.get("MODEL_BASE_URL") or URL_OPENAI).strip()
+
+
+def post_json(url: str, headers: dict, body: dict, timeout: int = 60) -> dict:
+    """Gửi POST JSON, trả về JSON phản hồi. Chỉ dùng thư viện chuẩn (urllib)."""
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        method="POST",
+        headers=dict({"Content-Type": "application/json"}, **headers),
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError("HTTP %d: %s" % (e.code, e.read().decode("utf-8", "replace")[:300]))
+
+
+def call_openai_compat(system: str, user: str) -> dict:
+    """Gọi API tương thích OpenAI (dùng cho MODEL_PROVIDER=codex hoặc openai)."""
+    if not API_KEY:
+        raise RuntimeError("Thiếu API_KEY (hoặc OPENAI_API_KEY) trong file .env ở gốc repo")
+    messages = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": user}]
+    data = post_json(
+        MODEL_BASE_URL,
+        {"Authorization": "Bearer " + API_KEY},
+        {"model": MODEL_NAME, "messages": messages},
+    )
+    usage = data.get("usage") or {}
+    tokens_in = usage.get("prompt_tokens", usage.get("input_tokens", 0))
+    tokens_out = usage.get("completion_tokens", usage.get("output_tokens", 0))
+    text = data["choices"][0]["message"]["content"]
+    return {
+        "text": text,
+        "model": MODEL_NAME,
+        "tokens_in": int(tokens_in),
+        "tokens_out": int(tokens_out),
+    }
 
 
 @model_call
@@ -63,8 +105,10 @@ def call_model(system: str, user: str) -> dict:
             "tokens_out": 0,
         }
 
-    # NHÓM VIẾT: gọi model thật ở đây (theo MODEL_PROVIDER, MODEL_NAME, API_KEY) rồi trả đúng 4 khoá.
-    # Ví dụ chép được cho từng nhà cung cấp: docs/connect-model.md mục 2.
+    if MODEL_PROVIDER in ("codex", "openai"):
+        return call_openai_compat(system, user)
+
     raise NotImplementedError(
         "chưa viết phần gọi model thật cho MODEL_PROVIDER=%s trong codebase/ai.py — xem docs/connect-model.md"
-        % MODEL_PROVIDER)
+        % MODEL_PROVIDER
+    )

@@ -4,7 +4,7 @@
     .\\.venv\\Scripts\\python.exe migrate_to_supabase.py            # chuyển, từ chối nếu Supabase đã có dữ liệu
     .\\.venv\\Scripts\\python.exe migrate_to_supabase.py --replace  # xoá vector/ảnh khung trên Supabase rồi chuyển lại
 
-Cần backend/.env có SUPABASE_URL và SUPABASE_SERVICE_KEY. Không in khoá ra màn hình.
+Cần file `.env` ở gốc repo (hoặc `backend/.env`) có SUPABASE_URL và SUPABASE_SERVICE_KEY. Không in khoá ra màn hình.
 Thứ tự: bản đồ/điểm/đường nối/phòng -> vết đi bộ -> ảnh sơ đồ -> vector nhận diện -> ảnh khung nhỏ.
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ ap.add_argument('--replace', action='store_true', help='xoá vector và ảnh kh
 args = ap.parse_args()
 
 if not supa.ENABLED:
-    sys.exit('Thiếu SUPABASE_URL hoặc SUPABASE_SERVICE_KEY trong backend/.env')
+    sys.exit('Thiếu SUPABASE_URL hoặc SUPABASE_SERVICE_KEY trong file .env ở gốc repo')
 db = supa.client()
 
 src = SITE if SITE.exists() else SEED

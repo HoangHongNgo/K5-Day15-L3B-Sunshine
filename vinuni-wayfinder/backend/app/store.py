@@ -15,10 +15,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import supa
+from .env import load_root_env
 
+load_root_env()
 BACKEND = Path(__file__).resolve().parents[1]
 ROOT = BACKEND.parent
-DATA = Path(os.getenv('WAYFINDER_DATA', BACKEND / 'data'))
+DATA = Path(os.getenv('WAYFINDER_DATA') or (BACKEND / 'data'))
 MAPS_SRC = ROOT / 'maps'                     # ảnh nguồn + seed (không commit)
 SEED = MAPS_SRC / 'seed-site.json'
 SITE = DATA / 'site.json'

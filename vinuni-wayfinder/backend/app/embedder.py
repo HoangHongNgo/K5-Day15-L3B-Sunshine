@@ -11,10 +11,14 @@ import threading
 import numpy as np
 from PIL import Image
 
+from .env import load_root_env
 from .store import BACKEND
 
-os.environ.setdefault('TORCH_HOME', str(BACKEND / '.torch'))
-os.environ.setdefault('HF_HOME', str(BACKEND / '.torch' / 'hf'))
+load_root_env()
+if not os.environ.get('TORCH_HOME'):
+    os.environ['TORCH_HOME'] = str(BACKEND / '.torch')
+if not os.environ.get('HF_HOME'):
+    os.environ['HF_HOME'] = str(BACKEND / '.torch' / 'hf')
 
 SIDE = 322
 DIM = 8448

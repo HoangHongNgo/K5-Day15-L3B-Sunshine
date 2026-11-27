@@ -39,7 +39,7 @@ project đó. Mọi bảng bật RLS và không có policy, hai kho ảnh `maps`
 
 Mỗi thành viên:
 1. Xin khoá `SUPABASE_SERVICE_KEY` từ người quản lý project (qua kênh riêng của nhóm).
-2. Sao chép `backend/.env.example` thành `backend/.env`, điền `SUPABASE_URL` và `SUPABASE_SERVICE_KEY`.
+2. Sao chép `.env.example` ở thư mục gốc repo thành `.env` ở gốc repo, điền `SUPABASE_URL` và `SUPABASE_SERVICE_KEY` (dùng chung cho cả khung AI, backend và frontend).
 3. Chạy backend như bình thường. `GET /api/health` sẽ báo `"storage": "supabase"`. Thiếu `.env` thì backend chạy chế độ
    cục bộ (dữ liệu trong `backend/data/`, không chia sẻ).
 
