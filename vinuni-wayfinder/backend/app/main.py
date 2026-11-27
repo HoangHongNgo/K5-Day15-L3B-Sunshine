@@ -10,10 +10,12 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from PIL import Image, ImageOps
 
+from . import auth_store as auth_mod
+from . import events_store as ev_mod
 from . import store, supa
 from .embedder import DIM, MODEL_NAME, embedder
 from .index import VectorIndex
@@ -23,6 +25,12 @@ from .store import DATA, MAPS_SRC, SAFE_NAME, SiteConflict, load_site, save_site
 app = FastAPI(title='VinUni Wayfinder')
 REMOTE = supa.client() if supa.ENABLED else None
 index = VectorIndex(DATA / 'index.npz', DIM, MODEL_NAME, remote=REMOTE)
+events_store = ev_mod.EventsStore(DATA / 'events.json', remote=REMOTE)
+auth_store = auth_mod.AuthStore(DATA / 'auth.json', remote=REMOTE)
+try:
+    auth_store.ensure_admin_from_env()
+except Exception:
+    pass
 _map_cache: dict[str, tuple[bytes, str]] = {}
 
 K = 10
@@ -443,3 +451,172 @@ async def import_site(file: UploadFile = File(...)):
     except (ValueError, KeyError, TypeError) as e:
         err(400, 'invalid_site', f'File không hợp lệ: {e}')
     return {'ok': True}
+
+
+# ---------------- đăng nhập & phân quyền BTC ----------------
+def _bearer_token(authorization: str | None) -> str | None:
+    if not authorization:
+        return None
+    parts = authorization.strip().split(None, 1)
+    if len(parts) == 2 and parts[0].lower() == 'bearer' and parts[1].strip():
+        return parts[1].strip()
+    return None
+
+
+def _require_btc(authorization: str | None) -> dict:
+    token = _bearer_token(authorization)
+    if not token:
+        err(401, 'unauthorized', 'Vui lòng đăng nhập tài khoản BTC để thực hiện thao tác này.')
+    try:
+        account = auth_store.get_session(token)
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+    if account is None:
+        err(401, 'unauthorized', 'Vui lòng đăng nhập tài khoản BTC để thực hiện thao tác này.')
+    return account
+
+
+@app.post('/api/auth/register')
+def auth_register(body: dict = Body(...)):
+    payload = dict(body or {})
+    try:
+        res = auth_store.register(
+            username=payload.get('username', ''),
+            password=payload.get('password', ''),
+            display_name=payload.get('displayName', ''),
+            club_name=payload.get('clubName', ''),
+            role='clb',
+        )
+        return {'ok': True, 'account': res['account'], 'token': res['token']}
+    except auth_mod.ValidationError as e:
+        err(422, 'invalid_auth', str(e))
+    except auth_mod.ConflictError as e:
+        err(409, 'username_taken', str(e))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+
+
+@app.post('/api/auth/login')
+def auth_login(body: dict = Body(...)):
+    payload = dict(body or {})
+    try:
+        res = auth_store.login(
+            username=payload.get('username', ''),
+            password=payload.get('password', ''),
+        )
+        return {'ok': True, 'account': res['account'], 'token': res['token']}
+    except auth_mod.AuthError as e:
+        err(401, 'invalid_credentials', str(e))
+    except auth_mod.ValidationError as e:
+        err(422, 'invalid_auth', str(e))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+
+
+@app.get('/api/auth/me')
+def auth_me(authorization: str | None = Header(default=None)):
+    token = _bearer_token(authorization)
+    if not token:
+        return {'authenticated': False, 'account': None}
+    try:
+        account = auth_store.get_session(token)
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+    if account is None:
+        return {'authenticated': False, 'account': None}
+    return {'authenticated': True, 'account': account}
+
+
+@app.post('/api/auth/logout')
+def auth_logout(authorization: str | None = Header(default=None)):
+    token = _bearer_token(authorization)
+    try:
+        auth_store.logout(token)
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+    return {'ok': True}
+
+
+# ---------------- sự kiện CLB & mascot (Supabase / cục bộ) ----------------
+@app.get('/api/events')
+def list_events():
+    try:
+        return events_store.list_all()
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+
+
+@app.put('/api/events/{event_id}')
+def upsert_event(event_id: str, body: dict = Body(...), authorization: str | None = Header(default=None)):
+    actor = _require_btc(authorization)
+    payload = dict(body or {})
+    payload['id'] = event_id
+    g = graph()
+    valid_locations = {r['id'] for r in g.rooms if r.get('node') in g.nodes}
+    try:
+        saved = events_store.save_event(payload, valid_locations=valid_locations, actor=actor)
+        return {'ok': True, 'event': saved, 'storage': events_store.storage_mode}
+    except PermissionError as e:
+        err(403, 'forbidden', str(e))
+    except ev_mod.ValidationError as e:
+        err(422, 'invalid_event', str(e))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+
+
+@app.delete('/api/events/{event_id}')
+def remove_event(event_id: str, authorization: str | None = Header(default=None)):
+    actor = _require_btc(authorization)
+    try:
+        events_store.delete_event(event_id, actor=actor)
+        return {'ok': True}
+    except PermissionError as e:
+        err(403, 'forbidden', str(e))
+    except ev_mod.ValidationError as e:
+        err(422, 'invalid_event', str(e))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+
+
+@app.post('/api/events/{event_id}/metrics')
+def record_event_metric(event_id: str, body: dict = Body(...)):
+    metric = str((body or {}).get('metric') or '').strip()
+    try:
+        counts = events_store.increment_metric(event_id, metric)
+    except ev_mod.ValidationError as e:
+        err(422, 'invalid_metric', str(e))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+    if counts is None:
+        err(404, 'not_found', 'Không tìm thấy sự kiện này.')
+    return {'ok': True, 'viewsCount': counts['viewsCount'], 'navigationsCount': counts['navigationsCount']}
+
+
+@app.put('/api/club-mascots/{mascot_id}')
+def upsert_club_mascot(mascot_id: str, body: dict = Body(...), authorization: str | None = Header(default=None)):
+    actor = _require_btc(authorization)
+    payload = dict(body or {})
+    payload['id'] = mascot_id
+    try:
+        saved = events_store.save_mascot(payload, actor=actor)
+        return {'ok': True, 'mascot': saved, 'storage': events_store.storage_mode}
+    except PermissionError as e:
+        err(403, 'forbidden', str(e))
+    except ev_mod.ValidationError as e:
+        err(422, 'invalid_mascot', str(e))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+
+
+@app.delete('/api/club-mascots/{mascot_id}')
+def remove_club_mascot(mascot_id: str, authorization: str | None = Header(default=None)):
+    actor = _require_btc(authorization)
+    try:
+        events_store.delete_mascot(mascot_id, actor=actor)
+        return {'ok': True}
+    except PermissionError as e:
+        err(403, 'forbidden', str(e))
+    except ev_mod.ValidationError as e:
+        err(422, 'invalid_mascot', str(e))
+    except supa.SupabaseError as e:
+        err(502, 'supabase', f'Lỗi Supabase: {e.message}')

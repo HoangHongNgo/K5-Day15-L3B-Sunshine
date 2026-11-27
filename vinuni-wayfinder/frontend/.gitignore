@@ -12,3 +12,4 @@ bun.lock
 output/
 # Real photos, plans and location data stay outside the public repository.
 public/local-data/
+.vercel

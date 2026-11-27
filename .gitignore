@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 supabase/.temp/
+.vercel/
 *.pem
 *service-account*.json
 credentials*.json

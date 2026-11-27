@@ -20,6 +20,9 @@ const wayfinderProxyPaths = [
   '/api/traces',
   '/api/export',
   '/api/import',
+  '/api/events',
+  '/api/club-mascots',
+  '/api/auth',
   '/maps',
 ]
 

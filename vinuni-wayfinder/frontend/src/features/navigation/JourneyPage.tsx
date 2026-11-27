@@ -4,11 +4,13 @@ import { ArrowLeft, ArrowRight, ArrowUp, Check, ChevronLeft, DoorOpen, Footprint
 import { DemoNote, EmptyState, IconButton, Modal, NotFound, parseCoord } from '../../shared/ui'
 import { SaveButton } from '../../shared/FavoritesContext'
 import { useEventJourney } from '../events/EventContext'
+import { EventQrCard } from '../events/EventQrCard'
 import { EventJourneyBadge } from '../events/EventsPages'
 import { Mascot } from '../mascot/Mascot'
 import { findRoute, type Turn } from '../wayfinder/data'
 import { ApiError, splitRouteSteps, stepDirection, wayfinderApi, type BackendRouteResponse, type StepDirection } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
+import { resolveArrivalContext } from './eventArrival'
 
 const turnIcons: Record<Turn, LucideIcon> = { straight: ArrowUp, left: ArrowLeft, right: ArrowRight }
 const turnLabels: Record<Turn, string> = { straight: 'Đi thẳng', left: 'Rẽ trái', right: 'Rẽ phải' }
@@ -17,13 +19,15 @@ const stepDirLabels: Record<StepDirection, string> = { straight: 'Đi thẳng', 
 
 export function JourneyPage() {
   const { getPlace, isLive } = useWayfinder()
-  const { link } = useEventJourney()
+  const { event, link } = useEventJourney()
   const [params] = useSearchParams()
   const rawFrom = params.get('from') ?? ''
   const fromLabel = params.get('fromLabel') ?? ''
   const rawTo = params.get('to') ?? ''
+  const stopParam = params.get('stop')
   const lat = parseCoord(params.get('lat'))
   const lng = parseCoord(params.get('lng'))
+  const arrivalCtx = event && rawTo ? resolveArrivalContext(event, rawTo, stopParam) : null
   const hasGps = isLive && lat !== undefined && lng !== undefined
   const fromPlace = getPlace(rawFrom)
   const toPlace = getPlace(rawTo)
@@ -136,7 +140,28 @@ export function JourneyPage() {
             {speechMessage && <p className="inline-feedback" role="status">{speechMessage}</p>}
             <div className="journey-progress"><div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Tiến độ hành trình"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><span>{step}/{travelSteps.length} chặng đã xác nhận</span></div>
             {arrived ? (
-              <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link>{toPlace && <SaveButton place={toPlace} />}</div>
+              <>
+                {event && arrivalCtx && (
+                  <div className="journey-arrival-event">
+                    <EventQrCard
+                      compact
+                      size={180}
+                      value={arrivalCtx.checkinCode}
+                      copyValue={arrivalCtx.checkinCode}
+                      copyLabel="Sao chép mã check-in"
+                      title="Mã QR Check-in tại cửa"
+                      subtitle="Đưa mã này cho Ban Tổ Chức quét xác nhận khi tới cửa (app không tự điểm danh)."
+                      filename={`checkin-${event.id}`}
+                    />
+                    {arrivalCtx.nextStop && arrivalCtx.nextStopRoute && (
+                      <Link to={arrivalCtx.nextStopRoute} className="button button-primary full-width">
+                        Đi tiếp tới trạm kế tiếp: {arrivalCtx.nextStop.label}<ArrowRight size={19} />
+                      </Link>
+                    )}
+                  </div>
+                )}
+                <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link>{toPlace && <SaveButton place={toPlace} />}</div>
+              </>
             ) : (
               <><button className="button button-primary full-width" onClick={() => goStep(step + 1)}>Đã xong chặng này<Check size={19} /></button><div className="journey-controls"><button disabled={step === 0} onClick={() => goStep(step - 1)}><ChevronLeft size={18} />Chặng trước</button><Link to={link(`/vi-tri?to=${rawTo}`)}><RotateCcw size={16} />Đổi điểm xuất phát</Link></div></>
             )}
@@ -184,7 +209,30 @@ export function JourneyPage() {
           <div className={`direction-stage ${arrived ? 'arrived' : ''}`}><div className="journey-companion"><Mascot mood={arrived ? 'jump' : edge.turn === 'left' ? 'left' : edge.turn === 'right' ? 'right' : 'walk'} size={122} /><span className="companion-arrow"><Direction size={50} strokeWidth={1.5} aria-hidden="true" /></span></div><h2>{arrived ? to.name : turnLabels[edge.turn]}</h2><p>{arrived ? 'Đối chiếu biển tên trước khi vào phòng.' : edge.instruction}</p><span className="direction-location"><MapPin size={15} />{arrived ? 'Toà I, tầng trệt' : `Từ ${current.short}`}</span></div>
           {speechMessage && <p className="inline-feedback" role="status">{speechMessage}</p>}
           <div className="journey-progress"><div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Tiến độ hành trình"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><span>{step}/{route.length} chặng đã xác nhận</span></div>
-          {arrived ? <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link><SaveButton place={to} /></div> : <><button className="button button-primary full-width" onClick={() => goStep(step + 1)}>Đã tới {getPlace(edge.to)?.short}<Check size={19} /></button><div className="journey-controls"><button disabled={step === 0} onClick={() => goStep(step - 1)}><ChevronLeft size={18} />Chặng trước</button><Link to={link(`/vi-tri?to=${to.id}`)}><RotateCcw size={16} />Đổi điểm xuất phát</Link></div></>}
+          {arrived ? (
+            <>
+              {event && arrivalCtx && (
+                <div className="journey-arrival-event">
+                  <EventQrCard
+                    compact
+                    size={180}
+                    value={arrivalCtx.checkinCode}
+                    copyValue={arrivalCtx.checkinCode}
+                    copyLabel="Sao chép mã check-in"
+                    title="Mã QR Check-in tại cửa"
+                    subtitle="Đưa mã này cho Ban Tổ Chức quét xác nhận khi tới cửa (app không tự điểm danh)."
+                    filename={`checkin-${event.id}`}
+                  />
+                  {arrivalCtx.nextStop && arrivalCtx.nextStopRoute && (
+                    <Link to={arrivalCtx.nextStopRoute} className="button button-primary full-width">
+                      Đi tiếp tới trạm kế tiếp: {arrivalCtx.nextStop.label}<ArrowRight size={19} />
+                    </Link>
+                  )}
+                </div>
+              )}
+              <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link><SaveButton place={to} /></div>
+            </>
+          ) : <><button className="button button-primary full-width" onClick={() => goStep(step + 1)}>Đã tới {getPlace(edge.to)?.short}<Check size={19} /></button><div className="journey-controls"><button disabled={step === 0} onClick={() => goStep(step - 1)}><ChevronLeft size={18} />Chặng trước</button><Link to={link(`/vi-tri?to=${to.id}`)}><RotateCcw size={16} />Đổi điểm xuất phát</Link></div></>}
           <DemoNote compact />
         </section>
         <aside className="journey-timeline"><div className="section-heading"><h2>Hành trình của bạn</h2><Footprints size={21} /></div><p>Bạn xác nhận sau mỗi chặng.</p><ol className="timeline">{[from, ...route.map(e => getPlace(e.to)!)].map((place, index) => <li key={place.id} className={index < step ? 'complete' : index === step ? 'current' : ''}><span className="timeline-marker">{index < step ? <Check size={15} /> : index === step ? <Navigation2 size={15} /> : index}</span><div><strong>{place.name}</strong><small>{index === step ? arrived ? 'Đã tới nơi' : 'Mốc đã xác nhận' : index === 0 ? 'Điểm xuất phát' : index === route.length ? 'Điểm đến' : 'Điểm đi qua'}</small></div></li>)}</ol><p className="timeline-note">Tuyến mẫu không theo dõi vị trí trực tiếp.</p></aside>

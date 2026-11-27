@@ -10,6 +10,7 @@ import '@fontsource/be-vietnam-pro/latin-700.css'
 import App from './App'
 import { FavoritesProvider } from './shared/FavoritesContext'
 import { WayfinderProvider } from './features/wayfinder/WayfinderContext'
+import { AuthProvider } from './features/events/AuthContext'
 import { EventsProvider } from './features/events/EventContext'
 import './shared/styles/styles.css'
 import './shared/styles/glass.css'
@@ -29,11 +30,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <WayfinderProvider>
-        <FavoritesProvider>
-          <EventsProvider>
-            <App />
-          </EventsProvider>
-        </FavoritesProvider>
+        <AuthProvider>
+          <FavoritesProvider>
+            <EventsProvider>
+              <App />
+            </EventsProvider>
+          </FavoritesProvider>
+        </AuthProvider>
       </WayfinderProvider>
     </BrowserRouter>
   </React.StrictMode>,

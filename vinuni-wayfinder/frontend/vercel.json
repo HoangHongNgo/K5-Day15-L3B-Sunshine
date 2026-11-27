@@ -6,6 +6,18 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://vinuni-wayfinder-backend-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/maps/:path*",
+      "destination": "https://vinuni-wayfinder-backend-production.up.railway.app/maps/:path*"
+    },
+    {
+      "source": "/thu-thap",
+      "destination": "/index.html"
+    },
+    {
       "source": "/di-den",
       "destination": "/index.html"
     },

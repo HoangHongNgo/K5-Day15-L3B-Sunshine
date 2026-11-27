@@ -103,6 +103,17 @@ class TestBackendRootEnvLoader(unittest.TestCase):
             self.assertNotIn("HF_HOME", target_env)
             self.assertEqual(target_env["SUPABASE_URL"], "https://x.supabase.co")
 
+    def test_shallow_container_path_does_not_raise_index_error(self):
+        spec = importlib.util.spec_from_file_location("wayfinder_env_shallow", ENV_MOD_PATH)
+        assert spec and spec.loader
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        # Inside Docker container: /app/app/env.py only has parents /app/app, /app, /
+        paths = mod.candidate_env_paths(pathlib.Path("/app/app/env.py"))
+        self.assertEqual(paths[-1], pathlib.Path("/app/.env"))
+        self.assertGreaterEqual(len(paths), 1)
+
 
 class TestCodebaseAiRootEnv(unittest.TestCase):
     def test_codex_provider_calls_openai_compatible_endpoint_with_usage_tokens(self):

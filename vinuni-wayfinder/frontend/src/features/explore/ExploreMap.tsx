@@ -2,6 +2,7 @@ import { lazy, Suspense, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarDays, ArrowDown, ArrowUpRight, BookOpen, Camera, ChevronDown, ChevronRight, Coffee, Compass, DoorOpen, ImagePlus, Layers, Leaf, Lightbulb, List, MapPin, Navigation, Search, SlidersHorizontal, X, type LucideIcon } from 'lucide-react'
 import { categories, type Category, type Place } from '../wayfinder/data'
+import { FeaturedEventsStrip } from '../events/FeaturedEventsStrip'
 import { Mascot } from '../mascot/Mascot'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
 
@@ -38,6 +39,7 @@ export default function ExploreMap({ save, onHello }: { save: (place: Place) => 
         </select>
       </div></div>
       <div className="explorer-results">
+        {!filtered && <FeaturedEventsStrip />}
         <div className="section-heading"><h2>{category !== 'all' ? categories.find(c => c.id === category)?.label : filtered ? 'Địa điểm phù hợp' : 'Điểm đến của bạn'}</h2><span className="result-count" role="status">{results.length} địa điểm</span><button className="mobile-results-close icon-button" aria-label="Đóng danh sách" onClick={() => { setListOpen(false); setParams({}, { replace: true }) }}><X size={18} /></button></div>
         {results.length ? <div className="place-list">{results.map(p => { const Icon = icons[p.icon]; return <div className={`place-row map-result ${place.id === p.id ? 'is-selected' : ''}`} key={p.id}><button className="place-row-link" onClick={() => select(p.id)}><span className={`place-symbol tone-${p.category}`}><Icon size={22} strokeWidth={1.5} /></span><span className="place-row-copy"><strong>{p.name}</strong><span>{p.building ? p.building : 'Toà I · Tầng trệt'}</span></span><ChevronRight size={17} /></button>{save(p)}</div> })}</div> : <div className="empty-state"><Search size={30} /><h2>Chưa thấy nơi bạn tìm</h2><p>Thử mã phòng như I109, hoặc tên ngắn như “cà phê”.</p><button className="button button-quiet" onClick={() => setParams({})}>Xem các địa điểm</button></div>}
         <Link to="/vi-tri" className="locate-shortcut"><Compass size={21} /><span>Chưa biết mình ở đâu?<small>Chọn một điểm bạn nhận ra</small></span><ArrowUpRight size={18} /></Link>

@@ -35,6 +35,9 @@ describe('Vite dev proxy for VinUni Wayfinder backend', () => {
         '/api/route?to=i109&start=gate_main',
         '/api/site',
         '/api/export',
+        '/api/events',
+        '/api/club-mascots/m1',
+        '/api/auth/me',
         '/maps/campus-osm.webp',
       ]) {
         const res = await fetch(`${base}${path}`)

@@ -30,6 +30,23 @@ describe('Event-scoped companions', () => {
     expect(activeEvent([liveEvent], new URLSearchParams({ to: 'r_g106', event: 'g106-demo' }), lookup)).toEqual(liveEvent)
     expect(validateEvent({ ...liveEvent, locationId: 'missing' }, true, lookup)).toMatch(/địa điểm/)
   })
+  it('supports multi-stop events in activeEvent, withEvent, and validation', () => {
+    const multiStop = {
+      ...event,
+      id: 'open-day',
+      locationId: 'lobby',
+      stops: [
+        { id: 'st-1', label: 'Gian hàng Robotics', locationId: 'startup', note: 'Tầng trệt' },
+        { id: 'st-2', label: 'Quầy cà phê giao lưu', locationId: 'coffee' },
+      ],
+    }
+    expect(validateEvent(multiStop)).toBeNull()
+    expect(activeEvent([multiStop], new URLSearchParams({ to: 'startup', event: 'open-day' }))).toEqual(multiStop)
+    expect(activeEvent([multiStop], new URLSearchParams({ to: 'coffee', event: 'open-day' }))).toEqual(multiStop)
+    expect(activeEvent([multiStop], new URLSearchParams({ to: 'i109', event: 'open-day' }))).toBeUndefined()
+    expect(withEvent('/di-den?to=coffee', multiStop)).toBe('/di-den?to=coffee&event=open-day')
+    expect(validateEvent({ ...multiStop, stops: [{ id: 'bad', label: 'Trạm lỗi', locationId: 'nope' }] })).toMatch(/trạm|địa điểm/i)
+  })
   it('recovers from malformed storage and rejects external or executable image sources', () => {
     expect(readEventStore('{invalid').events).toEqual(initialEvents)
     expect(readEventStore(JSON.stringify({ version: 1, events: [{ title: 123 }], mascots: [] })).events).toEqual([])

@@ -1,0 +1,11 @@
+.venv/
+.torch/
+data/
+tests/
+__pycache__/
+*.pyc
+.env
+.env.*
+*.npz
+*.mp4
+*.mov

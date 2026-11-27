@@ -11,8 +11,23 @@ import os
 from collections.abc import Iterable, MutableMapping
 from pathlib import Path
 
-BACKEND_DIR = Path(__file__).resolve().parents[1]
-REPO_ROOT = Path(__file__).resolve().parents[3]
+def candidate_env_paths(module_file: Path | None = None) -> list[Path]:
+    """Trả danh sách đường dẫn `.env` ứng viên (gốc repo trước, backend sau), an toàn trong Docker."""
+    resolved = (module_file or Path(__file__)).resolve()
+    parents = resolved.parents
+    backend_dir = parents[1] if len(parents) > 1 else resolved.parent
+    paths: list[Path] = []
+    if len(parents) > 3:
+        paths.append(parents[3] / '.env')
+    backend_env = backend_dir / '.env'
+    if backend_env not in paths:
+        paths.append(backend_env)
+    return paths
+
+
+_DEFAULT_PARENTS = Path(__file__).resolve().parents
+BACKEND_DIR = _DEFAULT_PARENTS[1] if len(_DEFAULT_PARENTS) > 1 else Path(__file__).resolve().parent
+REPO_ROOT = _DEFAULT_PARENTS[3] if len(_DEFAULT_PARENTS) > 3 else BACKEND_DIR
 
 
 def load_env_files(
@@ -35,4 +50,4 @@ def load_env_files(
 
 
 def load_root_env() -> None:
-    load_env_files([REPO_ROOT / '.env', BACKEND_DIR / '.env'])
+    load_env_files(candidate_env_paths())
