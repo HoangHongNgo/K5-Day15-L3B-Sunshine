@@ -7,7 +7,7 @@
 
 - **Dataset 1 (`data/campus.json`, `synthetic`):** 12 địa điểm và 11 lối đi hai chiều do nhóm tự viết tay, dùng cho `tra_dia_diem`, `danh_sach_dia_diem`, `tim_lo_trinh`.
 - **Dataset 2 (`data/events.json`, `synthetic`):** 6 hoạt động tuần định hướng do nhóm tự viết tay, dùng cho `tra_dia_diem`, `tao_ma_checkin`.
-- **Dataset 3–4 (wayfinder, `thật — chưa kiểm` / `thật — chưa quay`):** sơ đồ khuôn viên + ảnh mặt bằng tầng trệt Toà I (chưa số hoá) và ảnh/video hành lang (chưa quay); không lưu trong repo công khai. Chi tiết ở `data/DATA_CARD.md`.
+- **Dataset 3–4 (wayfinder, `thật — chưa kiểm` / `thật — chưa quay`):** sơ đồ khuôn viên + ảnh mặt bằng tầng trệt Toà I (đã có bản seed đồ thị 30 điểm Toà I + 25 điểm ngoài trời, tất cả chưa kiểm tại chỗ) và ảnh/video hành lang (chưa quay thật); không lưu trong repo công khai. Chi tiết ở `data/DATA_CARD.md`.
 
 ## 2. Bộ câu thử dựng ra sao
 

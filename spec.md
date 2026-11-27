@@ -55,7 +55,7 @@ flowchart LR
   O --> P["Ban tổ chức xác nhận check-in<br/>khi quét QR tại cửa (người duyệt)"]
 ```
 
-- **Sơ đồ định vị (wayfinder, phần mới — chưa cài đặt):** điểm xuất phát có thể đến từ ba nguồn thay cho việc sinh viên tự nói: GPS (ngoài trời) · ảnh hành lang → vector MegaLoc → 10 khung gần nhất bỏ phiếu → độ tin cậy → tự trả lời / top 3 / xin ảnh thứ hai · gõ số phòng. Kết quả thành mã địa điểm đưa vào `tim_lo_trinh` như trên. Ảnh bị xoá sau khi so khớp; chỉ giữ vector và dự đoán để người dùng sửa. Chi tiết ở `docs/PRD.md`.
+- **Sơ đồ định vị (wayfinder — đã có mã chạy thử trên laptop trong `vinuni-wayfinder/`, chưa thử trên điện thoại, chưa có số đo độ chính xác):** điểm xuất phát có thể đến từ ba nguồn thay cho việc sinh viên tự nói: GPS (ngoài trời) · ảnh hành lang → vector MegaLoc → 10 khung gần nhất bỏ phiếu → độ tin cậy → tự trả lời / top 3 / xin ảnh thứ hai · gõ số phòng. Kết quả thành mã địa điểm đưa vào `tim_lo_trinh` như trên. Ảnh bị xoá sau khi so khớp; chỉ giữ vector và dự đoán để người dùng sửa. Chi tiết ở `docs/PRD.md`.
 
 ```mermaid
 flowchart LR
@@ -94,7 +94,7 @@ flowchart LR
   | G11 — giải thích vì sao | output nêu rõ từ đâu tới đâu, mã địa điểm, số phút và từng bước, để sinh viên đối chiếu biển chỉ dẫn |
   | G1/G2 — nói rõ làm được gì | lời từ chối nói mascot chỉ dẫn đường trong trường, việc khác liên hệ BTC / phòng CTSV |
 
-- Phần nào còn giả: bản đồ và lịch trong `codebase/` là `synthetic` (`data/DATA_CARD.md`); model đang ở chế độ giả (chưa nối model thật, sẽ nối trước CP3); bản chạy thử trong `codebase/` là dòng lệnh. Phần wayfinder (GPS, nhận diện ảnh, thẻ chỉ dẫn, chế độ thu thập) **chưa viết xong**, chưa có dữ liệu quay và chưa có số đo độ chính xác; môi trường PyTorch + GPU đã chạy được. Mascot AR hoãn.
+- Phần nào còn giả: bản đồ và lịch trong `codebase/` là `synthetic` (`data/DATA_CARD.md`); model đang ở chế độ giả (chưa nối model thật, sẽ nối trước CP3); bản chạy thử trong `codebase/` là dòng lệnh. Phần wayfinder (`vinuni-wayfinder/`: backend FastAPI + MegaLoc, giao diện React) **đã có mã chạy thử trên laptop** (định vị bằng ảnh, thẻ chỉ dẫn, chế độ thu thập), nhưng **chưa thử trên điện thoại** (camera, GPS, la bàn, HTTPS), **chưa thu thập dữ liệu thật** tại Toà I và **chưa có số đo độ chính xác**; đồ thị đường đi mới là bản seed 25 điểm ngoài trời + 30 điểm Toà I, tất cả chưa kiểm tại chỗ. Mascot AR hoãn.
 
 ## §5. Chỗ khó — 4 lớp + ≥6 kịch bản + 2 tấn công *(guide 2.3)*
 
@@ -128,7 +128,7 @@ flowchart LR
 - So với impact / người / tháng (§2): đáng làm không, vì sao:
 
 ## §9. Rủi ro & an toàn
-- Dữ liệu *(thiết kế của wayfinder, chưa cài đặt xong)*: không lưu vị trí GPS của người dùng sau khi trả lời; ảnh người dùng gửi để định vị bị xoá ngay sau khi so khớp, chỉ giữ vector và dự đoán; không có tài khoản. Dữ liệu quay (ảnh hành lang, sơ đồ, đồ thị, vector) chỉ quay ở hành lang công cộng, làm mờ khuôn mặt trước khi lưu, và **không nằm trong repo công khai** vì một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh. Không đưa dữ liệu cá nhân thật vào model gói miễn phí.
+- Dữ liệu *(thiết kế của wayfinder; đã cài trong mã chạy thử, chưa kiểm trên thiết bị thật)*: không lưu vị trí GPS của người dùng sau khi trả lời; ảnh người dùng gửi để định vị bị xoá ngay sau khi so khớp, chỉ giữ vector và dự đoán; không có tài khoản. Dữ liệu quay (ảnh hành lang, sơ đồ, đồ thị, vector) chỉ quay ở hành lang công cộng, làm mờ khuôn mặt trước khi lưu, và **không nằm trong repo công khai** vì một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh. Không đưa dữ liệu cá nhân thật vào model gói miễn phí.
 - AI **không được** làm gì kể cả khi người dùng yêu cầu: điểm danh hộ, in mọi mã check-in hoặc danh sách sinh viên, đoán vị trí khi chưa chắc (phải hỏi lại / hiện top 3 / xin ảnh thứ hai), bịa địa điểm, lộ trình hoặc giờ không có trong dữ liệu.
 - Ai có thể bị hại nếu AI sai, và nhóm chặn thế nào: người dùng bị dẫn sai chỗ và trễ giờ — chặn bằng độ tin cậy thật, top 3, ảnh thứ hai và gõ số phòng; người cần lối đi không bậc thang chưa được phục vụ (chưa làm chế độ tiếp cận, ghi rõ ở "Không làm"); dữ liệu quay dự kiến chỉ ở chiều cao cầm tay nên chưa kiểm ở tầm ngồi xe lăn.
 
@@ -146,6 +146,7 @@ flowchart LR
 | Thời điểm | Đổi gì | Vì sao (trỏ về câu thử / lỗi / bằng chứng nào) |
 |---|---|---|
 | 27/11/2026 | Đổi ưu tiên của lát cắt (§4): từ "mascot AR dẫn đường trên camera, bản đồ giả lập, người dùng tự nói vị trí" sang **wayfinder** — định vị bằng GPS ngoài trời và ảnh hành lang trong toà (Toà I, tầng trệt), thẻ chỉ dẫn từng bước, chế độ thu thập dữ liệu trên điện thoại. Mascot AR chuyển sang giai đoạn sau. Cập nhật `docs/PRD.md`, `canvas.md`, `data/DATA_CARD.md`, `README.md`; thêm Hound Around vào §3 và viết §9. **Không sửa** chuẩn "đạt" §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Quyết định của nhóm: chỉ đường chính xác tới đúng phòng thật có giá trị hơn mascot, và GPS không đủ trong nhà. Bộ câu thử hiện tại vẫn đo đúng phần hiểu câu hỏi, lộ trình và từ chối của luồng này; **chưa có bộ đo cho nhận diện bằng ảnh** — cần quyết định có thêm câu thử mới hay không, không thêm im lặng vào bộ cũ |
+| 27/11/2026 | Cập nhật mô tả trạng thái wayfinder ở §4 và §9: từ "chưa cài đặt / chưa viết xong" sang "đã có mã chạy thử trên laptop, chưa thử trên điện thoại, chưa thu thập dữ liệu thật, chưa có số đo". Chỉ sửa mô tả, **không sửa** §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Trạng thái cũ không còn đúng với `vinuni-wayfinder/CLAUDE.md` (Tiến độ). Không đổi chuẩn "đạt" hay câu thử |
 
 **Sau CP4 (đến 23:59 Thứ Bảy 28/11)** (sửa theo góp ý — không sửa chuẩn "đạt", câu thử, số bằng chứng, kết quả các lượt đã chạy)
 
