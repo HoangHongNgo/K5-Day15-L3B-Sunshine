@@ -49,7 +49,7 @@
 | Phiên bản / ngày lấy | 28/11/2026 (bản thử) |
 | Nhãn | `thật — đang thu thập` |
 | Giới hạn | dự kiến quay ở chiều cao cầm tay, chưa phủ tầm ngồi xe lăn; thay đổi ánh sáng và đông người có thể làm sai; các hành lang giống nhau dễ nhầm |
-| Riêng tư / an ninh | chỉ quay hành lang công cộng, bỏ khu dịch vụ và khu hạn chế; **không đưa ảnh, video, đồ thị hay vector lên repo công khai** (một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh); tên ảnh không chứa thông tin cá nhân |
+| Riêng tư / an ninh | chỉ quay hành lang công cộng, bỏ khu dịch vụ và khu hạn chế; **không đưa ảnh, video, đồ thị hay vector lên repo công khai** (một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh); tên ảnh không chứa thông tin cá nhân; từ 28/11/2026 dữ liệu Dataset 3–4 lưu trên project Supabase riêng tư của nhóm (RLS bật, không có policy, chỉ khoá service của backend đọc/ghi) |
 
 **Cách sinh:** Dataset 1–2 viết tay, không dùng LLM, không cần seed. Người kiểm: Nguyễn Ánh Dương *(cần kiểm tay toàn bộ 12 địa điểm, 11 lối đi, 6 hoạt động trước CP3)*. Dataset 3–4 do nhóm tự thu thập, chưa có người kiểm.
 **Không dùng:** sơ đồ, lịch, danh sách sinh viên thật của bất kỳ trường nào cho dữ liệu synthetic; không dùng dữ liệu của dự án Hound Around (họ không công khai dữ liệu; nhóm chỉ tham khảo cách làm).
