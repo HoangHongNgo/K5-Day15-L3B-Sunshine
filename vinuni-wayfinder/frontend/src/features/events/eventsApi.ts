@@ -63,6 +63,12 @@ export function createEventsApi(fetchFn: typeof fetch = fetch) {
         signal,
       })
     },
+    generateMascot(input: { name: string; brief: string; club: string }, token: string | null, signal?: AbortSignal) {
+      return request<{ mascot: MascotAsset }>('/api/club-mascots/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+        body: JSON.stringify(input), signal,
+      })
+    },
     saveMascot(mascot: MascotAsset, token?: string | null, signal?: AbortSignal) {
       return request<{ ok: boolean; mascot: MascotAsset; storage: string }>(
         `/api/club-mascots/${encodeURIComponent(mascot.id)}`,

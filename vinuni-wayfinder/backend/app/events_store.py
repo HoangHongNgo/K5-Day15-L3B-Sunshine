@@ -11,11 +11,13 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .mascot_recipe import valid_recipe
+
 SAFE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,80}$')
 IMAGE_DATA_URI_RE = re.compile(r'^data:image/(png|webp|jpeg);base64,[A-Za-z0-9+/]+=*$')
 MAX_IMAGE_LEN = 800_000
 MAX_EVENTS = 50
-MAX_MASCOTS = 12
+MASCOT_PAGE_SIZE = 100
 MAX_STOPS = 12
 FORBIDDEN_MSG = 'Bạn chỉ có thể chỉnh sửa/xoá dữ liệu do tài khoản CLB của mình tạo.'
 
@@ -49,20 +51,26 @@ def validate_mascot(data: dict) -> dict:
     image = data.get('image')
     brief = data.get('brief')
 
-    if not SAFE_ID_RE.match(mid) or mid in ('vini', 'boba'):
+    if not SAFE_ID_RE.match(mid) or mid in ('vini', 'boba', 'tia3d'):
         raise ValidationError('Mã mascot không hợp lệ hoặc trùng mascot mặc định.')
     if not name or len(name) > 40:
         raise ValidationError('Tên mascot phải từ 1 đến 40 ký tự.')
-    if kind != 'image':
-        raise ValidationError('Chỉ lưu mascot dạng ảnh tuỳ chỉnh.')
-    if not isinstance(image, str) or len(image) > MAX_IMAGE_LEN or not IMAGE_DATA_URI_RE.match(image):
-        raise ValidationError('Ảnh mascot phải là PNG, WebP hoặc JPG dạng data URI hợp lệ (≤ 800 KB).')
+    if kind not in ('image', 'model3d'):
+        raise ValidationError('Loại mascot không hợp lệ.')
+    out = {'id': mid, 'name': name, 'kind': kind}
+    if kind == 'model3d':
+        if not valid_recipe(data.get('recipe')):
+            raise ValidationError('Thông số mô hình mascot 3D không hợp lệ.')
+        out['recipe'] = data['recipe']
+    if kind == 'image' or image is not None:
+        if not isinstance(image, str) or len(image) > MAX_IMAGE_LEN or not IMAGE_DATA_URI_RE.fullmatch(image):
+            raise ValidationError('Ảnh mascot phải là PNG, WebP hoặc JPG dạng data URI hợp lệ (≤ 800 KB).')
+        out['image'] = image
     if brief is not None:
         if not isinstance(brief, str) or len(brief) > 700:
             raise ValidationError('Mô tả mascot quá dài (tối đa 700 ký tự).')
         brief = brief.strip() or None
 
-    out = {'id': mid, 'name': name, 'kind': 'image', 'image': image}
     if brief is not None:
         out['brief'] = brief
     return out
@@ -146,7 +154,16 @@ def validate_event(data: dict, valid_locations: set[str] | None = None) -> dict:
         if dt_end <= dt_start:
             raise ValidationError('Thời gian kết thúc phải sau thời gian bắt đầu.')
 
+    anchor = data.get('arAnchor')
+    if anchor is not None:
+        if not isinstance(anchor, dict) or any(
+            type(anchor.get(key)) not in (int, float) or not -limit <= anchor[key] <= limit
+            for key, limit in [('lat', 90), ('lon', 180)]
+        ):
+            raise ValidationError('Toạ độ điểm gặp mascot không hợp lệ.')
+        anchor = {key: anchor[key] for key in ('lat', 'lon')}
     return {
+        'arAnchor': anchor,
         'id': eid,
         'title': title,
         'club': club,
@@ -174,6 +191,7 @@ def _row_to_event(r: dict) -> dict:
         'mascotId': r.get('mascot_id', 'vini'),
         'status': r.get('status', 'draft'),
         'stops': list(raw_stops) if isinstance(raw_stops, list) else [],
+        'arAnchor': r.get('ar_anchor'),
         'ownerId': r.get('owner_id'),
         'viewsCount': int(r.get('views_count') or 0),
         'navigationsCount': int(r.get('navigations_count') or 0),
@@ -186,6 +204,7 @@ def _row_to_event(r: dict) -> dict:
 def _event_to_row(e: dict, include_metrics: bool = True) -> dict:
     row = {
         'id': e['id'],
+        'ar_anchor': e.get('arAnchor'),
         'title': e['title'],
         'club': e['club'],
         'description': e['description'],
@@ -209,10 +228,13 @@ def _row_to_mascot(r: dict) -> dict:
     out = {
         'id': r['id'],
         'name': r['name'],
-        'kind': 'image',
-        'image': r['image'],
+        'kind': r.get('kind', 'image'),
         'ownerId': r.get('owner_id'),
     }
+    if r.get('image'):
+        out['image'] = r['image']
+    if r.get('recipe'):
+        out['recipe'] = r['recipe']
     if r.get('brief'):
         out['brief'] = r['brief']
     return out
@@ -222,8 +244,9 @@ def _mascot_to_row(m: dict) -> dict:
     return {
         'id': m['id'],
         'name': m['name'],
-        'kind': 'image',
-        'image': m['image'],
+        'kind': m['kind'],
+        'image': m.get('image'),
+        **({'recipe': m['recipe']} if m['kind'] == 'model3d' else {}),
         'brief': m.get('brief'),
         'owner_id': m.get('ownerId'),
         'updated_at': datetime.now(timezone.utc).isoformat(),
@@ -276,20 +299,40 @@ class EventsStore:
             return
         self.remote.insert(table, [row], on_conflict='id')
 
+    def get_published(self, event_id: str) -> dict | None:
+        if not SAFE_ID_RE.fullmatch(event_id):
+            return None
+        if self.remote is not None:
+            rows = self.remote.select('club_events', {
+                'select': '*', 'id': f'eq.{event_id}', 'status': 'eq.published', 'limit': '1',
+            })
+            return _row_to_event(rows[0]) if rows else None
+        with self._lock:
+            return next((event for event in self._read_local()['events']
+                         if event.get('id') == event_id and event.get('status') == 'published'), None)
+
     def list_all(self) -> dict:
         if self.remote is not None:
             ev_rows = self.remote.select('club_events', {'select': '*', 'order': 'updated_at.desc'})
-            m_rows = self.remote.select('club_mascots', {'select': '*', 'order': 'created_at.asc'})
+            m_rows = []
+            while True:
+                page = self.remote.select('club_mascots', {
+                    'select': '*', 'order': 'created_at.asc,id.asc',
+                    'offset': str(len(m_rows)), 'limit': str(MASCOT_PAGE_SIZE),
+                })
+                m_rows.extend(page)
+                if len(page) < MASCOT_PAGE_SIZE:
+                    break
             return {
                 'events': [_row_to_event(r) for r in ev_rows][:MAX_EVENTS],
-                'mascots': [_row_to_mascot(r) for r in m_rows][:MAX_MASCOTS],
+                'mascots': [_row_to_mascot(r) for r in m_rows],
                 'storage': 'supabase',
             }
         with self._lock:
             local = self._read_local()
         return {
             'events': local['events'][:MAX_EVENTS],
-            'mascots': local['mascots'][:MAX_MASCOTS],
+            'mascots': local['mascots'],
             'storage': 'local',
         }
 
@@ -372,12 +415,12 @@ class EventsStore:
                 mascot['ownerId'] = existing.get('ownerId') or (actor.get('id') if actor else None)
             else:
                 mascot['ownerId'] = actor.get('id') if actor else None
-            local['mascots'] = [*[m for m in local['mascots'] if m.get('id') != mascot['id']], mascot][:MAX_MASCOTS]
+            local['mascots'] = [*[m for m in local['mascots'] if m.get('id') != mascot['id']], mascot]
             self._write_local(local)
         return mascot
 
     def delete_mascot(self, mascot_id: str, actor: dict | None = None) -> None:
-        if not SAFE_ID_RE.match(mascot_id) or mascot_id in ('vini', 'boba'):
+        if not SAFE_ID_RE.match(mascot_id) or mascot_id in ('vini', 'boba', 'tia3d'):
             raise ValidationError('Mã mascot không hợp lệ.')
         if self.remote is not None:
             if actor is not None:

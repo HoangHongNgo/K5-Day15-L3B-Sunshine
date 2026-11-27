@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowDownToLine, Bookmark, CheckCheck, Compass, HelpCircle, MapPin, Navigation, Pause, Play, Share, ShieldCheck, Smartphone, WifiOff, X } from 'lucide-react'
 import { usePwa } from './shared/usePwa'
@@ -15,6 +15,8 @@ import { MotionContext } from './features/mascot/Mascot'
 import { useEventJourney } from './features/events/EventContext'
 import { ClubDashboard, ClubMascots, EventEditor, EventsList, EventDetail } from './features/events/EventsPages'
 import { CollectPage } from './features/collect/CollectPage'
+
+const Mascot3dDemo = lazy(() => import('./features/mascot/Mascot3dDemo'))
 
 function RouteFocus() {
   const { pathname } = useLocation()
@@ -91,6 +93,7 @@ export default function App() {
       )}
       <main id="main-content" tabIndex={-1} className={`app-main ${isJourney ? 'in-journey' : ''} ${pathname === '/' ? 'map-main' : ''} ${isClub ? 'club-main' : ''} ${isCollect ? 'collect-main' : ''}`}>
         <Routes>
+          <Route path="/mascot-3d" element={<Suspense fallback={<p role="status">Đang mở mascot 3D…</p>}><Mascot3dDemo /></Suspense>} />
           <Route path="/thu-thap" element={<CollectPage />} />
           <Route path="/clb" element={<ClubDashboard />} />
           <Route path="/clb/mascot" element={<ClubMascots />} />

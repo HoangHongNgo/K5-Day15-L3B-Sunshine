@@ -1,20 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
-import { activeEvent, builtInMascots, defaultMascot, eventStorageKey, isEvent, isMascot, readEventStore, validateEvent, withEvent, type CampusEvent, type EventStore, type MascotAsset } from './events'
+import { activeEvent, builtInMascots, defaultMascot, eventStorageKey, isEvent, isCustomMascot, readEventStore, validateEvent, withEvent, type CampusEvent, type EventStore, type MascotAsset } from './events'
 import { eventsApi, type EventMetricKind } from './eventsApi'
 import { useAuth } from './AuthContext'
 import { ApiError } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
 
-type SyncMode = 'local' | 'supabase'
+type SyncMode = 'local' | 'server' | 'supabase'
 type StoreContext = EventStore & {
   allMascots: MascotAsset[]
   storage: SyncMode
   syncError: string | null
-  saveEvent: (event: CampusEvent) => string | null
   saveEventAsync: (event: CampusEvent) => Promise<string | null>
   deleteEvent: (id: string) => Promise<string | null>
-  saveMascot: (mascot: MascotAsset) => string | null
+  saveMascot: (mascot: MascotAsset) => Promise<string | null>
   trackMetric: (id: string, metric: EventMetricKind) => void
 }
 
@@ -47,10 +46,10 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     eventsApi.list(controller.signal)
       .then(res => {
         if (controller.signal.aborted) return
-        setStorage(res.storage === 'supabase' ? 'supabase' : 'local')
+        setStorage(res.storage === 'supabase' ? 'supabase' : 'server')
         setSyncError(null)
         const remoteEvents = (res.events || []).filter(isEvent).slice(0, 50)
-        const remoteMascots = (res.mascots || []).filter(m => isMascot(m) && m.kind === 'image').slice(0, 12)
+        const remoteMascots = (res.mascots || []).filter(isCustomMascot)
         if (remoteEvents.length > 0 || remoteMascots.length > 0) {
           const next: EventStore = { version: 1, events: remoteEvents, mascots: remoteMascots }
           setState(next)
@@ -78,36 +77,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     return null
   }
 
-  function saveEvent(event: CampusEvent) {
-    const problem = validateBeforeSave(event)
-    if (problem) return problem
-    const enriched: CampusEvent = {
-      ...event,
-      ownerId: event.ownerId ?? account?.id ?? null,
-    }
-    const localErr = persist({ ...state, events: [enriched, ...state.events.filter(e => e.id !== enriched.id)] })
-    if (localErr) return localErr
-    if (isLive) {
-      eventsApi.saveEvent(enriched, token)
-        .then(res => {
-          setSyncError(null)
-          if (res.storage === 'supabase') setStorage('supabase')
-          setState(prev => {
-            const next: EventStore = {
-              ...prev,
-              events: [res.event, ...prev.events.filter(e => e.id !== res.event.id)],
-            }
-            try { localStorage.setItem(eventStorageKey, JSON.stringify(next)) } catch { /* ignore */ }
-            return next
-          })
-        })
-        .catch(err => {
-          setSyncError(err instanceof ApiError ? err.message : 'Chưa đồng bộ được sự kiện lên Supabase.')
-        })
-    }
-    return null
-  }
-
   async function saveEventAsync(event: CampusEvent): Promise<string | null> {
     const problem = validateBeforeSave(event)
     if (problem) return problem
@@ -120,8 +89,11 @@ export function EventsProvider({ children }: { children: ReactNode }) {
         const res = await eventsApi.saveEvent(enriched, token)
         setSyncError(null)
         if (res.storage === 'supabase') setStorage('supabase')
-        const next: EventStore = { ...state, events: [res.event, ...state.events.filter(e => e.id !== res.event.id)] }
-        persist(next)
+        setState(prev => {
+          const next = { ...prev, events: [res.event, ...prev.events.filter(e => e.id !== res.event.id)] }
+          try { localStorage.setItem(eventStorageKey, JSON.stringify(next)) } catch { /* Saved on the server. */ }
+          return next
+        })
         return null
       } catch (err) {
         const msg = err instanceof ApiError ? err.message : 'Chưa đồng bộ được sự kiện lên Supabase.'
@@ -147,23 +119,25 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     return persist(next)
   }
 
-  function saveMascot(mascot: MascotAsset) {
-    if (!isMascot(mascot) || mascot.kind !== 'image') return 'Ảnh mascot chưa hợp lệ. Hãy thử ảnh PNG, JPG hoặc WebP khác.'
-    if (!state.mascots.some(m => m.id === mascot.id) && state.mascots.length >= 12) return 'Thư viện bản thử đã có 12 mascot. Bạn có thể dùng một mẫu đã lưu.'
+  async function saveMascot(mascot: MascotAsset): Promise<string | null> {
+    if (!isCustomMascot(mascot)) return 'Thông tin mascot chưa hợp lệ.'
     const enriched: MascotAsset = { ...mascot, ownerId: mascot.ownerId ?? account?.id ?? null }
-    const localErr = persist({ ...state, mascots: [...state.mascots.filter(m => m.id !== enriched.id), enriched] })
-    if (localErr) return localErr
-    if (isLive) {
-      eventsApi.saveMascot(enriched, token)
-        .then(res => {
-          setSyncError(null)
-          if (res.storage === 'supabase') setStorage('supabase')
-        })
-        .catch(err => {
-          setSyncError(err instanceof ApiError ? err.message : 'Chưa đồng bộ được mascot lên Supabase.')
-        })
+    if (!isLive) return persist({ ...state, mascots: [...state.mascots.filter(m => m.id !== enriched.id), enriched] })
+    try {
+      const result = await eventsApi.saveMascot(enriched, token)
+      setSyncError(null)
+      if (result.storage === 'supabase') setStorage('supabase')
+      setState(prev => {
+        const next = { ...prev, mascots: [...prev.mascots.filter(m => m.id !== result.mascot.id), result.mascot] }
+        try { localStorage.setItem(eventStorageKey, JSON.stringify(next)) } catch { /* Already saved on the server. */ }
+        return next
+      })
+      return null
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Chưa lưu được mascot lên máy chủ.'
+      setSyncError(message)
+      return message
     }
-    return null
   }
 
   const trackMetric = useCallback((id: string, metric: EventMetricKind) => {
@@ -179,7 +153,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   }, [isLive])
 
   return (
-    <Context.Provider value={{ ...state, allMascots, storage, syncError, saveEvent, saveEventAsync, deleteEvent, saveMascot, trackMetric }}>
+    <Context.Provider value={{ ...state, allMascots, storage, syncError, saveEventAsync, deleteEvent, saveMascot, trackMetric }}>
       {children}
     </Context.Provider>
   )
@@ -192,11 +166,11 @@ export function useEvents() {
 }
 
 export function useEventJourney() {
-  const { events, allMascots } = useEvents()
+  const { events } = useEvents()
   const { getPlace } = useWayfinder()
   const { pathname, search } = useLocation()
   const routes = ['/di-den', '/hanh-trinh', '/vi-tri', '/anh', '/anh-mau', '/nhan-dien', '/xac-nhan-vi-tri', '/ghim-anh']
   const event = routes.includes(pathname) ? activeEvent(events, new URLSearchParams(search), getPlace) : undefined
-  const mascot = allMascots.find(m => m.id === event?.mascotId) ?? defaultMascot
+  const mascot = defaultMascot
   return { event, mascot, link: (path: string) => withEvent(path, event) }
 }

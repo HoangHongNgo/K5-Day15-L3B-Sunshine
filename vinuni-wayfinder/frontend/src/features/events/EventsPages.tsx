@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, CalendarDays, Check, ChevronRight, Clock3, Compass, ExternalLink, Eye, FilePenLine, Info, LogOut, MapPin, Navigation, Plus, QrCode, Save, Search, ShieldCheck, Sparkles, Trash2, Users } from 'lucide-react'
 import { Modal } from '../../shared/ui'
@@ -11,11 +11,14 @@ import { ClubLoginGate } from './ClubLoginGate'
 import { DeleteEventDialog } from './DeleteEventDialog'
 import { useEvents, useEventJourney } from './EventContext'
 import { EventQrCard } from './EventQrCard'
-import { defaultMascot, emptyEvent, eventDate, eventRoute, validateEvent, type CampusEvent } from './events'
+import { defaultEventMascot, resolveEventMascot, emptyEvent, eventDate, eventRoute, isAnchor, validateEvent, type CampusEvent } from './events'
 import { eventPhaseLabel, eventTimeFilters, filterEventsByTime, getEventPhase, type EventTimeFilter } from './eventSchedule'
 import { eventShareUrl } from './qrCode'
 import { QuickRoomControl } from './QuickRoomControl'
 import { StopsEditor } from './StopsEditor'
+
+import EventAlbum from './EventAlbum'
+const EventEncounter = lazy(() => import('./EventEncounter'))
 
 export function EventJourneyBadge() {
   const { event, mascot } = useEventJourney()
@@ -36,9 +39,10 @@ function LocalNote() {
       <Info size={16} />
       <span>
         {syncError
-          ? `Lưu cục bộ (lỗi đồng bộ: ${syncError})`
+          ? syncError
           : storage === 'supabase'
             ? 'Sự kiện và mascot đang đồng bộ trực tiếp trên Supabase cho cả nhóm.'
+            : storage === 'server' ? 'Sự kiện và mascot được lưu trên máy chủ Wayfinder.'
             : 'Bản thử lưu trên trình duyệt này. Chưa đăng công khai hoặc đồng bộ với thiết bị khác.'}
       </span>
     </p>
@@ -107,7 +111,7 @@ export function ClubDashboard() {
   const totalNavs = events.reduce((acc, e) => acc + (e.navigationsCount ?? 0), 0)
 
   async function handleQuickRoom(ev: CampusEvent, newLocationId: string) {
-    return saveEventAsync({ ...ev, locationId: newLocationId })
+    return saveEventAsync({ ...ev, locationId: newLocationId, arAnchor: null })
   }
 
   async function confirmDelete() {
@@ -146,7 +150,7 @@ export function ClubDashboard() {
           </div>
           <Link to="/clb/mascot" className="text-link">Khám phá thư viện mascot<ArrowUpRight size={17} /></Link>
         </div>
-        <Mascot asset={defaultMascot} mood="wave" size={170} />
+        <Mascot asset={defaultEventMascot} mood="wave" size={170} />
       </div>
 
       <div className="event-list-heading">
@@ -276,9 +280,24 @@ function EditorForm({ initial }: { initial?: CampusEvent }) {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [creating, setCreating] = useState(false)
-  const { allMascots, saveEvent } = useEvents()
+  const [lat, setLat] = useState(initial?.arAnchor?.lat.toString() ?? '')
+  const [lon, setLon] = useState(initial?.arAnchor?.lon.toString() ?? '')
+  const [locating, setLocating] = useState(false)
+  function locateVenue() {
+    if (!navigator.geolocation) { setError('Thiết bị chưa hỗ trợ GPS. Hãy nhập toạ độ địa điểm.'); return }
+    setLocating(true)
+    setError('')
+    navigator.geolocation.getCurrentPosition(({coords}) => {
+      setLat(coords.latitude.toFixed(6).replace(/\.?0+$/, '') || '0')
+      setLon(coords.longitude.toFixed(6).replace(/\.?0+$/, '') || '0')
+      setLocating(false)
+    }, () => { setLocating(false); setError('Chưa lấy được GPS. Hãy nhập toạ độ của địa điểm.') },
+    {enableHighAccuracy:true, timeout:15000})
+  }
+  const { allMascots, saveEventAsync } = useEvents()
+  const [saving,setSaving] = useState(false)
   const navigate = useNavigate()
-  const mascot = allMascots.find(m => m.id === draft.mascotId) ?? defaultMascot
+  const mascot = resolveEventMascot(allMascots, draft.mascotId)
 
   function update<K extends keyof CampusEvent>(key: K, value: CampusEvent[K]) {
     setDraft(d => ({ ...d, [key]: value }))
@@ -286,19 +305,27 @@ function EditorForm({ initial }: { initial?: CampusEvent }) {
     setError('')
   }
 
-  function save(status: CampusEvent['status']) {
+  async function save(status: CampusEvent['status']) {
+    if (saving || locating) return
+    const arAnchor = lat.trim() || lon.trim() ? {lat:Number(lat),lon:Number(lon)} : null
+    if (arAnchor && (!lat.trim() || !lon.trim() || !isAnchor(arAnchor))) {
+      setError('Nhập đủ vĩ độ (−90 đến 90) và kinh độ (−180 đến 180) của điểm gặp.')
+      return
+    }
     const cleanedStops = (draft.stops ?? [])
       .map(s => ({ ...s, label: s.label.trim(), note: s.note?.trim() || undefined }))
       .filter(s => s.label || s.locationId)
     const event: CampusEvent = {
-      ...draft,
+      ...draft, mascotId: mascot.id, arAnchor,
       title: draft.title.trim(),
       club: draft.club.trim(),
       description: draft.description.trim(),
       stops: cleanedStops,
       status,
     }
-    const problem = validateEvent(event, status === 'published', getPlace) || saveEvent(event)
+    setSaving(true)
+    const problem = validateEvent(event, status === 'published', getPlace) || await saveEventAsync(event)
+    setSaving(false)
     if (problem) { setError(problem); return }
     setDraft(event)
     setError('')
@@ -336,20 +363,28 @@ function EditorForm({ initial }: { initial?: CampusEvent }) {
           </section>
 
           <section className="editor-section">
-            <div className="editor-section-title"><span>02</span><div><h2>Địa điểm tổ chức &amp; trạm dừng</h2><p>Nơi mascot sẽ đưa người tham dự đến.</p></div></div>
+            <div className="editor-section-title"><span>02</span><div><h2>Địa điểm tổ chức &amp; trạm dừng</h2><p>Các địa điểm để Vini dẫn đường cho người tham dự.</p></div></div>
             <label htmlFor="event-location">Địa điểm chính tại VinUni
-              <select id="event-location" value={draft.locationId} onChange={e => update('locationId', e.target.value)} required>
+              <select id="event-location" value={draft.locationId} onChange={e => { if (draft.locationId) { setLat(''); setLon('') }; update('locationId', e.target.value) }} required>
                 <option value="">Chọn địa điểm</option>
                 {places.map(place => <option value={place.id} key={place.id}>{place.name}</option>)}
               </select>
             </label>
             <p className="location-hint"><MapPin size={18} />{isLive ? 'Danh mục địa điểm đang đồng bộ từ máy chủ VinUni Wayfinder.' : 'Danh mục và tuyến đi hiện là dữ liệu mô phỏng của Toà I.'}</p>
+            <fieldset className="event-anchor"><legend>Điểm gặp mascot AR</legend>
+              <p>Đặt toạ độ công khai của địa điểm tổ chức để người ở gần có thể gặp mascot.</p>
+              <div className="event-form-pair">
+                <label>Vĩ độ điểm gặp<input type="number" step="any" value={lat} onChange={e => setLat(e.target.value)} /></label>
+                <label>Kinh độ điểm gặp<input type="number" step="any" value={lon} onChange={e => setLon(e.target.value)} /></label>
+              </div>
+              <button type="button" className="button button-quiet" disabled={locating} onClick={locateVenue}>{locating ? 'Đang lấy GPS…' : 'Đặt điểm gặp tại vị trí hiện tại'}</button>
+            </fieldset>
             <StopsEditor stops={draft.stops ?? []} places={places} onChange={stops => update('stops', stops)} />
           </section>
 
           <section className="editor-section">
-            <div className="editor-section-title"><span>03</span><div><h2>Người bạn đồng hành</h2><p>Xuất hiện khi người tham dự chọn dẫn đường tới sự kiện.</p></div></div>
-            <MascotPicker selected={draft.mascotId} onChange={id => update('mascotId', id)} />
+            <div className="editor-section-title"><span>03</span><div><h2>Người bạn đồng hành</h2><p>Người tham dự có thể gặp và trò chuyện với nhân vật tại điểm AR.</p></div></div>
+            <MascotPicker selected={mascot.id} onChange={id => update('mascotId', id)} />
             <button type="button" className="create-mascot-toggle" onClick={() => setCreating(!creating)} aria-expanded={creating}><Sparkles size={18} />{creating ? 'Thu gọn phần tạo mascot' : 'Tạo mascot riêng cho CLB'}<Plus size={18} /></button>
             {creating && <MascotCreator club={draft.club} onUse={id => update('mascotId', id)} />}
           </section>
@@ -358,7 +393,7 @@ function EditorForm({ initial }: { initial?: CampusEvent }) {
           {message && <p className="inline-feedback" role="status"><Check size={18} />{message}</p>}
           <div className="editor-actions">
             <button type="button" className="button button-quiet" onClick={() => save('draft')}><Save size={18} />Lưu bản nháp</button>
-            <button type="submit" className="button button-primary">{draft.status === 'published' ? 'Cập nhật trang sự kiện' : 'Đăng thử sự kiện'}<ArrowUpRight size={18} /></button>
+            <button type="submit" disabled={saving || locating} className="button button-primary">{draft.status === 'published' ? 'Cập nhật trang sự kiện' : 'Đăng thử sự kiện'}<ArrowUpRight size={18} /></button>
           </div>
           <LocalNote />
         </div>
@@ -371,7 +406,7 @@ function EditorForm({ initial }: { initial?: CampusEvent }) {
             <EventFacts event={draft} />
             <div className="preview-route"><Navigation size={18} />Dẫn đường tới sự kiện<ArrowUpRight size={18} /></div>
           </div>
-          <p>Đi bình thường dùng Vini. Chọn sự kiện này sẽ đi cùng {mascot.name}.</p>
+          <p>Vini dẫn đường. {mascot.name} đón khách tại sự kiện.</p>
         </aside>
       </form>
     </ClubShell>
@@ -444,14 +479,14 @@ export function EventsList() {
 
       <div className="event-cards">
         {visible.map(event => {
-          const mascot = allMascots.find(m => m.id === event.mascotId) ?? defaultMascot
+          const mascot = resolveEventMascot(allMascots, event.mascotId)
           const phase = getEventPhase(event, now)
           return (
             <Link to={`/su-kien/${event.id}`} className="event-card" key={event.id}>
               <div className="event-card-art">
                 <span className={`phase-badge phase-${phase}`}>{eventPhaseLabel(phase)}</span>
                 <Mascot asset={mascot} size={170} mood="wave" />
-                <span className="event-mascot-label">Đi cùng {mascot.name}</span>
+                <span className="event-mascot-label">Gặp {mascot.name}</span>
               </div>
               <div className="event-card-copy">
                 <p>{event.club}</p>
@@ -496,6 +531,7 @@ export function EventDetail() {
   const { id } = useParams()
   const { events, allMascots, trackMetric } = useEvents()
   const { getPlace, isLive } = useWayfinder()
+  const [encounter,setEncounter] = useState(false)
   const trackedRef = useRef<string | null>(null)
   const event = events.find(e => e.id === id && e.status === 'published' && !validateEvent(e, true, getPlace))
 
@@ -506,7 +542,7 @@ export function EventDetail() {
   }, [event, trackMetric])
 
   if (!event) return <EventMissing />
-  const mascot = allMascots.find(m => m.id === event.mascotId) ?? defaultMascot
+  const mascot = resolveEventMascot(allMascots, event.mascotId)
   const phase = getEventPhase(event)
   const stops = event.stops ?? []
 
@@ -517,7 +553,9 @@ export function EventDetail() {
         <div className="event-detail-art">
           <span className={`phase-badge phase-${phase}`}>{eventPhaseLabel(phase)}</span>
           <Mascot asset={mascot} mood="wave" size={290} />
-          <div><span>Xin chào, mình là</span><strong>{mascot.name}.</strong><p>Mình sẽ đồng hành cùng bạn đến sự kiện.</p></div>
+          <div><span>Xin chào, mình là</span><strong>{mascot.name}.</strong><p>Hẹn gặp bạn ở sự kiện!</p>
+            <Link to={'/mascot-3d?event=' + encodeURIComponent(event.id)} className="text-link">Xem mascot 360°</Link>
+          </div>
         </div>
         <section className="event-detail-copy">
           <p className="studio-kicker">{event.club}</p>
@@ -531,8 +569,10 @@ export function EventDetail() {
           >
             <Navigation size={20} />Dẫn đường tới sự kiện<ArrowUpRight size={19} />
           </Link>
-          <p className="field-hint">Bạn sẽ đi cùng {mascot.name}. {isLive ? 'Tuyến đi lấy trực tiếp từ backend Wayfinder.' : 'Các tuyến hiện là mô phỏng.'}</p>
+          <p className="field-hint">Vini sẽ dẫn đường cho bạn. {isLive ? 'Tuyến đi lấy trực tiếp từ backend Wayfinder.' : 'Các tuyến hiện là mô phỏng.'}</p>
           <p className="event-description">{event.description}</p>
+          <button className="button button-primary" aria-expanded={encounter} onClick={() => setEncounter(!encounter)}>{encounter ? 'Đóng trải nghiệm AR' : 'Gặp mascot trong AR'}</button>
+          {encounter && <Suspense fallback={<p role="status">Đang mở trải nghiệm AR…</p>}><EventEncounter key={event.id} event={event} mascot={mascot} anchor={event.arAnchor ?? null} /></Suspense>}
 
           {stops.length > 0 && (
             <section className="event-stops-section" aria-label="Các trạm dừng trong sự kiện">
@@ -558,6 +598,7 @@ export function EventDetail() {
             </section>
           )}
 
+          <EventAlbum key={event.id} event={event} />
           <EventQrCard
             value={eventShareUrl(event.id)}
             title="Mã QR chia sẻ sự kiện"

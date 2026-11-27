@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useEventJourney } from '../events/EventContext'
 import type { MascotAsset } from '../events/events'
+import { MascotPortrait } from './MascotPortrait'
 
 export const MotionContext = createContext({ paused: false, toggle: () => {} })
 export type MascotMood = 'idle' | 'right' | 'left' | 'walk' | 'wave' | 'jump' | 'wait'
@@ -23,6 +24,11 @@ export function Mascot({ mood = 'idle', size = 96, className = '', asset: overri
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
+  if (asset.kind === 'model3d' || asset.kind === 'tia') {
+    return <span aria-hidden="true" className={`mascot-sprite ${className}`} data-mascot={asset.id} style={{ width: size, height: size }}>
+      <MascotPortrait asset={asset} />
+    </span>
+  }
   const [column, row] = poses[mood]
   const bobaRow = { idle: 0, wave: 3, right: 1, left: 1, wait: 6, walk: 1, jump: 4 }[mood]
   const height = asset.kind === 'boba' ? size * 208 / 192 : size

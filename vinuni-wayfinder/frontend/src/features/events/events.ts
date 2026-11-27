@@ -1,9 +1,11 @@
+import { isMascotRecipe, type MascotRecipe } from '../mascot/mascotRecipe'
 import { getPlace } from '../wayfinder/data'
 
 export type MascotAsset = {
   id: string
   name: string
-  kind: 'vini' | 'boba' | 'image'
+  kind: 'vini' | 'boba' | 'tia' | 'image' | 'model3d'
+  recipe?: MascotRecipe
   image?: string
   brief?: string
   ownerId?: string | null
@@ -16,7 +18,14 @@ export type EventStop = {
   note?: string
 }
 
+export type EventAnchor = { lat: number; lon: number }
+export function isAnchor(value: unknown): value is EventAnchor {
+  if (!value || typeof value !== 'object') return false
+  const { lat, lon } = value as EventAnchor
+  return Number.isFinite(lat) && Math.abs(lat) <= 90 && Number.isFinite(lon) && Math.abs(lon) <= 180
+}
 export type CampusEvent = {
+  arAnchor?: EventAnchor | null
   id: string
   title: string
   club: string
@@ -36,7 +45,12 @@ export type CampusEvent = {
 export type EventStore = { version: 1; events: CampusEvent[]; mascots: MascotAsset[] }
 export const eventStorageKey = 'vinuni-ar-map.events.v1'
 export const defaultMascot: MascotAsset = { id: 'vini', name: 'Vini', kind: 'vini' }
-export const builtInMascots: MascotAsset[] = [defaultMascot, { id: 'boba', name: 'Boba', kind: 'boba' }]
+export const defaultEventMascot: MascotAsset = { id: 'tia3d', name: 'Tia', kind: 'tia' }
+export const builtInMascots: MascotAsset[] = [defaultMascot, { id: 'boba', name: 'Boba', kind: 'boba' }, defaultEventMascot]
+export function resolveEventMascot(library: MascotAsset[], id: string): MascotAsset {
+  return library.find(m => m.id === id && (m.kind === 'model3d' || m.kind === 'tia')) ?? defaultEventMascot
+}
+
 export const initialEvents: CampusEvent[] = [{
   id: 'robotics-open-lab',
   title: 'Robotics Open Lab',
@@ -59,7 +73,7 @@ export function emptyEvent(): CampusEvent {
     locationId: '',
     startsAt: '',
     endsAt: '',
-    mascotId: 'vini',
+    mascotId: 'tia3d',
     status: 'draft',
     stops: [],
   }
@@ -76,16 +90,23 @@ export function isEventStop(v: unknown): v is EventStop {
 export function isMascot(v: unknown): v is MascotAsset {
   if (!v || typeof v !== 'object') return false
   const m = v as MascotAsset
-  return text(m.id, 80) && /^[\w-]+$/.test(m.id) && text(m.name, 40) && !!m.name.trim() && (m.brief === undefined || text(m.brief, 700)) &&
-    ((m.kind === 'vini' && m.id === 'vini') || (m.kind === 'boba' && m.id === 'boba') ||
-      (m.kind === 'image' && !['vini', 'boba'].includes(m.id) && typeof m.image === 'string' && m.image.length <= 800_000 && /^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(m.image)))
+  if (!(text(m.id, 80) && /^[\w-]+$/.test(m.id) && text(m.name, 40) && m.name.trim() && (m.brief === undefined || text(m.brief, 700)))) return false
+  const builtin = builtInMascots.find(asset => asset.id === m.id)
+  if (builtin) return m.kind === builtin.kind
+  const imageOk = typeof m.image === 'string' && m.image.length <= 800_000 && /^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(m.image)
+  if (m.kind === 'model3d') return isMascotRecipe(m.recipe) && (m.image === undefined || imageOk)
+  return m.kind === 'image' && imageOk
+}
+
+export function isCustomMascot(value: unknown): value is MascotAsset {
+  return isMascot(value) && (value.kind === 'image' || value.kind === 'model3d')
 }
 
 export function isEvent(v: unknown): v is CampusEvent {
   if (!v || typeof v !== 'object') return false
   const e = v as CampusEvent
   const stopsOk = e.stops === undefined || (Array.isArray(e.stops) && e.stops.length <= 12 && e.stops.every(isEventStop))
-  return stopsOk && text(e.id, 80) && /^[\w-]+$/.test(e.id) && text(e.title, 100) && text(e.club, 80) && text(e.description, 1500) && text(e.locationId, 80) && text(e.startsAt, 40) && text(e.endsAt, 40) && text(e.mascotId, 80) && ['draft', 'published'].includes(e.status)
+  return (e.arAnchor == null || isAnchor(e.arAnchor)) && stopsOk && text(e.id, 80) && /^[\w-]+$/.test(e.id) && text(e.title, 100) && text(e.club, 80) && text(e.description, 1500) && text(e.locationId, 80) && text(e.startsAt, 40) && text(e.endsAt, 40) && text(e.mascotId, 80) && ['draft', 'published'].includes(e.status)
 }
 
 export function eventHasLocation(event: CampusEvent, locationId: string | null | undefined): boolean {
@@ -117,7 +138,7 @@ export function readEventStore(raw: string | null): EventStore {
   try {
     const data = JSON.parse(raw)
     if (data.version !== 1 || !Array.isArray(data.events) || !Array.isArray(data.mascots)) return fallback
-    return { version: 1, events: data.events.filter(isEvent).slice(0, 50), mascots: data.mascots.filter((m: unknown) => isMascot(m) && m.kind === 'image').slice(0, 12) }
+    return { version: 1, events: data.events.filter(isEvent).slice(0, 50), mascots: data.mascots.filter(isCustomMascot) }
   } catch { return fallback }
 }
 

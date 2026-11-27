@@ -1,0 +1,32 @@
+.event-encounter {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(16px, 3vw, 26px);
+  border: 1px solid var(--event-border);
+  border-radius: 20px;
+  background: var(--event-surface);
+}
+.event-encounter > .button, .encounter-camera > .button { justify-self: start; }
+.encounter-heading, .encounter-actions, .encounter-consent { display: flex; align-items: center; gap: 10px; }
+.encounter-heading h2 { margin: 0; font-size: 20px; }
+.encounter-heading-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 12px; color: var(--event-pink); background: var(--event-soft); }
+.event-encounter p, .encounter-consent { margin: 0; font-size: 13px; line-height: 1.65; color: var(--color-muted); }
+.encounter-actions { flex-wrap: wrap; }
+.encounter-actions .button { min-height: 42px; font-size: 13px; }
+.encounter-camera { display: grid; gap: 12px; min-width: 0; }
+.encounter-viewport, .encounter-preview { width: min(100%, 560px); border-radius: 16px; }
+.encounter-viewport { position: relative; aspect-ratio: 4/5; max-height: 65svh; overflow: hidden; background: #101722; }
+.encounter-viewport video, .encounter-viewport canvas, .encounter-placement { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.encounter-viewport video { object-fit: cover; }
+.encounter-viewport .mirrored { transform: scaleX(-1); }
+.encounter-placement { background: transparent; border: 0; cursor: crosshair; touch-action: manipulation; }
+.encounter-placement:focus-visible { outline-offset: -4px; outline: 3px solid white; }
+.encounter-hint { pointer-events: none; position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); border-radius: 12px; padding: 8px 12px; text-align: center; background: #101722dc; color: white; font-size: 13px; line-height: 1.5; }
+.encounter-preview { height: auto; display: block; }
+.encounter-consent { align-items: flex-start; cursor: pointer; color: var(--color-ink); }
+.encounter-consent input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--event-rose); }
+
+.encounter-size { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; font-size: 14px; }
+.encounter-size span { font-variant-numeric: tabular-nums; }
+.encounter-size input { grid-column: 1 / -1; width: 100%; min-height: 30px; margin: 0; }

@@ -40,6 +40,7 @@ export type BackendLocateResponse = {
   label: string
   confidence: number
   tier: LocateTier
+  roomIds?: string[]
   topSim?: number
   top3: BackendLocateCandidate[]
   combined: boolean

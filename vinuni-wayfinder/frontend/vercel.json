@@ -80,6 +80,10 @@
     {
       "source": "/su-kien/:id",
       "destination": "/index.html"
+    },
+    {
+      "source": "/mascot-3d",
+      "destination": "/index.html"
     }
   ]
 }

@@ -16,6 +16,9 @@ from PIL import Image, ImageOps
 
 from . import auth_store as auth_mod
 from . import events_store as ev_mod
+from .event_album import Album, album_router
+from .event_voice import event_voice_router
+from .mascot_generator import mascot_router
 from . import store, supa
 from .embedder import DIM, MODEL_NAME, embedder
 from .index import VectorIndex
@@ -321,6 +324,13 @@ def _label(g, s):
     return n['label'] if n else s
 
 
+def indoor_room_ids(g: SiteGraph, spot: str) -> list[str]:
+    node = g.nodes.get(spot)
+    if not node or g.maps.get(node.get('map'), {}).get('kind') != 'indoor':
+        return []
+    return [room['id'] for room in g.rooms if room.get('node') == spot]
+
+
 @app.post('/api/locate')
 async def locate(image: UploadFile = File(...), previous: str | None = Form(None)):
     index.sync_if_stale(20)
@@ -357,7 +367,7 @@ async def locate(image: UploadFile = File(...), previous: str | None = Form(None
     pid = 'p_' + secrets.token_hex(6)
     _photos[pid] = {'vec': q, 'tally': tally, 't': time.time(), 'pred': best}
     return {'photoId': pid, 'spot': best, 'label': _label(g, best), 'confidence': round(conf, 2),
-            'tier': tier, 'topSim': round(top_sim, 3),
+            'tier': tier, 'roomIds': indoor_room_ids(g, best), 'topSim': round(top_sim, 3),
             'top3': [{'spot': s, 'label': _label(g, s), 'votes': tally[s]['votes']} for s in ranked[:3]],
             'combined': bool(prev), 'ms': round((time.time() - t0) * 1000)}
 
@@ -476,6 +486,14 @@ def _require_btc(authorization: str | None) -> dict:
     return account
 
 
+album = Album(DATA / 'event-photos.sqlite', REMOTE)
+app.include_router(album_router(album, lambda eid: events_store.get_published(eid), _require_btc))
+app.include_router(mascot_router(_require_btc))
+app.include_router(event_voice_router(lambda: events_store, lambda: {
+    room['id']: room['name'] for room in graph().rooms if room.get('name')
+}))
+
+
 @app.post('/api/auth/register')
 def auth_register(body: dict = Body(...)):
     payload = dict(body or {})
@@ -569,6 +587,7 @@ def remove_event(event_id: str, authorization: str | None = Header(default=None)
     actor = _require_btc(authorization)
     try:
         events_store.delete_event(event_id, actor=actor)
+        album.clear_local(event_id)
         return {'ok': True}
     except PermissionError as e:
         err(403, 'forbidden', str(e))
