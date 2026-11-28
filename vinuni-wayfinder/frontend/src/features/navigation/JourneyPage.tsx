@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, ArrowUp, Check, ChevronLeft, DoorOpen, Footprint
 import { DemoNote, EmptyState, IconButton, Modal, NotFound, parseCoord } from '../../shared/ui'
 import { SaveButton } from '../../shared/FavoritesContext'
 import { useEventJourney } from '../events/EventContext'
-import { EventQrCard } from '../events/EventQrCard'
+import { EventWelcome } from './EventWelcome'
 import { EventJourneyBadge } from '../events/EventsPages'
 import { Mascot } from '../mascot/Mascot'
 import { findRoute, type Turn } from '../wayfinder/data'
@@ -112,6 +112,9 @@ export function JourneyPage() {
   const cameraControls = { onStep: goStep, onMode: chooseMode, onExit: () => setShowExit(true) }
   const modeButton = <div className="card-mode"><JourneyModeButton current="card" onChange={chooseMode} /></div>
 
+  const welcome = event && arrivalCtx && <EventWelcome key={event.id + ':' + rawTo} event={event} arrival={arrivalCtx} mode={mode} place={toPlace} />
+  const cardWelcome = <div className="focused-page journey-page">{modeButton}{welcome}</div>
+
   if (isLive) {
     if (!rawTo || (!rawFrom && !hasGps)) return <NotFound title="Chưa có hành trình này" description="Chọn lại điểm xuất phát và điểm đến để bắt đầu." />
     if (liveLoading) return <div className="narrow-page"><div className="locating-status" role="status"><LoaderCircle size={20} className="recognition-spinner" /><span>Đang tải chỉ dẫn từng bước…</span></div></div>
@@ -126,8 +129,9 @@ export function JourneyPage() {
     const mascotMood = arrived ? 'jump' : dir === 'left' ? 'left' : dir === 'right' ? 'right' : dir === 'back' ? 'wait' : 'walk'
     const progress = travelSteps.length ? Math.round((step / travelSteps.length) * 100) : 100
     const startDisplay = fromLabel || liveRoute.start
-    if (!arrived && mode === 'camera') return <><JourneyCamera {...cameraControls} live
-      destination={liveRoute.destination} step={step} direction={stepDirLabels[dir]} icon={Direction} mood={mascotMood} instruction={curStep.text}
+    if (arrived && welcome && mode === 'card') return cardWelcome
+    if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} welcome={arrived && welcome} live
+      destination={liveRoute.destination} step={step} direction={stepDirLabels[dir]} icon={Direction} mood={mascotMood} instruction={curStep?.text ?? ''}
       waypoints={travelSteps.map(s => ({ label: s.target.label || s.text, meters: s.meters, approx: s.approx }))} />{exitDialog}</>
 
     return (
@@ -147,28 +151,7 @@ export function JourneyPage() {
             {speechMessage && <p className="inline-feedback" role="status">{speechMessage}</p>}
             <div className="journey-progress"><div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Tiến độ hành trình"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><span>{step}/{travelSteps.length} chặng đã xác nhận</span></div>
             {arrived ? (
-              <>
-                {event && arrivalCtx && (
-                  <div className="journey-arrival-event">
-                    <EventQrCard
-                      compact
-                      size={180}
-                      value={arrivalCtx.checkinCode}
-                      copyValue={arrivalCtx.checkinCode}
-                      copyLabel="Sao chép mã check-in"
-                      title="Mã QR Check-in tại cửa"
-                      subtitle="Đưa mã này cho Ban Tổ Chức quét xác nhận khi tới cửa (app không tự điểm danh)."
-                      filename={`checkin-${event.id}`}
-                    />
-                    {arrivalCtx.nextStop && arrivalCtx.nextStopRoute && (
-                      <Link to={`${arrivalCtx.nextStopRoute}&mode=${mode}`} className="button button-primary full-width">
-                        Đi tiếp tới trạm kế tiếp: {arrivalCtx.nextStop.label}<ArrowRight size={19} />
-                      </Link>
-                    )}
-                  </div>
-                )}
-                <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link>{toPlace && <SaveButton place={toPlace} />}</div>
-              </>
+              <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link>{toPlace && <SaveButton place={toPlace} />}</div>
             ) : (
               <><button className="button button-primary full-width" onClick={() => goStep(step + 1)}>Đã xong chặng này<Check size={19} /></button><div className="journey-controls"><button disabled={step === 0} onClick={() => goStep(step - 1)}><ChevronLeft size={18} />Chặng trước</button><Link to={link(`/vi-tri?to=${rawTo}`)}><RotateCcw size={16} />Đổi điểm xuất phát</Link></div></>
             )}
@@ -207,9 +190,10 @@ export function JourneyPage() {
   const current = getPlace(step === 0 ? from.id : route[step - 1].to)!
   const progress = route.length ? Math.round((step / route.length) * 100) : 100
 
-  if (!arrived && mode === 'camera') return <><JourneyCamera {...cameraControls} live={false}
-    destination={to.name} step={step} direction={turnLabels[edge.turn]} icon={Direction}
-    mood={edge.turn === 'straight' ? 'walk' : edge.turn} instruction={edge.instruction}
+  if (arrived && welcome && mode === 'card') return cardWelcome
+  if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} welcome={arrived && welcome} live={false}
+    destination={to.name} step={step} direction={edge ? turnLabels[edge.turn] : stepDirLabels.arrive} icon={Direction}
+    mood={!edge || edge.turn === 'straight' ? 'walk' : edge.turn} instruction={edge?.instruction ?? ''}
     waypoints={route.map(e => ({ label: getPlace(e.to)?.name || e.to }))} />{exitDialog}</>
 
   return (
@@ -223,28 +207,7 @@ export function JourneyPage() {
           {speechMessage && <p className="inline-feedback" role="status">{speechMessage}</p>}
           <div className="journey-progress"><div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Tiến độ hành trình"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><span>{step}/{route.length} chặng đã xác nhận</span></div>
           {arrived ? (
-            <>
-              {event && arrivalCtx && (
-                <div className="journey-arrival-event">
-                  <EventQrCard
-                    compact
-                    size={180}
-                    value={arrivalCtx.checkinCode}
-                    copyValue={arrivalCtx.checkinCode}
-                    copyLabel="Sao chép mã check-in"
-                    title="Mã QR Check-in tại cửa"
-                    subtitle="Đưa mã này cho Ban Tổ Chức quét xác nhận khi tới cửa (app không tự điểm danh)."
-                    filename={`checkin-${event.id}`}
-                  />
-                  {arrivalCtx.nextStop && arrivalCtx.nextStopRoute && (
-                    <Link to={`${arrivalCtx.nextStopRoute}&mode=${mode}`} className="button button-primary full-width">
-                      Đi tiếp tới trạm kế tiếp: {arrivalCtx.nextStop.label}<ArrowRight size={19} />
-                    </Link>
-                  )}
-                </div>
-              )}
-              <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link><SaveButton place={to} /></div>
-            </>
+            <div className="arrival-actions"><Link to="/" className="button button-primary">Về bản đồ<ArrowRight size={19} /></Link><SaveButton place={to} /></div>
           ) : <><button className="button button-primary full-width" onClick={() => goStep(step + 1)}>Đã tới {getPlace(edge.to)?.short}<Check size={19} /></button><div className="journey-controls"><button disabled={step === 0} onClick={() => goStep(step - 1)}><ChevronLeft size={18} />Chặng trước</button><Link to={link(`/vi-tri?to=${to.id}`)}><RotateCcw size={16} />Đổi điểm xuất phát</Link></div></>}
           <DemoNote compact />
         </section>

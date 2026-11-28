@@ -82,6 +82,51 @@ try {
   await expect(page.locator('video')).toHaveCount(0)
   await page.getByLabel('Điểm đến', { exact: true }).selectOption('b')
   await expect(page.locator('video')).toBeVisible({ timeout: 1800 })
+  await page.route('**/api/events', route => route.fulfill({ json: {
+    storage: 'local', mascots: [], events: [{
+      id: 'club-test', title: 'Gặp mascot', club: 'CLB thử', description: 'Thử hành trình CLB.',
+      locationId: 'b', mascotId: 'tia3d', status: 'published',
+      startsAt: '2026-11-28T09:00:00+07:00', endsAt: '2026-11-28T10:00:00+07:00',
+    }],
+  } }))
+  await page.goto('/hanh-trinh?from=a&to=b&event=club-test&mode=camera')
+  await expect.poll(() => page.locator('video').evaluate(v => v.videoWidth)).toBeGreaterThan(0)
+  await button('Đã tới mốc').click()
+  await expect(page.getByRole('heading', { name: 'Tia chào bạn!' })).toHaveCount(0)
+  await page.evaluate(() => {
+    window.walkStream = document.querySelector('video').srcObject
+    const getContext = HTMLCanvasElement.prototype.getContext
+    HTMLCanvasElement.prototype.getContext = function (kind, options) {
+      return getContext.call(this, kind, kind === 'webgl2' ? { ...options, preserveDrawingBuffer: true } : options)
+    }
+    const sample = document.createElement('canvas')
+    sample.width = sample.height = 48
+    const ctx = sample.getContext('2d', { willReadFrequently: true })
+    window.footRows = new Set()
+    function sampleJump() {
+      const model = document.querySelector('.event-welcome canvas')
+      if (model?.width) {
+        ctx.clearRect(0, 0, 48, 48)
+        ctx.drawImage(model, 0, 0, 48, 48)
+        const pixels = ctx.getImageData(0, 0, 48, 48).data
+        const bottom = pixels.findLastIndex((v, i) => i % 4 === 3 && v > 150)
+        if (bottom >= 0) window.footRows.add(Math.floor(bottom / (48 * 4)))
+      }
+      if (window.footRows.size < 3) requestAnimationFrame(sampleJump)
+    }
+    requestAnimationFrame(sampleJump)
+  })
+  await button('Đã tới mốc').click()
+  await expect(page.getByRole('heading', { name: 'Tia chào bạn!' })).toBeVisible()
+  assert.ok(await page.locator('video').evaluate(v => v.srcObject === window.walkStream && v.srcObject.active))
+  await expect.poll(() => page.evaluate(() => window.footRows.size)).toBeGreaterThanOrEqual(3)
+  await button('Thẻ chỉ đường').click()
+  await expect.poll(allStopped).toBe(true)
+  await expect(page.getByRole('heading', { name: 'Tia chào bạn!' })).toBeVisible()
+  await page.getByText('Mã QR Check-in tại cửa', { exact: true }).first().click()
+  await expect(page.getByRole('button', { name: 'Sao chép mã check-in' })).toBeVisible()
+  await page.getByRole('link', { name: 'Xem sự kiện' }).click()
+  await expect(page).toHaveURL(/su-kien\/club-test$/)
   console.log('Đã kiểm tra Camera, Thẻ, ảnh định vị, tiến độ, từ chối quyền và giải phóng camera trên màn hình 390 px.')
 } finally {
   await browser.close()
