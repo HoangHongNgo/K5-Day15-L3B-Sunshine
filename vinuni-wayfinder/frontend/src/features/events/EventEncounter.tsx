@@ -9,7 +9,8 @@ import { matchesIndoorVenue } from './indoorEncounter'
 import { createEncounterStage, type EncounterMotion } from './encounterStage'
 import { useGroundAnchor } from './useGroundAnchor'
 import { dataUrlToBlob, savePhoto } from './photoSave'
-import { ArMascotButton } from './ArMascot'
+import { useArSupport, useQuickLook, useWebXrMascot } from './ArMascot'
+import { arrivalPhase } from './mascotAr'
 import { requestSensorPermission } from '../../shared/lib/sensors.js'
 import { assessEncounterLocation, captureEncounterPhoto, encounterAccuracy, encounterRadius, submitEncounterPhoto } from './eventEncounterMedia'
 import './eventEncounter.css'
@@ -34,7 +35,13 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
   }) : null
   const demoNearby = mockFix?.status === 'near'
   const atVenue = arrived || demoNearby
-  const [phase, setPhase] = useState<'entry' | 'unlocked' | 'camera' | 'review' | 'sent'>(arrived ? 'camera' : demoNearby ? 'unlocked' : 'entry')
+  // AR thật (WebXR) là mặc định khi máy hỗ trợ; máy khác dùng camera + mascot đứng trên mặt sàn.
+  const ar = useArSupport()
+  const xr = useWebXrMascot(mascot, undefined, ar === 'webxr')
+  const ql = useQuickLook(mascot, ar === 'quicklook')
+  const realAr = ar === 'webxr' || ar === 'quicklook'
+  const [phase, setPhase] = useState<'waiting' | 'entry' | 'unlocked' | 'camera' | 'review' | 'sent'>(arrived ? arrivalPhase(ar) : demoNearby ? 'unlocked' : 'entry')
+  useEffect(() => { if (phase === 'waiting' && ar !== 'checking') setPhase(arrivalPhase(ar)) }, [phase, ar])
   const [checking, setChecking] = useState<'gps' | 'photo' | null>(null)
   const indoorRequest = useRef<AbortController | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -115,6 +122,15 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
     setMessage('')
     setPhoto(null)
     setConsent(false)
+    if (ar === 'webxr') { xr.start(); setPhase('unlocked'); return }
+    if (ar === 'quicklook' && ql.open()) { setPhase('unlocked'); return }
+    setPhase('camera')
+  }
+  /** Camera thường (ghép ảnh trên máy) để chụp và gửi ảnh vào album CLB. */
+  function openPlainCamera() {
+    setMessage('')
+    setPhoto(null)
+    setConsent(false)
     setPhase('camera')
   }
   function exitCamera() {
@@ -176,8 +192,12 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
           <Camera size={17}/>{checking === 'photo' ? 'Đang nhận diện địa điểm…' : 'Định vị trong nhà bằng ảnh'}
         </button>
       </div>)}
-    {(phase === 'unlocked' || phase === 'sent') && <ArMascotButton mascot={mascot} />}
-    {phase === 'unlocked' && <button type="button" className="button button-primary" onClick={openCamera}><Camera size={17}/>{arrived ? `Chụp ảnh check-in cùng ${mascot.name}` : 'Mở camera AR'}</button>}
+    {phase === 'waiting' && <p role="status">Đang mở camera check-in…</p>}
+    {xr.message && <p role="status">{xr.message}</p>}
+    {xr.overlay}
+    {phase === 'unlocked' && <button type="button" className="button button-primary" onClick={openCamera} disabled={ar === 'quicklook' && !ql.ready}>
+      <Camera size={17}/>{ar === 'quicklook' && !ql.ready ? 'Đang chuẩn bị AR…' : realAr ? `Gặp ${mascot.name} trong AR` : arrived ? `Chụp ảnh check-in cùng ${mascot.name}` : 'Mở camera AR'}</button>}
+    {phase === 'unlocked' && realAr && <button type="button" className="button button-quiet" onClick={openPlainCamera}>Chụp ảnh gửi album CLB</button>}
     {(phase === 'camera' || phase === 'review') && <PhotoDialog onClose={exitCamera} busy={sending}>
       {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto} />}
       {phase === 'review' && photo && <div className="encounter-review">
@@ -351,10 +371,6 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
     </div>
     <div className="encounter-top">
       <button type="button" className="camera-control" onClick={onClose} aria-label="Đóng camera"><X /></button>
-      <ArMascotButton mascot={mascot} className="camera-control encounter-ar" beforeStart={() => {
-        (video.current?.srcObject as MediaStream | null)?.getTracks().forEach(t => t.stop())
-        onClose()
-      }} />
       <button type="button" className="camera-control" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')} aria-label="Đổi camera"><SwitchCamera /></button>
     </div>
     {(error || status === 'loading') && <p className="encounter-hint" role={error ? 'alert' : 'status'}>{error || 'Đang mở camera…'}</p>}

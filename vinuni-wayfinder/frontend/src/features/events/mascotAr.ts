@@ -23,3 +23,23 @@ export function joystickMove(stick: { x: number; y: number }, cameraYaw: number,
   const dz = (rz * stick.x - fz * stick.y) * step
   return { dx: dx + 0, dz: dz + 0, facing: Math.atan2(dx, dz) as number | null }
 }
+
+export type ArSupport = 'webxr' | 'quicklook' | 'none' | 'checking'
+
+/** Biết ngay (không chờ) khi là iPhone Quick Look hoặc máy không có WebXR, để camera mở tức thì. */
+export function initialArSupport({ quickLook, hasXr }: { quickLook: boolean; hasXr: boolean }): ArSupport {
+  if (quickLook) return 'quicklook'
+  return hasXr ? 'checking' : 'none'
+}
+
+/** Tới nơi: AR thật là mặc định ở cả Android (WebXR) và iPhone (Quick Look) — một chạm để vào; máy khác mở camera ngay. */
+export function arrivalPhase(support: ArSupport): 'unlocked' | 'camera' | 'waiting' {
+  if (support === 'webxr' || support === 'quicklook') return 'unlocked'
+  return support === 'checking' ? 'waiting' : 'camera'
+}
+
+/** Mascot tự đứng lên mặt phẳng đầu tiên khi vòng dò đã đứng yên ~0,5 s (không bắt người dùng chạm). */
+export const AUTO_PLACE_MS = 500
+export function autoPlaceReady(surfaceSince: number, now: number) {
+  return surfaceSince > 0 && now - surfaceSince >= AUTO_PLACE_MS
+}

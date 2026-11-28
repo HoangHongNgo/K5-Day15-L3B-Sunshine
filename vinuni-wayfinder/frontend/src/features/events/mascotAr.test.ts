@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { joystickMove, joystickVector } from './mascotAr'
+import { arrivalPhase, autoPlaceReady, initialArSupport, joystickMove, joystickVector } from './mascotAr'
 
 describe('joystickVector', () => {
   it('normalises the thumb offset to a unit disc with a small dead zone', () => {
@@ -32,5 +32,36 @@ describe('joystickMove', () => {
   it('faces the direction of travel and stands still without input', () => {
     expect(joystickMove({ x: 0, y: 0 }, 0, 0.5, 1)).toEqual({ dx: 0, dz: 0, facing: null })
     expect(joystickMove({ x: 1, y: 0 }, 0, 0.5, 1).facing).toBeCloseTo(Math.PI / 2)
+  })
+})
+
+describe('initialArSupport', () => {
+  it('knows iPhone Quick Look and the no-WebXR case synchronously, so the camera can open at once', () => {
+    expect(initialArSupport({ quickLook: true, hasXr: false })).toBe('quicklook')
+    expect(initialArSupport({ quickLook: false, hasXr: false })).toBe('none')
+  })
+  it('waits for the async WebXR check when navigator.xr exists', () => {
+    expect(initialArSupport({ quickLook: false, hasXr: true })).toBe('checking')
+  })
+})
+
+describe('arrivalPhase', () => {
+  it('real AR is the default where WebXR works: show one tap-to-enter button (AR needs a tap)', () => {
+    expect(arrivalPhase('webxr')).toBe('unlocked')
+  })
+  it('iPhone also goes straight to AR (Quick Look) with one tap, not the gyro camera first', () => {
+    expect(arrivalPhase('quicklook')).toBe('unlocked')
+  })
+  it('opens the camera straight away only where no AR exists, and holds while still checking', () => {
+    expect(arrivalPhase('none')).toBe('camera')
+    expect(arrivalPhase('checking')).toBe('waiting')
+  })
+})
+
+describe('autoPlaceReady', () => {
+  it('stands the mascot on the first surface once the reticle has been steady briefly', () => {
+    expect(autoPlaceReady(0, 1000)).toBe(false)
+    expect(autoPlaceReady(1000, 1300)).toBe(false)
+    expect(autoPlaceReady(1000, 1500)).toBe(true)
   })
 })

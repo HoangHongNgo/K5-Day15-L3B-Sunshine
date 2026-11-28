@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import type { MascotAsset } from './events'
 import type { EncounterMotion } from './encounterStage'
 import { createEventMascot } from '../mascot/eventMascot'
-import { joystickMove, joystickVector } from './mascotAr'
+import { autoPlaceReady, initialArSupport, joystickMove, joystickVector, type ArSupport } from './mascotAr'
 import { dataUrlToBlob, savePhoto } from './photoSave'
 import './arMascot.css'
 
@@ -14,17 +14,19 @@ import './arMascot.css'
 const AR_HEIGHT_M = 0.45
 const WALK_SPEED = 0.35
 
-type Support = 'webxr' | 'quicklook' | null
-
-function useArSupport(): Support {
-  const [support, setSupport] = useState<Support>(null)
+export function useArSupport(): ArSupport {
+  const [support, setSupport] = useState<ArSupport>(() => initialArSupport({
+    quickLook: typeof document !== 'undefined' && !!document.createElement('a').relList?.supports?.('ar'),
+    hasXr: typeof navigator !== 'undefined' && !!navigator.xr,
+  }))
   useEffect(() => {
+    if (support !== 'checking') return
     let alive = true
-    const a = document.createElement('a')
-    if (a.relList?.supports?.('ar')) { setSupport('quicklook'); return }
-    navigator.xr?.isSessionSupported('immersive-ar').then(ok => { if (alive && ok) setSupport('webxr') }).catch(() => {})
+    navigator.xr!.isSessionSupported('immersive-ar')
+      .then(ok => { if (alive) setSupport(ok ? 'webxr' : 'none') })
+      .catch(() => { if (alive) setSupport('none') })
     return () => { alive = false }
-  }, [])
+  }, [support])
   return support
 }
 
@@ -47,19 +49,21 @@ function buildArMascot(mascot: MascotAsset) {
   return { root, inner, shadow, asset }
 }
 
-export function ArMascotButton({ mascot, beforeStart, className = 'button button-quiet' }: {
-  mascot: MascotAsset; beforeStart?: () => void; className?: string
+/** Nút AR phụ: iPhone mở Quick Look; máy WebXR (khi không dùng làm mặc định) mở AR. */
+export function ArMascotButton({ mascot, beforeStart, className = 'button button-quiet', quickLookOnly = false }: {
+  mascot: MascotAsset; beforeStart?: () => void; className?: string; quickLookOnly?: boolean
 }) {
   const support = useArSupport()
   if (support === 'quicklook') return <QuickLookButton mascot={mascot} beforeStart={beforeStart} className={className} />
-  if (support === 'webxr') return <WebXrButton mascot={mascot} beforeStart={beforeStart} className={className} />
+  if (support === 'webxr' && !quickLookOnly) return <WebXrButton mascot={mascot} beforeStart={beforeStart} className={className} />
   return null
 }
 
-/** iPhone: xuất mascot ra USDZ ngay trên máy rồi mở AR Quick Look (ARKit dò bàn/sàn thật, có nút chụp sẵn). */
-function QuickLookButton({ mascot, beforeStart, className }: { mascot: MascotAsset; beforeStart?: () => void; className: string }) {
+/** iPhone: xuất mascot ra USDZ ngay trên máy (làm sẵn khi vào trang) để một chạm là mở AR Quick Look (ARKit). */
+export function useQuickLook(mascot: MascotAsset, enabled: boolean) {
   const [url, setUrl] = useState('')
   useEffect(() => {
+    if (!enabled) return
     let alive = true, made = ''
     void (async () => {
       const { USDZExporter } = await import('three/examples/jsm/exporters/USDZExporter.js')
@@ -74,22 +78,33 @@ function QuickLookButton({ mascot, beforeStart, className }: { mascot: MascotAss
       setUrl(made)
     })().catch(() => {})
     return () => { alive = false; if (made) URL.revokeObjectURL(made) }
-  }, [mascot])
-  if (!url) return null
-  return <button type="button" className={className} onClick={() => {
-    beforeStart?.()
-    const a = document.createElement('a')
-    a.rel = 'ar'
-    a.href = `${url}#allowsContentScaling=1`
-    a.appendChild(document.createElement('img'))
-    a.click()
-  }}><Box size={17} />Đặt {mascot.name} vào không gian thật</button>
+  }, [mascot, enabled])
+  return {
+    ready: !!url,
+    /** Phải gọi trong lần chạm của người dùng. */
+    open() {
+      if (!url) return false
+      const a = document.createElement('a')
+      a.rel = 'ar'
+      a.href = `${url}#allowsContentScaling=1`
+      a.appendChild(document.createElement('img'))
+      a.click()
+      return true
+    },
+  }
+}
+
+function QuickLookButton({ mascot, beforeStart, className }: { mascot: MascotAsset; beforeStart?: () => void; className: string }) {
+  const ql = useQuickLook(mascot, true)
+  if (!ql.ready) return null
+  return <button type="button" className={className} onClick={() => { beforeStart?.(); ql.open() }}><Box size={17} />Đặt {mascot.name} vào không gian thật</button>
 }
 
 type XrUi = { surface: boolean; placed: boolean; cameraAccess: boolean; message: string }
 
 /** Android Chrome: WebXR immersive-ar + hit-test. Chạm để đặt, joystick để đi, nút hoạt ảnh, chụp ghép camera nếu được. */
-function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; beforeStart?: () => void; className: string }) {
+/** Phiên AR gắn ở cấp màn hình (không nằm trong hộp camera) để phần điều khiển không bị gỡ khi vào AR. */
+export function useWebXrMascot(mascot: MascotAsset, beforeStart?: () => void, enabled = true) {
   const overlay = useRef<HTMLDivElement>(null)
   const stick = useRef({ x: 0, y: 0 })
   const ctl = useRef<{ end: () => void; play: (m: EncounterMotion) => void; scale: (k: number) => void; capture: () => void } | null>(null)
@@ -157,7 +172,7 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
       return
     }
     const ref = renderer.xr.getReferenceSpace()!
-    let placed = false, surface = false, captureWanted = false, last = 0, facing = 0
+    let placed = false, surface = false, captureWanted = false, last = 0, facing = 0, surfaceSince = 0
 
     function place() {
       if (!reticle.visible) return
@@ -188,6 +203,8 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
         reticle.visible = !!pose
         if (pose) reticle.matrix.fromArray(pose.transform.matrix)
         if (!!pose !== surface) { surface = !!pose; setUi(u => ({ ...u, surface })) }
+        surfaceSince = pose ? (surfaceSince || time) : 0
+        if (!placed && autoPlaceReady(surfaceSince, time)) place()
       }
       if (placed) {
         const xrCam = renderer.xr.getCamera()
@@ -293,14 +310,11 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
   }
   function releaseStick() { stick.current = { x: 0, y: 0 }; setKnob({ x: 0, y: 0 }) }
 
-  return <>
-    <button type="button" className={className} onClick={start}><Box size={17} />Đặt {mascot.name} vào không gian thật</button>
-    {!active && ui.message && <p role="status">{ui.message}</p>}
-    {createPortal(<div ref={overlay} className="ar-overlay" hidden>
+  const overlayNode = enabled && typeof document !== 'undefined' && createPortal(<div ref={overlay} className="ar-overlay" hidden>
       {active && <>
         <div className="ar-top">
           <button type="button" className="ar-round" aria-label="Thoát AR" onClick={() => ctl.current?.end()}><X size={22} /></button>
-          <p className="ar-hint" role="status">{ui.message || (!ui.placed ? (ui.surface ? `Chạm để đặt ${mascot.name} lên mặt phẳng` : 'Di chuyển điện thoại chậm để dò mặt bàn hoặc mặt sàn…') : 'Kéo joystick để đi, chạm chỗ khác để đặt lại')}</p>
+          <p className="ar-hint" role="status">{ui.message || (!ui.placed ? (ui.surface ? `Đã thấy mặt phẳng, ${mascot.name} đang ra…` : 'Di chuyển điện thoại chậm để dò mặt bàn hoặc mặt sàn…') : 'Kéo joystick để đi, chạm chỗ khác để đặt lại')}</p>
         </div>
         {ui.placed && <div className="ar-bottom">
           <div className="ar-stick" aria-label="Joystick di chuyển mascot" onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); onStick(e) }}
@@ -317,6 +331,15 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
           </div>
         </div>}
       </>}
-    </div>, document.body)}
+    </div>, document.body)
+  return { start, active, overlay: overlayNode, message: active ? '' : ui.message }
+}
+
+function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; beforeStart?: () => void; className: string }) {
+  const xr = useWebXrMascot(mascot, beforeStart)
+  return <>
+    <button type="button" className={className} onClick={xr.start}><Box size={17} />Đặt {mascot.name} vào không gian thật</button>
+    {xr.message && <p role="status">{xr.message}</p>}
+    {xr.overlay}
   </>
 }
