@@ -69,6 +69,14 @@ class SiteGraph:
         dot = u[0] * v[0] + u[1] * v[1]
         return math.degrees(math.atan2(cross, dot))
 
+    @staticmethod
+    def _floor(m):
+        """Số tầng của bản đồ trong nhà: trường `floor`, hoặc đọc từ tên 'Tòa C – tầng 3' (Supabase chỉ giữ cột cố định)."""
+        if m.get('floor'):
+            return int(m['floor'])
+        hit = re.search(r'tầng\s+(\d+)', m.get('name') or '', re.I)
+        return int(hit.group(1)) if hit else None
+
     def map_label(self, map_id):
         m = self.maps.get(map_id, {})
         return m.get('building') or m.get('name') or map_id
@@ -177,7 +185,13 @@ class SiteGraph:
             if a['map'] != b['map']:
                 flush()
                 bm, am = self.maps.get(b['map'], {}), self.maps.get(a['map'], {})
-                if bm.get('kind') == 'indoor':
+                if bm.get('kind') == 'indoor' and am.get('kind') == 'indoor' and self._floor(bm) and self._floor(am):
+                    way = 'thang máy' if 'thang máy' in a['label'].lower() else 'cầu thang bộ'
+                    text = f"Đi {way} {'lên' if self._floor(bm) > self._floor(am) else 'xuống'} tầng {self._floor(bm)}"
+                elif bm.get('kind') == 'indoor' and self._floor(bm) and b['type'] == 'landmark':
+                    way = 'thang máy' if 'thang máy' in b['label'].lower() else 'cầu thang bộ'
+                    text = f"Vào {self.map_label(b['map'])} rồi đi {way} lên tầng {self._floor(bm)}"
+                elif bm.get('kind') == 'indoor':
                     text = f"Vào {self.map_label(b['map'])} qua {self._door(b['label'])}"
                 elif am.get('kind') == 'indoor':
                     text = f"Ra khỏi {self.map_label(a['map'])} qua {self._door(a['label'])}"

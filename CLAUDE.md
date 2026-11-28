@@ -96,6 +96,7 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
   Thu thập); tên cửa Tòa G theo hướng trên bảng thoát hiểm, mà hướng "lên" của bảng gần như là Nam thật.
 - **Tòa G tầng trệt** (thu thập trước): ảnh `maps/toa-G-tang-tret.webp`. Phòng G101–G107, 2 khu WC, 2 thang máy, 2 cầu
   thang. 33 điểm trong nhà, cửa nối theo GPS thật (3 neo, sai số 4,9 m). `metersPerPx` = 0.04 *(tự ước tính)*.
+- **Tòa C tầng 3 và tầng 4** (28/11/2026): sơ đồ **vẽ lại** từ bảng thoát hiểm bằng `backend/tools/add_c_floors.py` (`python -m tools.add_c_floors`, chạy lại được; ảnh `maps/toa-C-tang-3.webp`, `toa-C-tang-4.webp`, map `C3`/`C4` có `floor`). Tầng 3: C301–C305; tầng 4: hội trường C401, C402; mỗi tầng 3 cầu thang, thang máy, 3 WC. Hai tầng nối nhau qua thang máy/cầu thang; **tầng trệt Tòa C chưa có sơ đồ nên `c_door` tạm nối thẳng vào thang máy tầng 3**. Mọi điểm `verified: false`, `metersPerPx` 0.035 *(tự ước tính)*.
 - **Tòa I tầng trệt**: ảnh chụp biển "Floor map" `maps/toa-I-tang-tret.webp` (nghiêng, chói, chữ nhỏ). Hướng "lên" của
   ảnh là phía Tòa E. Đọc được: quầy cà phê, quầy tiện ích, khu tự học mở, **I119** (y tế), **I109**, văn phòng, WC, thang
   máy, cầu thang; lối sang Tòa A, B, C, E, bãi xe. Khu phía đông nhiều phòng chưa ghi số.
