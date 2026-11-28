@@ -90,16 +90,21 @@ try {
   await button('Mở camera AR').click()
 
   const placement = page.getByRole('button', { name: /Đặt .* trong khung hình/ })
+  const shutter = page.getByRole('button', { name: /Chụp ảnh cùng/ })
+  await expect(shutter).toBeEnabled()
+  const frame = await page.locator('.encounter-viewport').boundingBox()
+  assert.deepEqual(frame, { x: 0, y: 0, width: 390, height: 844 })
   await placement.click({ position: { x: 105, y: 190 } })
   // Hide only the moving video while comparing snapshots of the real 3D canvas.
   const stillCamera = await page.addStyleTag({ content: '.encounter-viewport video {visibility:hidden}' })
   const canvas = page.locator('.encounter-viewport canvas')
   async function mascotPixels() {
-    const snapshot = sharp(await canvas.screenshot())
+    const snapshot = sharp(await canvas.screenshot({ style: '.encounter-tools, .encounter-top, .encounter-bottom { visibility: hidden !important }' }))
     const { width, height } = await snapshot.metadata()
-    // The mobile app's fixed navigation can overlap the very bottom of this screenshot.
+    // Compare the upper part of the frame where the test placed the mascot.
     return snapshot.extract({ left: 0, top: 0, width, height: Math.floor(height * .7) }).raw().toBuffer()
   }
+  await button('Tùy chỉnh mascot').click()
   const slider = page.getByRole('slider', { name: 'Kích thước mascot' })
   await expect(slider).toHaveValue('100')
   const initial = await mascotPixels()
@@ -127,13 +132,23 @@ try {
   await stillCamera.evaluate(el => el.remove())
   await button('Đổi camera').click()
   await expect.poll(() => page.evaluate(() => window.testTracks.length)).toBe(2)
-  await placement.click()
-  await page.getByRole('button', { name: /Chụp ảnh cùng/ }).click()
+  await expect(shutter).toBeEnabled()
+  const downloaded = page.waitForEvent('download')
+  await shutter.click()
+  const download = await downloaded
+  assert.match(download.suggestedFilename(), /\.jpg$/i)
+
   const preview = page.getByRole('img', { name: /Ảnh vừa chụp/ })
   await expect(preview).toBeVisible()
   const photo = await preview.getAttribute('src')
   assert.ok(photo.startsWith('data:image/jpeg;base64,') && photo.length > 6000)
   assert.equal(await page.evaluate(() => window.testTracks.filter(t => t.readyState === 'live').length), 0)
+  const retry = page.getByRole('link', { name: 'Lưu ảnh về máy' })
+  await expect(retry).toHaveAttribute('href', photo)
+  const saved = await download.createReadStream()
+  const chunks = []
+  for await (const chunk of saved) chunks.push(chunk)
+  assert.deepEqual(Buffer.concat(chunks), Buffer.from(photo.split(',')[1], 'base64'))
   assert.equal(uploads.length, 0)
   const submit = button('Gửi ảnh cho CLB')
   await expect(submit).toBeDisabled()
@@ -141,5 +156,18 @@ try {
   await submit.click()
   await expect(page.getByText(/Đã gửi ảnh cho CLB/)).toBeVisible()
   assert.deepEqual(uploads, [{ image: photo }])
-  console.log('Verified organizer placement, Vini navigation, GPS gating, camera denial, 3D actions, camera flip, photo consent and cleanup.')
+  await page.goto(detail + '?chup-anh=1')
+  await page.setViewportSize({ width: 844, height: 390 })
+  await check.click()
+  await button('Mở camera AR').click()
+  await expect(shutter).toBeEnabled()
+  assert.deepEqual(await page.locator('.encounter-viewport').boundingBox(), { x: 0, y: 0, width: 844, height: 390 })
+  const localCopy = page.waitForEvent('download')
+  await shutter.click()
+  await localCopy
+  await expect(page.getByRole('checkbox', { name: /Tôi đồng ý/ })).not.toBeChecked()
+  await button('Đóng ảnh').click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  assert.equal(uploads.length, 1, 'Keeping the second photo on the device must not upload it.')
+  console.log('Verified fullscreen portrait and landscape, mascot controls, JPEG download, opt-in sharing and camera cleanup.')
 } finally { await browser.close() }

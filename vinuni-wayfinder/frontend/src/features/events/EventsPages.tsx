@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, NavLink, useNavigate, useParams } from 'react-router-dom'
+import { Link, NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, CalendarDays, Check, ChevronRight, Clock3, Compass, ExternalLink, Eye, FilePenLine, Info, LogOut, MapPin, Navigation, Plus, QrCode, Save, Search, ShieldCheck, Sparkles, Trash2, Users } from 'lucide-react'
 import { Modal } from '../../shared/ui'
 import { normalize } from '../wayfinder/data'
@@ -528,6 +528,7 @@ function EventMissing({ management = false }: { management?: boolean }) {
 }
 
 export function EventDetail() {
+  const [params] = useSearchParams()
   const { id } = useParams()
   const { events, allMascots, trackMetric } = useEvents()
   const { getPlace, isLive } = useWayfinder()
@@ -543,6 +544,11 @@ export function EventDetail() {
 
   if (!event) return <EventMissing />
   const mascot = resolveEventMascot(allMascots, event.mascotId)
+  if (params.get('chup-anh') === '1') return <div className="events-page narrow-page">
+    <Link className="back-link" to={`/su-kien/${event.id}`}><ArrowLeft size={17}/>Về sự kiện</Link>
+    <h1>Chụp ảnh cùng {mascot.name}</h1>
+    <Suspense fallback={<p role="status">Đang mở trải nghiệm AR…</p>}><EventEncounter key={event.id} event={event} mascot={mascot} anchor={event.arAnchor ?? null} /></Suspense>
+  </div>
   const phase = getEventPhase(event)
   const stops = event.stops ?? []
 
