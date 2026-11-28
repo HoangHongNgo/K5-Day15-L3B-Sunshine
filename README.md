@@ -4,9 +4,9 @@
 
 *Lát cắt = phần nhỏ nhất làm xong được trong hackathon: một người dùng · một việc · một quyết định AI · một kết quả.*
 
-**Lát cắt của nhóm:** một sinh viên mới hoặc khách trong khuôn viên VinUni (Gia Lâm) · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định mình đang đứng ở đâu (GPS ngoài trời, nhận diện ảnh hành lang trong tầng trệt Toà G và Toà I) và nên dẫn đường / hỏi lại / từ chối · mascot dẫn đường bằng thẻ chỉ dẫn từng bước. Mascot là hình 2D như prototype `web/`; AR neo không gian làm sau.
+**Lát cắt của nhóm:** một sinh viên mới hoặc khách trong khuôn viên VinUni (Gia Lâm) · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định mình đang đứng ở đâu (GPS ngoài trời, nhận diện ảnh hành lang trong tầng trệt Toà G và Toà I) và nên dẫn đường / hỏi lại / từ chối · mascot dẫn đường bằng thẻ chỉ dẫn từng bước. Vini dẫn đường ở dạng 2D. Trải nghiệm sự kiện có mascot 3D riêng.
 
-**Trạng thái (28/11/2026):** bản chạy thử dòng lệnh trong `codebase/` (hiểu câu hỏi, lộ trình, từ chối, dữ liệu giả lập) chạy được ở chế độ giả. Backend wayfinder (`vinuni-wayfinder/backend/`: nhận diện ảnh bằng MegaLoc, tìm đường trên đồ thị OpenStreetMap, thẻ chỉ dẫn, chế độ thu thập) và frontend hợp nhất (`vinuni-wayfinder/frontend/`, đã gộp `web/` vào và nối API backend) **chạy được trên laptop**. Chưa thử trên điện thoại, chưa thu thập đủ dữ liệu và chưa có số đo độ chính xác. Yêu cầu và kế hoạch: [docs/PRD.md](docs/PRD.md) · thiết kế: [spec.md](spec.md) · dữ liệu: [data/DATA_CARD.md](data/DATA_CARD.md).
+**Trạng thái CP3 ngày 28/11/2026.** CLI đã chạy GPT-4.1 mini trên 20 câu, có usage và trace cho từng câu. Lượt 1 đang chờ người chấm duyệt. Web đã mở Camera hoặc Thẻ để dẫn đường và trả kết quả MegaLoc qua API production. Một ảnh đã cho kết quả, cần thêm ảnh có nhãn thực địa để đo độ chính xác trong hai tòa. [Demo](https://vinuni-wayfinder.vercel.app/) · [Báo cáo lượt 1](eval/report.md) · [Thiết kế](spec.md) · [Dữ liệu](data/DATA_CARD.md)
 
 **Tham khảo:** cách định vị trong nhà tham khảo dự án Hound Around (BU Spark! DS+X 2026); mô hình nhận diện vị trí MegaLoc của Gabriele Berton và Carlo Masone. Nhóm tự cài đặt, không chép code. Dữ liệu quay (ảnh, sơ đồ, đồ thị, vector) không nằm trong repo công khai.
 
@@ -99,10 +99,10 @@ Nhóm dùng stack khác (Node, Streamlit, notebook…): sửa hàm `run_app()` t
 
 | Thành phần | Thật / Giả | Ghi chú |
 |---|---|---|
-| Lời gọi AI ở quyết định trung tâm | **Thật** (bắt buộc từ CP3) | Model: ____ |
-| Hiểu câu hỏi, lộ trình, từ chối (`codebase/`) | Chạy được ở **chế độ giả**; model thật chưa nối | Dữ liệu bản đồ và lịch là `synthetic` |
-| Backend wayfinder: GPS, nhận diện ảnh (MegaLoc), thẻ chỉ dẫn, chế độ thu thập | **Thật**, chạy trên laptop | Chưa thử trên điện thoại; chưa thu thập đủ dữ liệu; chưa có số đo độ chính xác |
-| Giao diện `web/` (mascot, tìm phòng, sự kiện CLB) | Giao diện thật, **dữ liệu mẫu** | Tên phòng, tuyến đường, kết quả nhận diện là fixture cho tới khi nối backend |
+| Lời gọi AI ở quyết định trung tâm | **Thật** (bắt buộc từ CP3) | GPT-4.1 mini, lượt 1 dùng 20 câu, usage ghi trong trace |
+| Hiểu câu hỏi, lộ trình, từ chối (`codebase/`) | Đã chạy model thật ở lượt 1 | Dữ liệu bản đồ và lịch là `synthetic` |
+| Backend wayfinder: GPS, nhận diện ảnh (MegaLoc), thẻ chỉ dẫn, chế độ thu thập | **Thật**, đã thử API qua Vercel | Một ảnh trả nhãn Hành lang phía Đông. Cần kiểm nhiều mốc độc lập trên điện thoại |
+| Giao diện `vinuni-wayfinder/frontend/` (mascot, tìm phòng, sự kiện CLB) | Đã nối backend | Camera và thẻ chỉ dẫn dùng chung hành trình. Có chế độ dữ liệu mẫu khi ngoại tuyến |
 | Đồ thị khuôn viên | Thật, từ OpenStreetMap, **chưa kiểm tại chỗ** | Cổng và cửa toà suy từ OSM; Toà K chưa có |
 | Đồ thị tầng trệt Toà G, Toà I | Thật, vẽ từ ảnh bảng sơ đồ, **chưa kiểm tại chỗ** | Phải đi bộ kiểm trước khi dùng làm đáp án |
 
@@ -110,7 +110,7 @@ Nhóm dùng stack khác (Node, Streamlit, notebook…): sửa hàm `run_app()` t
 
 2–3 dòng (bắt buộc): nhóm dùng công cụ AI nào để làm gì, người kiểm lại phần nào. Chi tiết: [docs/ai-usage.md](docs/ai-usage.md). Coding agent đọc [AGENTS.md](AGENTS.md).
 
-Nhóm dùng Claude Code (Anthropic) để viết và sửa code, soạn tài liệu (PRD, spec, data card, canvas) và đọc dự án tham khảo. AI không tạo người được phỏng vấn, trích dẫn hay số liệu. Người kiểm lại từng phần: nhóm điền tên và phần đã kiểm ở [docs/ai-usage.md](docs/ai-usage.md).
+Nhóm dùng Codex cho lượt đánh giá CP3, nguồn câu B13–B20, mô phỏng chi phí và bản đối chiếu chờ người duyệt. Nhóm dùng Claude Code (Anthropic) để viết và sửa code, soạn tài liệu (PRD, spec, data card, canvas) và đọc dự án tham khảo. AI không tạo người được phỏng vấn, trích dẫn hay số liệu. Người kiểm lại từng phần: nhóm điền tên và phần đã kiểm ở [docs/ai-usage.md](docs/ai-usage.md).
 
 ## File mẫu — điền ở bước nào
 

@@ -6,28 +6,29 @@
 Track: F (Làn khác) — bài toán: sinh viên mới khó tìm đường tới nơi tổ chức hoạt động trong trường
 Data BTC cấp đã dùng (nếu có — không commit nguyên file): không (track F, dữ liệu tự dựng `synthetic`)
 
-## §0. Hiện tại việc này diễn ra thế nào *(guide 1.1)*
-- Luồng hiện tại của việc này, trong khoá hoặc trên app thật (3–5 bước; ảnh chụp từ tài khoản của mình, đã che thông tin):
-- Công cụ / AI đang được dùng cho việc này (nếu có) + nguồn. Không kiểm được thì ghi "chưa kiểm":
+## §0. Người mới tìm phòng như thế nào
 
-## §1. Người dùng & bằng chứng *(guide 1.1, 1.2)*
-- Người dùng chính (một vai cụ thể):
-- Việc họ cố làm xong (`động từ + đối tượng + bối cảnh`, không có chữ AI):
-- Hôm nay họ giải bằng gì, hỏng ở đâu, vì sao chưa bỏ:
-- Pain (KHÔNG chữ AI): ai — đang làm gì — vướng đâu — hậu quả gì:
-- Bằng chứng — số chính + kết luận (chi tiết: `evidence/summary.md`): __
+1. Học viên nhận tên hoạt động hoặc mã phòng trong lịch. Có 9/27 người từng biết tên sự kiện nhưng chưa rõ sự kiện ở đâu.
+2. Khi chưa chắc đường, 8/27 hỏi người gần đó, 6/27 nhắn bạn hoặc nhóm lớp, 5/27 dò biển chỉ dẫn, 4/27 mở bản đồ và 4/27 mở lại thông báo.
+3. Người đi đối chiếu tòa, tầng và cửa phòng. Với 15/27 người, biết mã phòng vẫn chưa đủ để hình dung đường đi. Khảo sát ghi nhận các lựa chọn và hậu quả qua tự báo cáo. Chưa có quan sát trực tiếp hay số đo thời gian cho toàn bộ hành trình.
 
-## §2. Impact & quyết định chọn *(guide 1.3)*
+Nguồn cho ba bước là các câu 5–8 trong [khảo sát 27 học viên](evidence/summary.md). Phiếu chưa hỏi về việc dùng công cụ AI để tìm đường.
 
-| Hướng | Bao nhiêu người gặp | Bao nhiêu lần / tháng | Mỗi lần tốn gì | Impact / tháng | Làm kịp không | Chọn? |
-|---|---|---|---|---|---|---|
-|  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |
+## §1. Người dùng và bằng chứng
 
-- **Impact / tháng** của hướng chọn = __ người × __ lần × __ phút = __ — nguồn từng thừa số: __ (không có nguồn thì ghi rõ *(tự ước tính)*)
-- Hướng ĐÃ LOẠI + vì sao (giữ lại, đừng xoá):
-- Số lần / tháng của từng kiểu người dùng (dùng cho persona ở §8):
+Người dùng chính là học viên mới đến VinUni, cần tới đúng cửa phòng trước giờ học hoặc hoạt động. Mẫu khảo sát gồm 27 học viên AI20K ngoài nhóm, đã ở trường 1–4 tuần. Có 25 người từng gặp khó khi tìm phòng, 13 người gặp ít nhất ba lần và 14 người cho biết từng trễ, bỏ lỡ hoạt động hoặc lỡ điểm danh. Những nhóm này có thể trùng nhau.
+
+Tòa I được 15 người chọn là nơi dễ nhầm, tòa G được 8 người chọn. Nhóm lấy hai tòa làm phạm vi thử trong nhà. Khảo sát chưa đo riêng sinh viên chính quy năm nhất hoặc khách đến trường. [Phiếu ẩn danh](evidence/survey/results.csv) · [Cách tính lại](evidence/survey/count.py)
+
+## §2. Tác động và lựa chọn
+
+| Hướng | Bằng chứng từ 27 phiếu | Quyết định cho bản thử |
+|---|---|---|
+| Dẫn tới cửa phòng theo từng mốc | 15 người chọn chỉ dẫn từng bước. 13 người cho biết hậu quả chỉ là mất thêm 3–5 phút. | Ưu tiên. Người đi có thể dùng thẻ suốt hành trình và tự xác nhận từng mốc. |
+| Tra phòng qua tên sự kiện | 9 người chọn nguyên nhân biết tên sự kiện nhưng thiếu tòa/phòng. | Cho phép bắt đầu tuyến từ trang sự kiện khi CLB đã điền địa điểm. |
+| Chỉ đường chỉ bằng camera | 5 người chọn camera có nhân vật ảo, 16 người chọn bản đồ 2D. Câu hỏi cho chọn nhiều phương án. | Loại phương án bắt buộc mở camera. Cho đổi Camera ↔ Thẻ giữa đường. |
+
+**Tác động cần đo** là số phút tiết kiệm và số lần tới đúng cửa trước giờ. Con số 3–5 phút là thời gian người trả lời cho biết đã mất. Để đo phần ứng dụng tiết kiệm được, cần bấm giờ các hành trình tương đương theo cách cũ và với Wayfinder, rồi ghi cả trường hợp đi sai. Khảo sát chưa thu số chuyến mỗi tháng nên chưa tính được tác động tháng. Các tần suất dùng để thử chi phí được ghi rõ là giả định trong [cấu hình mô phỏng](cost/personas.yaml). [Tổng hợp khảo sát](evidence/summary.md)
 
 ## §3. Giải pháp tương tự *(guide 2.1)*
 - **Hound Around** (BU Spark! DS+X 2026, app web chỉ đường trong toà CDS của Đại học Boston; nguồn: trang Devpost của dự án và repo GitHub công khai `DxubleBTW/Hound-Around`): đáng học — nhận diện vị trí bằng một ảnh hành lang, nói thẳng khi chưa chắc (top 3 hoặc xin ảnh thứ hai) thay vì đoán, và cho gõ số phòng khi không chụp được; đáng né — chỉ nhận diện sau khi chụp ảnh, không theo dõi liên tục, và dữ liệu quay phải làm tay cho từng toà; mình khác — thêm GPS ngoài trời giữa các toà, thêm màn thu thập dữ liệu ngay trên điện thoại, và dữ liệu là toà của VinUni. Nhóm tự cài đặt, không chép code (repo đó không có giấy phép khi nhóm kiểm). Số liệu độ chính xác của họ chỉ để tham khảo, đo trên toà khác.
@@ -35,7 +36,7 @@ Data BTC cấp đã dùng (nếu có — không commit nguyên file): không (tr
 ## §4. Thiết kế *(guide 2.2, 3.2)*
 - **Lát cắt MỘT CÂU** *(cập nhật 28/11/2026, xem §10)*: Một sinh viên mới hoặc khách đang ở trong khuôn viên VinUni · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định (a) mình đang đứng ở đâu — GPS ngoài trời, nhận diện ảnh hành lang trong toà (tầng trệt Toà G và Toà I) — và (b) nên dẫn đường / hỏi lại / từ chối · mascot dẫn đường bằng thẻ chỉ dẫn từng bước, kèm mã QR check-in của hoạt động (nếu có).
 - Không làm (≥3 điều):
-  1. AR neo không gian (mascot đứng đúng chỗ trong không gian 3D qua camera). Mascot trong bản demo là hình 2D đi kèm thẻ chỉ dẫn và phủ lên camera, như prototype `web/`.
+  1. AR neo không gian (mascot đứng đúng chỗ trong không gian 3D qua camera). Trong chế độ chỉ đường, Vini là mascot 2D phủ lên camera. Mascot 3D thuộc trải nghiệm sự kiện.
   2. Nhiều tầng, thang máy / cầu thang giữa các tầng, và các toà khác ngoài Toà G, Toà I khi nhận diện trong nhà.
   3. Chế độ tiếp cận (lộ trình không bậc thang) và giao diện tiếng Anh.
   4. Ghi nhận điểm danh vào hệ thống thật (chỉ sinh nội dung mã QR).
@@ -55,7 +56,7 @@ flowchart LR
   O --> P["Ban tổ chức xác nhận check-in<br/>khi quét QR tại cửa (người duyệt)"]
 ```
 
-- **Sơ đồ định vị (wayfinder — đã có mã chạy thử trên laptop trong `vinuni-wayfinder/`, chưa thử trên điện thoại, chưa có số đo độ chính xác):** điểm xuất phát có thể đến từ ba nguồn thay cho việc sinh viên tự nói: GPS (ngoài trời) · ảnh hành lang → vector MegaLoc → 10 khung gần nhất bỏ phiếu → độ tin cậy → tự trả lời / top 3 / xin ảnh thứ hai · gõ số phòng. Kết quả thành mã địa điểm đưa vào `tim_lo_trinh` như trên. Ảnh bị xoá sau khi so khớp; chỉ giữ vector và dự đoán để người dùng sửa. Chi tiết ở `docs/PRD.md`.
+- **Định vị trong ứng dụng web.** Người dùng chọn điểm xuất phát qua GPS ngoài trời, ảnh hành lang hoặc tên phòng. Backend so khớp ảnh bằng MegaLoc. Khi cần, người dùng chọn trong các ứng viên hoặc chụp góc thứ hai. Web gửi vị trí đã xác nhận đến `/api/route`. Khung CLI trong sơ đồ trước dùng hàm `tim_lo_trinh` trên bản đồ giả lập riêng.
 
 ```mermaid
 flowchart LR
@@ -70,7 +71,7 @@ flowchart LR
   TOP3 --> NODE
   GPS --> NODE
   ROOM --> NODE
-  NODE --> ROUTE["Đưa vào tim_lo_trinh<br/>(nhánh dẫn đường ở sơ đồ trên)"]
+  NODE --> ROUTE["Backend /api/route<br/>tính các chặng cho web"]
 ```
 
 - **Hình dạng:** [x] workflow cố định · [ ] một agent · [ ] nhiều agent — Chỉ có một quyết định cần AI (hiểu câu hỏi → from/to/hành động); tra cứu và tìm đường là việc tất định nên để code làm. Không chọn agent vì không cần AI tự chọn bước tiếp, và để model tự đi nhiều bước dễ bịa đường, khó đo.
@@ -94,7 +95,8 @@ flowchart LR
   | G11 — giải thích vì sao | output nêu rõ từ đâu tới đâu, mã địa điểm, số phút và từng bước, để sinh viên đối chiếu biển chỉ dẫn |
   | G1/G2 — nói rõ làm được gì | lời từ chối nói mascot chỉ dẫn đường trong trường, việc khác liên hệ BTC / phòng CTSV |
 
-- Phần nào còn giả: bản đồ và lịch trong `codebase/` là `synthetic` (`data/DATA_CARD.md`); model đang ở chế độ giả (chưa nối model thật, sẽ nối trước CP3); bản chạy thử trong `codebase/` là dòng lệnh. Phần wayfinder (`vinuni-wayfinder/backend/`: FastAPI + MegaLoc) **đã có mã chạy thử trên laptop** (định vị bằng ảnh, thẻ chỉ dẫn, chế độ thu thập), nhưng **chưa thử trên điện thoại** (camera, GPS, la bàn, HTTPS), **chưa thu thập dữ liệu thật** và **chưa có số đo độ chính xác**; đồ thị campus dựng từ OpenStreetMap (~290 điểm), Toà G và Toà I vẽ từ ảnh bảng sơ đồ, tất cả chưa kiểm tại chỗ. Giao diện chính là prototype `web/` (mascot, tìm phòng, sự kiện CLB), hiện **vẫn chạy bằng dữ liệu fixture, chưa nối backend**; giao diện cũ `vinuni-wayfinder/frontend/` sẽ được chuyển sang `web/` rồi bỏ.
+- **Bản đã chạy ngày 28/11.** Frontend tại `vinuni-wayfinder/frontend/` gọi backend qua Vercel. Health trả 240 vector, MegaLoc đã nạp và lưu trữ dùng Supabase. Một ảnh gửi tới `/api/locate` trả nhãn “Hành lang phía Đông”, điểm 0,90, thời gian xử lý 432 ms và thời gian cả yêu cầu 1,07 giây. Đây là một phản hồi của hệ thống. Cần ảnh mới có nhãn do người đứng tại từng mốc xác nhận để đo độ chính xác ở G và I. [Ứng dụng](https://vinuni-wayfinder.vercel.app/) · [API health](https://vinuni-wayfinder.vercel.app/api/health)
+- **Khung đánh giá CLI.** `codebase/agent.py` dùng GPT-4.1 mini chọn hành động. Công cụ tính đường đọc 12 địa điểm và 11 lối đi giả lập, công cụ tra lịch đọc 6 sự kiện giả lập. Kết quả benchmark đo luồng hỏi bằng văn bản. [Hồ sơ đánh giá](eval/README.md)
 
 ## §5. Chỗ khó — 4 lớp + ≥6 kịch bản + 2 tấn công *(guide 2.3)*
 
@@ -117,15 +119,12 @@ flowchart LR
 - Bị đòi ngoài phạm vi (lớp 3): `[TỪ CHỐI]` + chỉ tới BTC / phòng CTSV · Trường hợp đặc thù lĩnh vực (lớp 4): đích luôn lấy từ địa điểm của hoạt động trong lịch
 
 ## §7. Đánh giá & chuẩn "đạt" *(guide 2.4, 4.1)*
-- Data card: `data/DATA_CARD.md` · bộ câu thử: `eval/benchmark.csv` — 12 câu (thuong 5 · kho 5 · tu_choi 2) · metric: `eval/metric_spec.yaml` (4 metric)
+- Data card: `data/DATA_CARD.md` · bộ câu thử: `eval/benchmark.csv` — 20 câu (thuong 5 · kho 11 · tu_choi 4) · metric: `eval/metric_spec.yaml` (4 metric)
 - **Chuẩn "đạt"** (chốt **trước 19:30 Thứ Sáu 27/11**, giữ nguyên đến 23:59 Thứ Bảy 28/11): "Đạt khi ≥ 80% câu qua, và 100% câu `tu_choi` qua, và 0 câu dẫn tới địa điểm / giờ không có trong dữ liệu (metric `khong_bia_dia_diem`)"
-- Kết quả: lượt 1 __/__ (__%) · lượt 2 __/__ (__%) — run ID: __ / __ → chi tiết `eval/report.md`, hồ sơ `eval/README.md`
+- Lượt 1 `run-1@20261128-060141` đã trả 20/20 đầu ra. Điểm chính thức chờ thành viên duyệt. [Báo cáo](eval/report.md) · [Phiếu chấm độc lập](eval/review-run-1.csv)
 
 ## §8. Chi phí khi dùng thật *(guide 4.2)*
-- Persona + giá: `cost/personas.yaml` · lượt mô phỏng: `cost/simulate-__.csv` (__ phiên)
-- Chi phí / task thành công: __ (model __) · __ (model __)
-- Chi phí / tháng ở quy mô thật: thấp __ · cơ sở __ · cao __ → chi tiết `cost/cost-estimate.md`
-- So với impact / người / tháng (§2): đáng làm không, vì sao:
+Bản thử CP3 dùng GPT-4.1 mini, 10 phiên, 15 lượt hỏi. Với đơn giá token chuẩn, chi phí ước tính là 0,00071 USD/phiên cho phần hỏi đáp văn bản. Tần suất và quy mô người dùng là giả định. Mô phỏng đầy đủ và chi phí trên mỗi tác vụ thành công còn chờ CP4. [Số đo và giả định](cost/cost-estimate.md)
 
 ## §9. Rủi ro & an toàn
 - Dữ liệu *(thiết kế của wayfinder; đã cài trong mã chạy thử, chưa kiểm trên thiết bị thật)*: không lưu vị trí GPS của người dùng sau khi trả lời; ảnh người dùng gửi để định vị bị xoá ngay sau khi so khớp, chỉ giữ vector và dự đoán; không có tài khoản. Dữ liệu quay (ảnh hành lang, sơ đồ, đồ thị, vector) chỉ quay ở hành lang công cộng, làm mờ khuôn mặt trước khi lưu, và **không nằm trong repo công khai** vì một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh. Từ 28/11/2026 dữ liệu này lưu chung trên project Supabase riêng tư của nhóm (mọi bảng bật RLS, không có policy; chỉ backend dùng khoá service đọc/ghi; khoá và mật khẩu DB chỉ để trong `backend/.env`, không commit). Không đưa dữ liệu cá nhân thật vào model gói miễn phí.
@@ -150,6 +149,7 @@ flowchart LR
 | 28/11/2026 | Wayfinder: sơ đồ khuôn viên chuyển từ ảnh sơ đồ vẽ tay sang **dữ liệu OpenStreetMap** (toà A–J, lối đi bộ, cổng) có toạ độ GPS thật, nên GPS ngoài trời dùng được. Cập nhật `data/DATA_CARD.md` (Dataset 3, nguồn và giấy phép ODbL). Công cụ dựng nằm ở `vinuni-wayfinder/backend/tools/build_osm_campus.py`. **Không sửa** §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Sơ đồ cũ không có toạ độ GPS (0 neo) nên không chỉ đường ngoài trời được từ vị trí thật. Đồ thị mới vẫn `verified: false` — chưa đi bộ kiểm; Tòa K chưa có trong OSM nên tạm bỏ khỏi danh sách đích |
 | 28/11/2026 | (1) Phạm vi trong nhà mở từ Toà I sang **Toà G và Toà I** (tầng trệt). (2) **Mascot dẫn đường đưa trở lại bản demo** dưới dạng hình 2D đi kèm thẻ chỉ dẫn như prototype `web/` (không làm AR neo không gian). (3) `web/` thành **giao diện chính duy nhất**: màn Chỉ đường và Thu thập của `vinuni-wayfinder/frontend/` thiết kế lại theo style `web/` và chuyển code sang đó; backend wayfinder giữ vai trò định vị (MegaLoc) và tìm đường (OSM). Cập nhật §4, `docs/PRD.md`, `README.md`, `canvas.md`, `data/DATA_CARD.md` (Dataset 3–4), `CLAUDE.md` gốc repo (thay `vinuni-wayfinder/CLAUDE.md`, đã xoá). **Không sửa** §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Quyết định của nhóm: Toà G được thu thập trước và đã có đồ thị nối GPS thật; prototype `web/` đã có mascot và luồng dẫn đường nên dùng làm giao diện chung thay vì giữ hai frontend. Bộ câu thử không đổi; vẫn chưa có bộ đo cho nhận diện bằng ảnh |
 | 28/11/2026 | Dữ liệu thu thập của wayfinder (điểm, đường nối, phòng, vết đi bộ, vector, ảnh sơ đồ và khung hình) chuyển từ thư mục `backend/data/` trên máy từng người sang **Supabase dùng chung, riêng tư**. Ghi vào §9 và `data/DATA_CARD.md` (Dataset 3–4). Xoá thư mục ảnh mẫu virtual tour chưa commit (không dùng). **Không sửa** §7, `eval/metric_spec.yaml`, `eval/benchmark.csv` | Cả nhóm cần cùng một bộ dữ liệu khi thu thập ở Toà G, Toà I; dữ liệu vẫn không nằm trong repo công khai (`CLAUDE.md` mục Dữ liệu chung) |
+| 28/11/2026 · CP3 | Điền §0–§2 theo khảo sát, đối chiếu web đã deploy và CLI ở §4, bổ sung B13–B20 có nguồn trước lượt 1. | Đo được cả cách xử lý khi địa điểm thật thiếu hoặc khác danh mục giả lập. |
 
 **Sau CP4 (đến 23:59 Thứ Bảy 28/11)** (sửa theo góp ý — không sửa chuẩn "đạt", câu thử, số bằng chứng, kết quả các lượt đã chạy)
 
