@@ -110,11 +110,15 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
 - Lưu sơ đồ qua SQL `save_site(base_version, payload)`: người khác đã lưu thì 409 `version_conflict`. Vector nạp vào bộ
   nhớ lúc khởi động và đồng bộ ~20 s (8448 chiều vượt giới hạn chỉ mục pgvector). DELETE qua API phải có WHERE.
 
-## Môi trường máy dev
+## Môi trường máy dev & triển khai production
 
-- Backend: Python 3.12/3.13, venv `vinuni-wayfinder/backend/.venv` (torch CUDA). GPU GTX 1650 4 GB: MegaLoc ~73 ms/ảnh, load lần đầu ~2 phút.
+- Backend (dev local): Python 3.12/3.13, venv `vinuni-wayfinder/backend/.venv` (torch CUDA). GPU GTX 1650 4 GB: MegaLoc ~73 ms/ảnh, load lần đầu ~2 phút.
 - Đặt `TORCH_HOME=backend/.torch` và `HF_HOME=backend/.torch/hf` để dùng cache model trong dự án (trọng số ~870 MB). Model: `torch.hub.load('gmberton/MegaLoc', 'get_trained_model', trust_repo=True)`.
-- Frontend: Node 22+, `cd vinuni-wayfinder/frontend && npm ci && npm run dev`.
+- Frontend (dev local): Node 22+, `cd vinuni-wayfinder/frontend && npm ci && npm run dev`.
+- **Production (Vercel + Tailscale Funnel cố định):**
+  - Frontend deploy trên Vercel tại `https://vinuni-wayfinder.vercel.app` (deploy thủ công từ `vinuni-wayfinder/frontend/` bằng `vercel --prod`).
+  - `vinuni-wayfinder/frontend/vercel.json` rewrite `/api/:path*` và `/maps/:path*` cùng origin tới domain HTTPS cố định `https://minhphuong.tail65ddfe.ts.net` (được kiểm tra bởi `vinuni-wayfinder/frontend/server/wayfinderProxy.test.ts`, không dùng `*.trycloudflare.com` tạm thời).
+  - Backend chạy trên máy chủ `phuong@minhphuong` qua `systemd --user` (`vinuni-wayfinder-backend.service`, `uvicorn app.main:app --host 127.0.0.1 --port 8010`) và public HTTPS cố định qua `tailscale funnel --bg 8010` (cấu hình lưu bền vững sau reboot; đã tắt `vinuni-wayfinder-tunnel.service` của Cloudflare Quick Tunnel cũ).
 
 ## Việc còn lại
 
