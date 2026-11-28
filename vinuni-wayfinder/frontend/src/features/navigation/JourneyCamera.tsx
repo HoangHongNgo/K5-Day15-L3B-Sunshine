@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronUp, Flag, LocateFixed, MapPin, type LucideIcon } from 'lucide-react'
 import { Mascot, type MascotMood } from '../mascot/Mascot'
 import { wayfinderApi } from '../wayfinder/wayfinderApi'
@@ -8,6 +8,7 @@ import './journeyCamera.css'
 type Waypoint = { label: string; meters?: number; approx?: boolean }
 
 type Props = {
+  welcome?: ReactNode
   destination: string
   waypoints: Waypoint[]
   step: number
@@ -21,7 +22,7 @@ type Props = {
   onExit: () => void
 }
 
-export function JourneyCamera({ destination, waypoints, step, instruction, direction, icon: Icon, mood, live, onMode, onStep, onExit }: Props) {
+export function JourneyCamera({ welcome, destination, waypoints, step, instruction, direction, icon: Icon, mood, live, onMode, onStep, onExit }: Props) {
   const player = useRef<HTMLVideoElement>(null)
   const locating = useRef<AbortController | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -101,7 +102,7 @@ export function JourneyCamera({ destination, waypoints, step, instruction, direc
   return <section className="walk-camera" aria-label={`Dẫn đường tới ${destination}`}>
     <video ref={player} muted playsInline autoPlay aria-label="Camera dẫn đường trực tiếp" />
     <div className="walk-top"><JourneyModeButton current="camera" onChange={onMode} /></div>
-    <div className="walk-controls">
+    {welcome ? <div className="walk-welcome">{welcome}{cameraStatus && <p className="walk-status" role="status">{cameraStatus}</p>}</div> : <div className="walk-controls">
       {!expanded && <div className="walk-companion">
         <div className="walk-bubble" aria-live="polite">
           <h2><Icon size={24} />{direction}</h2>
@@ -127,6 +128,6 @@ export function JourneyCamera({ destination, waypoints, step, instruction, direc
         </div>
         {expanded && <button type="button" className="walk-end" onClick={onExit}>Kết thúc hành trình</button>}
       </section>
-    </div>
+    </div>}
   </section>
 }
