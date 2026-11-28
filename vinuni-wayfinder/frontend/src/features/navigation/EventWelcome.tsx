@@ -13,9 +13,15 @@ import './eventWelcome.css'
 
 const EventEncounter = lazy(() => import('../events/EventEncounter'))
 
-type Props = { event: CampusEvent; arrival: ArrivalContext; mode: JourneyMode; place?: Place }
+type Props = {
+  event: CampusEvent
+  arrival: ArrivalContext
+  mode: JourneyMode
+  place?: Place
+  onCameraActiveChange?: (active: boolean) => void
+}
 
-export function EventWelcome({ event, arrival, mode, place }: Props) {
+export function EventWelcome({ event, arrival, mode, place, onCameraActiveChange }: Props) {
   const { allMascots } = useEvents()
   const mascot = resolveEventMascot(allMascots, event.mascotId)
   const { paused } = useContext(MotionContext)
@@ -47,8 +53,8 @@ export function EventWelcome({ event, arrival, mode, place }: Props) {
       <p>Chào mừng bạn đến với {event.title}.</p>
       {arrival.currentStop && arrival.currentStop.id !== 'main' && <p>{arrival.currentStop.label}</p>}
       {arrival.nextStop && arrival.nextStopRoute && <Link className="button button-primary" to={`${arrival.nextStopRoute}&mode=${mode}`}>Đi tiếp tới {arrival.nextStop.label}</Link>}
-      <Suspense fallback={<p role="status">Đang mở camera check-in…</p>}>
-        <EventEncounter event={event} mascot={mascot} anchor={event.arAnchor ?? null} arrived />
+      <Suspense fallback={<p role="status">Đang tải chụp ảnh check-in…</p>}>
+        <EventEncounter event={event} mascot={mascot} anchor={event.arAnchor ?? null} arrived onCameraActiveChange={onCameraActiveChange} />
       </Suspense>
       <Link className="button button-quiet" to={`/su-kien/${event.id}`}>Xem sự kiện</Link>
       <details>

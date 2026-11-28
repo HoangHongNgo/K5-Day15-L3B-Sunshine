@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, ArrowUp, Check, ChevronLeft, DoorOpen, Footprints, LoaderCircle, MapPin, Navigation2, RotateCcw, Volume2, VolumeX, X, type LucideIcon } from 'lucide-react'
 import { DemoNote, EmptyState, IconButton, Modal, NotFound, parseCoord } from '../../shared/ui'
@@ -11,7 +11,7 @@ import { findRoute, type Turn } from '../wayfinder/data'
 import { ApiError, splitRouteSteps, stepDirection, wayfinderApi, type BackendRouteResponse, type StepDirection } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
 import { AutoArrival } from './AutoArrival'
-import { JourneyCamera } from './JourneyCamera'
+import { JourneyCamera, shouldSuspendJourneyCamera } from './JourneyCamera'
 import { JourneyModeButton, rememberJourneyMode, type JourneyMode } from './JourneyModeButton'
 import { resolveArrivalContext } from './eventArrival'
 import { nextTurnOf } from './indoorProgress'
@@ -52,6 +52,11 @@ export function JourneyPage() {
   const [autoOffJourney, setAutoOffJourney] = useState<string | null>(null)
   const [undoStep, setUndoStep] = useState<number | null>(null)
   const [photoNoticeClosed, setPhotoNoticeClosed] = useState(false)
+  const [encounterCameraActive, setEncounterCameraActive] = useState(false)
+  const handleEncounterCameraChange = useCallback((active: boolean) => {
+    setEncounterCameraActive(active)
+  }, [])
+  useEffect(() => { setEncounterCameraActive(false) }, [journeyKey, mode])
   useEffect(() => {
     if (undoStep == null) return
     const timer = window.setTimeout(() => setUndoStep(null), 6000)
@@ -122,10 +127,10 @@ export function JourneyPage() {
     <div className="dialog-actions"><button className="button button-quiet" onClick={() => setShowExit(false)}>Tiếp tục đi</button>
       <Link className="button button-primary" to={`/di-den?${backQuery}`}>Dừng hành trình</Link></div>
   </Modal>
-  const cameraControls = { onStep: goStep, onMode: chooseMode, onExit: () => setShowExit(true) }
+  const cameraControls = { onStep: goStep, onMode: chooseMode, onExit: () => setShowExit(true), destinationId: rawTo }
   const modeButton = <div className="card-mode"><JourneyModeButton current="card" onChange={chooseMode} /></div>
 
-  const welcome = event && arrivalCtx && <EventWelcome key={event.id + ':' + rawTo} event={event} arrival={arrivalCtx} mode={mode} place={toPlace} />
+  const welcome = event && arrivalCtx && <EventWelcome key={event.id + ':' + rawTo} event={event} arrival={arrivalCtx} mode={mode} place={toPlace} onCameraActiveChange={handleEncounterCameraChange} />
   const cardWelcome = <div className="focused-page journey-page">{modeButton}{welcome}</div>
 
   if (isLive) {
@@ -160,8 +165,9 @@ export function JourneyPage() {
     const mascotMood = arrived ? 'jump' : dir === 'left' ? 'left' : dir === 'right' ? 'right' : dir === 'back' ? 'wait' : 'walk'
     const progress = travelSteps.length ? Math.round((step / travelSteps.length) * 100) : 100
     const startDisplay = fromLabel || liveRoute.start
+    const cameraSuspended = shouldSuspendJourneyCamera({ mode, arrived, hasWelcome: Boolean(welcome), encounterCameraActive })
     if (arrived && welcome && mode === 'card') return cardWelcome
-    if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} welcome={arrived && welcome} tracking={tracking} live
+    if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} suspended={cameraSuspended} welcome={arrived && welcome} tracking={tracking} live
       destination={liveRoute.destination} step={step} direction={stepDirLabels[dir]} icon={Direction} mood={mascotMood} instruction={curStep?.text ?? ''}
       waypoints={travelSteps.map(s => ({ label: s.target.label || s.text, meters: s.meters, approx: s.approx }))} />{undoToast}{exitDialog}</>
 
@@ -222,8 +228,9 @@ export function JourneyPage() {
   const current = getPlace(step === 0 ? from.id : route[step - 1].to)!
   const progress = route.length ? Math.round((step / route.length) * 100) : 100
 
+  const cameraSuspended = shouldSuspendJourneyCamera({ mode, arrived, hasWelcome: Boolean(welcome), encounterCameraActive })
   if (arrived && welcome && mode === 'card') return cardWelcome
-  if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} welcome={arrived && welcome} live={false}
+  if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} suspended={cameraSuspended} welcome={arrived && welcome} live={false}
     destination={to.name} step={step} direction={edge ? turnLabels[edge.turn] : stepDirLabels.arrive} icon={Direction}
     mood={!edge || edge.turn === 'straight' ? 'walk' : edge.turn} instruction={edge?.instruction ?? ''}
     waypoints={route.map(e => ({ label: getPlace(e.to)?.name || e.to }))} />{exitDialog}</>

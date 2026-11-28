@@ -6,3 +6,7 @@
 .event-voice button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; justify-self: start; min-height: 44px; padding: .45rem .8rem; border-radius: .7rem; border: 1px solid currentColor; font: inherit; }
 .event-voice button:disabled { opacity: .55; }
 .event-voice p { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
+.event-voice-tabs { display: flex; gap: .5rem; margin-bottom: .7rem; }
+.event-voice-tabs button, .event-voice-route { min-height: 44px; padding: .45rem .8rem; border: 1px solid currentColor; border-radius: .7rem; }
+.event-voice-tabs button[aria-pressed="true"] { background: #2853a0; color: #fff; }
+.event-voice-route { display: inline-flex; align-items: center; justify-self: start; font-weight: 600; }

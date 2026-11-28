@@ -28,12 +28,21 @@ it.each(['camera', 'card'])('shows the event mascot at the confirmed venue in %s
   expect(html).toContain('<canvas')
   expect(html.includes('<video')).toBe(mode === 'camera')
   expect(html).toContain('/su-kien/robotics-open-lab')
-  // Tới nơi = màn check-in: camera chụp ảnh cùng mascot mở ngay, không phải sang trang sự kiện xác nhận vị trí.
+  // Tới nơi: giữ nguyên màn chào với camera dẫn đường hiện tại và nút mở check-in một chạm, không tự mở modal đè lên.
   expect(html).not.toContain('?chup-anh=1')
-  expect(html).toContain('Đang mở camera check-in')
+  expect(html).not.toContain('Đang mở camera check-in')
   expect(html).toContain('Mã QR Check-in tại cửa')
   expect(html).not.toContain('Tới nơi rồi!')
 })
 it('reserves the greeting for the last waypoint', () => {
   expect(journey('camera', false)).not.toContain('Tia chào bạn!')
+})
+
+it('tracks navigation camera suspension cleanly across encounter open, review, close, mode change and unmount', async () => {
+  const { shouldSuspendJourneyCamera } = await import('./JourneyCamera')
+  expect(shouldSuspendJourneyCamera({ mode: 'camera', arrived: true, hasWelcome: true, encounterCameraActive: false })).toBe(false)
+  expect(shouldSuspendJourneyCamera({ mode: 'camera', arrived: true, hasWelcome: true, encounterCameraActive: true })).toBe(true)
+  expect(shouldSuspendJourneyCamera({ mode: 'card', arrived: true, hasWelcome: true, encounterCameraActive: true })).toBe(false)
+  expect(shouldSuspendJourneyCamera({ mode: 'camera', arrived: false, hasWelcome: true, encounterCameraActive: true })).toBe(false)
+  expect(shouldSuspendJourneyCamera({ mode: 'camera', arrived: true, hasWelcome: false, encounterCameraActive: true })).toBe(false)
 })

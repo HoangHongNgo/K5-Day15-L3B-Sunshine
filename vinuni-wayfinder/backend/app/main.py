@@ -29,6 +29,7 @@ from .index import VectorIndex
 from .routing import SiteGraph
 from .store import DATA, MAPS_SRC, SAFE_NAME, SiteConflict, load_site, save_site
 from .video_uploads import CHUNK_SIZE, MAX_UPLOAD, UploadError, VideoUploadStore, normalize_suffix
+from .voice_navigation import voice_navigation_router
 
 app = FastAPI(title='VinUni Wayfinder')
 REMOTE = supa.client() if supa.ENABLED else None
@@ -455,7 +456,7 @@ async def locate(image: UploadFile = File(...), previous: str | None = Form(None
     else:
         tier = 'auto' if conf >= AUTO_P else 'picker' if conf >= PICKER_P else 'second'
     pid = 'p_' + secrets.token_hex(6)
-    _photos[pid] = {'vec': q, 'tally': tally, 't': time.time(), 'pred': best}
+    _photos[pid] = {'vec': q, 'tally': tally, 't': time.time(), 'pred': best, 'tier': tier}
     return {'photoId': pid, 'spot': best, 'label': _label(g, best), 'confidence': round(conf, 2),
             'tier': tier, 'roomIds': indoor_room_ids(g, best), 'topSim': round(top_sim, 3),
             'top3': [{'spot': s, 'label': _label(g, s), 'votes': tally[s]['votes']} for s in ranked[:3]],
@@ -582,6 +583,8 @@ app.include_router(mascot_router(_require_btc))
 app.include_router(event_voice_router(lambda: events_store, lambda: {
     room['id']: room['name'] for room in graph().rooms if room.get('name')
 }))
+app.include_router(voice_navigation_router(lambda: graph(), lambda photo_id: _photos.get(photo_id),
+                                          lambda: DATA, PHOTO_TTL))
 
 
 @app.post('/api/auth/register')

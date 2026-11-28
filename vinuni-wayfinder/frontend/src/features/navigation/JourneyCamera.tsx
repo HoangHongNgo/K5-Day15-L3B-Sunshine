@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Check, ChevronDown, ChevronLeft, ChevronUp, Flag, LocateFixed, MapPin, type LucideIcon } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronUp, Flag, LocateFixed, MapPin, Mic, type LucideIcon } from 'lucide-react'
+import EventVoice from '../events/EventVoice'
 import { Mascot, type MascotMood } from '../mascot/Mascot'
 import { AutoArrival, type ArrivalTracking } from './AutoArrival'
 import { locateVideoFrame } from './waypointArrival'
@@ -8,10 +9,21 @@ import './journeyCamera.css'
 
 type Waypoint = { label: string; meters?: number; approx?: boolean }
 
+export function shouldSuspendJourneyCamera(state: {
+  mode: JourneyMode
+  arrived: boolean
+  hasWelcome: boolean
+  encounterCameraActive: boolean
+}) {
+  return state.mode === 'camera' && state.arrived && state.hasWelcome && state.encounterCameraActive
+}
+
 type Props = {
   tracking?: ArrivalTracking
   welcome?: ReactNode
+  suspended?: boolean
   destination: string
+  destinationId?: string
   waypoints: Waypoint[]
   step: number
   instruction: string
@@ -24,13 +36,14 @@ type Props = {
   onExit: () => void
 }
 
-export function JourneyCamera({ tracking, welcome, destination, waypoints, step, instruction, direction, icon: Icon, mood, live, onMode, onStep, onExit }: Props) {
+export function JourneyCamera({ tracking, welcome, suspended = false, destination, destinationId, waypoints, step, instruction, direction, icon: Icon, mood, live, onMode, onStep, onExit }: Props) {
   const player = useRef<HTMLVideoElement>(null)
   const locating = useRef<AbortController | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [cameraStatus, setCameraStatus] = useState('Đang mở camera…')
   const [feedback, setFeedback] = useState('')
   const [busy, setBusy] = useState(false)
+  const [voiceOpen, setVoiceOpen] = useState(false)
   const waypoint = waypoints[step]
   const next = waypoints[step + 1]
 
@@ -45,6 +58,12 @@ export function JourneyCamera({ tracking, welcome, destination, waypoints, step,
       video.srcObject = null
       locating.current?.abort()
       locating.current = null
+    }
+    if (suspended) {
+      release()
+      setBusy(false)
+      setCameraStatus('')
+      return
     }
     async function open() {
       release()
@@ -72,7 +91,7 @@ export function JourneyCamera({ tracking, welcome, destination, waypoints, step,
     void open()
     document.addEventListener('visibilitychange', open)
     return () => { document.removeEventListener('visibilitychange', open); release() }
-  }, [])
+  }, [suspended])
 
   async function locate() {
     const video = player.current
@@ -120,6 +139,13 @@ export function JourneyCamera({ tracking, welcome, destination, waypoints, step,
           <button type="button" className="walk-confirm" onClick={() => { setFeedback(''); onStep(step + 1) }}><Check size={19} />Đã tới mốc</button>
           {live && <button type="button" className="walk-locate" disabled={busy || !!cameraStatus || tracking?.enabled} onClick={() => void locate()}><LocateFixed size={18} />Định vị lại</button>}
         </div>
+        <button className="walk-locate walk-voice-toggle" type="button" aria-expanded={voiceOpen} onClick={() => setVoiceOpen(!voiceOpen)}>
+          <Mic size={17} />{voiceOpen ? 'Đóng hỏi đường' : 'Hỏi đường bằng giọng nói'}
+        </button>
+        {voiceOpen && <EventVoice navigation={{ destinationId, locatePhoto: cameraStatus ? undefined : signal => {
+          if (!player.current) throw new Error('Camera chưa có hình.')
+          return locateVideoFrame(player.current, signal)
+        } }} />}
         {expanded && <button type="button" className="walk-end" onClick={onExit}>Kết thúc hành trình</button>}
       </section>
     </div>}

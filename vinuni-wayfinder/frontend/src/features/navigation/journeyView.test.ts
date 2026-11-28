@@ -26,6 +26,7 @@ it('offers camera by default and cards before starting a walk', () => {
 
 it('opens camera at the requested waypoint, with the instruction and manual confirmation', () => {
   const html = render(JourneyPage, '/hanh-trinh?from=lobby&to=i109&mode=camera&buoc=1')
+  expect(html).toContain('Hỏi đường bằng giọng nói')
   expect(html).toContain('<video')
   expect(html).toContain('Rẽ phải về phía khu tự học mở.')
   expect(html).toContain('Đã tới mốc')
