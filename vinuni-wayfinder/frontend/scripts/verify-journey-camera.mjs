@@ -127,6 +127,44 @@ try {
   await expect(page.getByRole('button', { name: 'Sao chép mã check-in' })).toBeVisible()
   await page.getByRole('link', { name: 'Xem sự kiện' }).click()
   await expect(page).toHaveURL(/su-kien\/club-test$/)
+  // Indoor: discard a weak result and a different node, then confirm two consecutive frames.
+  const results = [
+    { tier: 'picker', spot: '0' }, { tier: 'auto', spot: 'wrong' },
+    { tier: 'auto', spot: '0' }, { tier: 'auto', spot: '0' },
+    { tier: 'auto', spot: '1' }, { tier: 'auto', spot: '1' },
+  ]
+  let scans = 0
+  await page.route('**/api/locate', route => route.fulfill({ json: results[scans++] ?? { tier: 'second' } }))
+  await page.goto('/hanh-trinh?from=a&to=b&event=club-test&mode=camera')
+  await page.getByRole('checkbox', { name: /Tự chuyển chặng/ }).check()
+  await expect.poll(() => scans, { timeout: 25000 }).toBe(3)
+  assert.equal(new URL(page.url()).searchParams.get('buoc'), null)
+  await expect(page).toHaveURL(/buoc=1/, { timeout: 10000 })
+  await expect(page.getByRole('heading', { name: 'Tia chào bạn!' })).toBeVisible({ timeout: 16000 })
+  assert.equal(scans, 6)
+
+  // Outdoor: the same position event twice must not advance the card route.
+  await page.route('**/api/route?**', route => route.fulfill({ json: {
+    destination: 'Phòng thử', start: 'Sảnh thử', totalMeters: 40, estSeconds: 30,
+    steps: [{ ...steps[0], meters: 40, mapKind: 'outdoor', target: { node: 'b', label: 'Phòng thử', lat: 21, lng: 105 } }],
+  } }))
+  await page.goto('/hanh-trinh?from=a&to=b&mode=card')
+  await page.evaluate(() => {
+    navigator.geolocation.watchPosition = callback => { window.emitFix = callback; return 17 }
+    navigator.geolocation.clearWatch = () => { window.watchCleared = true }
+  })
+  await page.getByRole('checkbox', { name: /Tự chuyển chặng/ }).check()
+  await page.waitForFunction(() => !!window.emitFix)
+  await page.evaluate(() => {
+    const fix = { coords: { latitude: 21, longitude: 105, accuracy: 3 }, timestamp: Date.now() }
+    window.emitFix(fix)
+    window.emitFix(fix)
+  })
+  await expect(button('Đã xong chặng này')).toBeVisible()
+  await page.waitForTimeout(1100)
+  await page.evaluate(() => window.emitFix({ coords: { latitude: 21, longitude: 105, accuracy: 3 }, timestamp: Date.now() }))
+  await expect(page.getByRole('heading', { name: 'Tới nơi rồi!' })).toBeVisible()
+  assert.ok(await page.evaluate(() => window.watchCleared))
   console.log('Đã kiểm tra Camera, Thẻ, ảnh định vị, tiến độ, từ chối quyền và giải phóng camera trên màn hình 390 px.')
 } finally {
   await browser.close()

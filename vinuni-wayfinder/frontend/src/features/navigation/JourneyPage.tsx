@@ -10,6 +10,7 @@ import { Mascot } from '../mascot/Mascot'
 import { findRoute, type Turn } from '../wayfinder/data'
 import { ApiError, splitRouteSteps, stepDirection, wayfinderApi, type BackendRouteResponse, type StepDirection } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
+import { AutoArrival } from './AutoArrival'
 import { JourneyCamera } from './JourneyCamera'
 import { JourneyModeButton, rememberJourneyMode, type JourneyMode } from './JourneyModeButton'
 import { resolveArrivalContext } from './eventArrival'
@@ -45,6 +46,8 @@ export function JourneyPage() {
   const [speaking, setSpeaking] = useState(false)
   const [speechMessage, setSpeechMessage] = useState('')
   const [showExit, setShowExit] = useState(false)
+  const journeyKey = JSON.stringify([rawFrom, rawTo, lat, lng, stopParam, event?.id])
+  const [trackedJourney, setTrackedJourney] = useState<string | null>(null)
   const speechAvailable = 'speechSynthesis' in window
 
   useEffect(() => {
@@ -124,13 +127,21 @@ export function JourneyPage() {
     const step = Math.min(Math.max(Number.isFinite(stepParam) ? Math.floor(stepParam) : 0, 0), travelSteps.length)
     const arrived = step === travelSteps.length
     const curStep = travelSteps[step]
+    const tracking = curStep && {
+      waypoint: curStep,
+      finalNode: step === travelSteps.length - 1 ? arrivalStep?.target.node : undefined,
+      enabled: trackedJourney === journeyKey,
+      onToggle: (enabled: boolean) => setTrackedJourney(enabled ? journeyKey : null),
+      onArrival: () => goStep(step + 1),
+      paused: showExit,
+    }
     const dir: StepDirection = curStep ? stepDirection(curStep) : 'arrive'
     const Direction = stepDirIcons[dir]
     const mascotMood = arrived ? 'jump' : dir === 'left' ? 'left' : dir === 'right' ? 'right' : dir === 'back' ? 'wait' : 'walk'
     const progress = travelSteps.length ? Math.round((step / travelSteps.length) * 100) : 100
     const startDisplay = fromLabel || liveRoute.start
     if (arrived && welcome && mode === 'card') return cardWelcome
-    if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} welcome={arrived && welcome} live
+    if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} welcome={arrived && welcome} tracking={tracking} live
       destination={liveRoute.destination} step={step} direction={stepDirLabels[dir]} icon={Direction} mood={mascotMood} instruction={curStep?.text ?? ''}
       waypoints={travelSteps.map(s => ({ label: s.target.label || s.text, meters: s.meters, approx: s.approx }))} />{exitDialog}</>
 
@@ -148,6 +159,7 @@ export function JourneyPage() {
               {!arrived && curStep.passes.length > 0 && <p className="helper-text">Đi ngang qua: {curStep.passes.map(p => `${p.name} (${p.side})`).join(', ')}</p>}
               <span className="direction-location"><MapPin size={15} />{arrived ? (arrivalStep?.building || toPlace?.building || 'VinUniversity') : (curStep.building || (curStep.mapKind === 'outdoor' ? 'Ngoài trời' : 'Trong nhà'))}</span>
             </div>
+            {tracking && <AutoArrival key={step} {...tracking} />}
             {speechMessage && <p className="inline-feedback" role="status">{speechMessage}</p>}
             <div className="journey-progress"><div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Tiến độ hành trình"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><span>{step}/{travelSteps.length} chặng đã xác nhận</span></div>
             {arrived ? (
@@ -158,7 +170,7 @@ export function JourneyPage() {
           </section>
           <aside className="journey-timeline">
             <div className="section-heading"><h2>Hành trình của bạn</h2><Footprints size={21} /></div>
-            <p>Bạn xác nhận sau mỗi chặng.</p>
+            <p>Theo dõi các mốc tới điểm đến.</p>
             <ol className="timeline">
               <li className={step > 0 ? 'complete' : 'current'}><span className="timeline-marker">{step > 0 ? <Check size={15} /> : <Navigation2 size={15} />}</span><div><strong>{startDisplay}</strong><small>Điểm xuất phát</small></div></li>
               {travelSteps.map((s, idx) => {

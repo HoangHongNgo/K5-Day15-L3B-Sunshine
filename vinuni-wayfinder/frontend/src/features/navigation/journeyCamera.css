@@ -41,3 +41,6 @@ body:has(.walk-camera) { overflow: hidden; }
 @media (min-width: 640px) {
   .walk-controls { left: auto; width: min(510px, 65vw); right: max(22px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); }
 }
+.arrival-tracking, .arrival-tracking-note { margin: 8px 0; font-size: .85rem; }
+.arrival-tracking label { display: inline-flex; gap: 8px; align-items: center; min-height: 38px; font-weight: 600; cursor: pointer; }
+.arrival-tracking small { display: block; }
