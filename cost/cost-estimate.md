@@ -1,38 +1,18 @@
-# Chi phí khi dùng thật
+# Chi phí hỏi đường bằng văn bản · bản thử CP3
 
-> Điền ở guide bước 4.2, nộp ở CP4 14:30 Thứ Bảy 28/11. Ôn lại: ngày 13, ngày 1, ngày 14 · lab ngày 13, lab ngày 14. Chấm ở rubric R6.
-> Số **không điền tay**: điền `cost/personas.yaml` → `python run.py simulate` → chép bảng trong `cost/simulate-N-summary.md` vào đây.
-> Lúc build dùng gói miễn phí vẫn tính theo **giá gói trả phí** — đây là chi phí cho lúc đưa vào dùng thật.
+Mười phiên mô phỏng ngày 28/11/2026 phát sinh 15 lượt gọi GPT-4.1 mini, nhận 13.304 token vào và 1.119 token ra. Cả 10 phiên đều có kết quả. Với đơn giá chuẩn 0,40 USD/triệu token vào và 1,60 USD/triệu token ra, tổng chi phí ước tính của 10 phiên là **0,007112 USD**, trung bình **0,000711 USD/phiên**. Đây là chi phí suy từ usage trước chiết khấu hoặc cache. [Giá GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini)
 
-## 1. Đầu vào
+## Đầu vào
 
-- **Persona** (`cost/personas.yaml`): ≥3 kiểu — tỉ lệ, số phiên / người / tháng, số lượt hỏi / phiên. Nguồn: __
-- **Số người dùng thật** 3 kịch bản: thấp __ · cơ sở __ · cao __. Nguồn: __
-- **Giá** ≥2 mức model (từ `further-reading/model-prices.md` của repo đề, có link + ngày xem): __ · __
-- **Tỉ lệ đạt** dùng để tính: __/__ (__%) — lượt `run-__` (lượt 2)
-- Đo token trên model __, tính giá model __ và __
+Mã lượt `simulate-try@20261128-060200`, seed 42. Trong 10 phiên có 6 phiên một câu, 3 phiên hai câu và 1 phiên ba câu. Mỗi lượt lấy một đầu vào độc lập từ benchmark. Các biến về tỷ lệ persona, số phiên/tháng và người dùng/tháng là giả định để nhóm duyệt. Mốc 27 chỉ lấy kích thước mẫu khảo sát làm quy mô thử, chưa đo nhu cầu sử dụng hằng tháng. [Cấu hình và nguồn giá](personas.yaml)
 
-## 2. Kết quả mô phỏng
+## Kịch bản chi phí
 
-Lượt mô phỏng: `cost/simulate-__.csv` · run ID __ · __ phiên · seed __
+| Giá áp dụng cho cùng lượng token | USD/phiên | USD/tháng, 10 người | USD/tháng, 27 người | USD/tháng, 54 người |
+|---|---:|---:|---:|---:|
+| GPT-4.1 mini, model đã chạy | 0,00071 | 0,0385 | 0,1039 | 0,2079 |
+| GPT-5 mini, kịch bản đổi đơn giá | 0,00056 | 0,0302 | 0,0817 | 0,1633 |
 
-*(dán bảng từ `cost/simulate-N-summary.md`)*
+Bảng giữ nguyên kết quả từ `cost/simulate-try-summary.md`. Với GPT-5 mini, token thực tế và chất lượng có thể khác khi chạy model đó. [Giá GPT-5 mini](https://developers.openai.com/api/docs/models/gpt-5-mini)
 
-| Model | Chi phí / phiên | Chi phí / task thành công | / tháng — thấp | / tháng — cơ sở | / tháng — cao | / người / tháng (cơ sở) |
-|---|---|---|---|---|---|---|
-| | | | | | | |
-| | | | | | | |
-
-Chi phí / task thành công = chi phí trung bình mỗi phiên ÷ tỉ lệ đạt — **không coi như đạt 100%**.
-
-## 3. So với impact
-
-- Impact / người / tháng (`spec.md` §2): __
-- Chi phí / người / tháng (cơ sở, model __): __
-- **Kết luận một dòng — đáng làm không:** __
-
-## 4. *(Muốn sâu hơn, không bắt buộc)*
-
-- Bảng độ nhạy: model rẻ hơn · cache · cắt ngữ cảnh · giới hạn bước — mỗi cần gạt đổi chi phí bao nhiêu
-- Chi phí ngoài model: hosting, lưu trữ, giờ công người duyệt
-- Quy mô nào thì bài toán còn đáng làm
+Phạm vi đo là phân loại câu hỏi chỉ đường bằng văn bản. Hosting, định vị MegaLoc, giọng nói, ảnh và mô hình mascot sự kiện cần đo riêng. CP4 cần mô phỏng ít nhất 50 phiên, tỷ lệ đạt đã duyệt của lượt 2 để tính USD/tác vụ thành công, cùng số đo tác động thực tế để so sánh.

@@ -1,20 +1,13 @@
 # Tổng hợp bằng chứng pain
 
-> Điền ở guide bước 1.2, xong trước **CP3 10:00 Thứ Bảy 28/11**. Chấm ở rubric R1.
-> Ba nguồn ngang nhau — tối thiểu **≥1 nguồn đạt ngưỡng**. Mạnh nhất: đào data ra insight → hỏi người dùng để kiểm lại (hoặc ngược lại).
+Khảo sát 27 học viên AI20K ngoài nhóm ghi nhận 25 người từng gặp khó khi tìm phòng hoặc tòa tại VinUni. Ở câu hỏi về hậu quả, 14/27 người chọn đến trễ, bỏ lỡ hoạt động hoặc lỡ điểm danh.
 
 ## 1. Nguồn đã dùng
 
-| Nguồn | Đạt ngưỡng? | File |
-|---|---|---|
-| Đào data (x/N, %, cách đếm chạy lại được, ≥5 ví dụ) | ☐ | `evidence/data-mining.md` |
-| Phỏng vấn (≥3 người ngoài nhóm, đúng người dùng) | ☐ | `evidence/interviews/P1.md`… |
-| Khảo sát (≥20 người ngoài nhóm, đúng người dùng) | ☑ n = 27 học viên AI20K ngoài nhóm, ở trường 1–4 tuần | `evidence/survey/` ([câu hỏi](survey/questions.md), [kết quả](survey/results.csv), [cách đếm](survey/count.py)) |
+Khảo sát đạt ngưỡng CP3 (ít nhất 20 người ngoài nhóm). Cả 27 học viên đều đã ở trường từ 1 đến 4 tuần. Nhóm chưa thực hiện phỏng vấn hoặc đào dữ liệu riêng. [Câu hỏi](survey/questions.md) · [Phiếu ẩn danh](survey/results.csv) · [Mã đếm kết quả](survey/count.py)
 
 ## 2. Số chính
 
-- Đào data: không làm.
-- Phỏng vấn: __/3 người gặp *(n nhỏ không ghi %)* · số lần / tháng: P1 __, P2 __, P3 __ · mỗi lần mất __–__ phút
 - Khảo sát: n = 27 (27/27 học viên AI20K, 27/27 ở trường 1–4 tuần; phiếu 27/11/2026 17:37–19:58). Số dưới đây tính
   trên n = 27, chạy lại bằng `python evidence/survey/count.py`.
   - **Từng gặp khó khi tìm phòng/tòa ≥1 lần: 25/27 (93%)**; ≥3 lần: 13/27 (48%); trên 5 lần / vẫn hay nhầm: 7/27 (26%).
@@ -31,18 +24,9 @@
   - Điện thoại: Android 13/27 (48%), iOS 9/27 (33%), cả hai 5/27 (19%).
   - Câu 9 (điểm phiền, không bắt buộc): 0/27 trả lời → khảo sát **không có câu trả lời tự do nào**.
 
-Phỏng vấn nhiều vai thì đếm theo từng vai, không cộng chung.
+## 3. Sáu ví dụ nguyên văn từ phiếu ẩn danh
 
-| | Vai | Gặp pain? | Số lần / 1 tháng qua | Lần gần nhất mất | Đang xoay xở bằng |
-|---|---|---|---|---|---|
-| P1 | | | | | |
-| P2 | | | | | |
-| P3 | | | | | |
-
-## 3. ≥5 trích dẫn hoặc ví dụ nguyên văn (có nguồn, bỏ tên)
-
-Khảo sát không có câu trả lời tự do (Câu 9 bỏ trống ở cả 27 phiếu), nên dưới đây là **ví dụ nguyên văn các lựa chọn**
-của từng phiếu. Trích dẫn lời nói thật cần lấy từ phỏng vấn P1–P3.
+Các đoạn trong ngoặc kép giữ nguyên văn phương án từng người đã chọn. Mã R đi kèm cho phép đối chiếu với [phiếu gốc ẩn danh](survey/results.csv). Câu 9 dành cho lời kể tự do có 0 phản hồi.
 
 1. "Trên 5 lần / Vẫn hay nhầm tới tận bây giờ" · khó tìm ở "Tòa I, Tòa G (hội trường), Tòa C" · vì "Biết tên sự kiện
    nhưng không rõ tổ chức ở tòa/phòng nào, Biết mã phòng nhưng không hình dung được đường đi/tầng /lối vào" · hậu quả
@@ -96,9 +80,3 @@ trễ / bỏ lỡ / lỡ điểm danh (vừa qua ngưỡng). Cần chỉnh lại
 - Phiếu R11 chọn "Chưa bao giờ" ở Câu 4 nhưng lại chọn khu vực, nguyên nhân và hậu quả "Bỏ lỡ hoạt động" → mâu thuẫn,
   vẫn được đếm như đã ghi (không sửa phiếu).
 - Vì sao người ta thích bản đồ 2D hơn mascot/camera, và thẻ chỉ dẫn không kèm bản đồ có đủ không.
-
-## Lịch hẹn (dùng cho CP2 — chỉ ghi vai và giờ, không tên)
-
-| Vai | Giờ hẹn | Đã xong? |
-|---|---|---|
-| | | |

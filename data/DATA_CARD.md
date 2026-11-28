@@ -1,6 +1,6 @@
 # Data card — dữ liệu bản chạy thử dùng
 
-> Bản CP2, cập nhật 27/11/2026. Dataset 1–2 (bản chạy thử trong `codebase/`) là **synthetic**, nhóm tự viết tay. Dataset 3–4 là dữ liệu thật cho wayfinder và **chưa số hoá / chưa quay** (ghi rõ trạng thái từng dòng). Không dataset nào là bằng chứng pain.
+> Cập nhật CP3 ngày 28/11/2026. Dataset 1–2 là dữ liệu giả lập của CLI. Dataset 3–4 phục vụ Wayfinder, gồm đồ thị đang kiểm tại chỗ và chỉ mục ảnh đang thu thập. Tám tình huống bổ sung dùng dữ kiện địa điểm từ tài liệu công khai của VinUni. [Nguồn theo mã câu](../eval/README.md). Bằng chứng nhu cầu người dùng nằm ở [khảo sát](../evidence/summary.md).
 
 ## Dataset 1 · Bản đồ khuôn viên giả lập (`data/campus.json`)
 
