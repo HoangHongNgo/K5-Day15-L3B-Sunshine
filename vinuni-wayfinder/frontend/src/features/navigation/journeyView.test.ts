@@ -8,12 +8,13 @@ import { JourneyPage } from './JourneyPage'
 
 vi.mock('../events/EventContext', () => ({ useEventJourney: () => ({ link: (path: string) => path }) }))
 vi.mock('../events/EventsPages', () => ({ EventJourneyBadge: () => null }))
-vi.mock('../mascot/Mascot', () => ({ Mascot: () => null }))
+vi.mock('../mascot/Mascot', async importOriginal => ({ ...await importOriginal<object>(), Mascot: () => null }))
+vi.mock('../../shared/FavoritesContext', async importOriginal => ({ ...await importOriginal<object>(), SaveButton: () => null }))
 
 afterEach(() => vi.unstubAllGlobals())
 
-function render(Page: typeof JourneyPage, url: string) {
-  vi.stubGlobal('window', {})
+function render(Page: typeof JourneyPage, url: string, browser = {}) {
+  vi.stubGlobal('window', browser)
   return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [url] }, createElement(Page)))
 }
 
@@ -38,6 +39,24 @@ it('opens cards at the same waypoint and offers switching back', () => {
   expect(html).toContain('Rẽ phải về phía khu tự học mở.')
   expect(html).not.toContain('<video')
   expect(html).toContain('Camera')
+  expect(html).not.toContain('Bạn đã đến Phòng I109 rồi!')
+  expect(html).not.toContain('Mascot 3D Tia')
+})
+
+it.each(['card', 'camera'])('celebrates arrival on an ordinary journey in %s mode', mode => {
+  const html = render(JourneyPage, `/hanh-trinh?from=lobby&to=i109&mode=${mode}&buoc=3`)
+  expect(html).toContain('Tới nơi rồi!')
+  expect(html).toContain('Bạn đã đến Phòng I109 rồi!')
+  expect(html).toContain('aria-label="Mascot 3D Tia"')
+  expect(html).toContain('<canvas')
+  expect(html).not.toContain('<video')
+  expect(html).not.toContain('Nghe lại lời chào')
+})
+
+it('offers replay when the browser can speak', () => {
+  vi.stubGlobal('SpeechSynthesisUtterance', class {})
+  const html = render(JourneyPage, '/hanh-trinh?from=lobby&to=i109&buoc=3', { speechSynthesis: {} })
+  expect(html).toContain('Nghe lại lời chào')
 })
 
 it('shows the project logo in the app header', () => {

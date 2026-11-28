@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight, ArrowUp, Check, ChevronLeft, DoorOpen, Footprint
 import { DemoNote, EmptyState, IconButton, Modal, NotFound, parseCoord } from '../../shared/ui'
 import { SaveButton } from '../../shared/FavoritesContext'
 import { useEventJourney } from '../events/EventContext'
+import { defaultEventMascot } from '../events/events'
+import { ArrivalMascot } from './ArrivalMascot'
 import { EventWelcome } from './EventWelcome'
 import { EventJourneyBadge } from '../events/EventsPages'
 import { Mascot } from '../mascot/Mascot'
@@ -15,6 +17,7 @@ import { JourneyCamera, shouldSuspendJourneyCamera } from './JourneyCamera'
 import { JourneyModeButton, rememberJourneyMode, type JourneyMode } from './JourneyModeButton'
 import { resolveArrivalContext } from './eventArrival'
 import { nextTurnOf } from './indoorProgress'
+import { useArrivalGreeting } from './useArrivalGreeting'
 
 const turnIcons: Record<Turn, LucideIcon> = { straight: ArrowUp, left: ArrowLeft, right: ArrowRight }
 const turnLabels: Record<Turn, string> = { straight: 'Đi thẳng', left: 'Rẽ trái', right: 'Rẽ phải' }
@@ -41,7 +44,8 @@ export function JourneyPage() {
   const fromPlace = getPlace(rawFrom)
   const toPlace = getPlace(rawTo)
 
-  const [liveRoute, setLiveRoute] = useState<BackendRouteResponse | null>(null)
+  const routeKey = JSON.stringify([rawFrom, rawTo, hasGps, lat, lng])
+  const [livePlan, setLivePlan] = useState<{ key: string; route: BackendRouteResponse } | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
   const [liveError, setLiveError] = useState('')
   const [speaking, setSpeaking] = useState(false)
@@ -66,17 +70,17 @@ export function JourneyPage() {
 
   useEffect(() => {
     if (!isLive || !rawTo || (!rawFrom && !hasGps)) {
-      setLiveRoute(null); setLiveError(''); setLiveLoading(false)
+      setLivePlan(null); setLiveError(''); setLiveLoading(false)
       return
     }
     if (!hasGps && rawFrom === rawTo) {
-      setLiveRoute({
+      setLivePlan({ key: routeKey, route: {
         destination: toPlace?.name ?? rawTo,
         start: fromLabel || fromPlace?.name || rawFrom,
         steps: [{ kind: 'arrive', text: `Bạn đã tới ${toPlace?.name ?? rawTo}`, meters: 0, approx: false, mapKind: 'indoor', building: toPlace?.building ?? null, target: { node: rawTo, label: toPlace?.name ?? rawTo, lat: null, lng: null }, passes: [], side: null }],
         totalMeters: 0,
         estSeconds: 0,
-      })
+      } })
       setLiveError('')
       setLiveLoading(false)
       return
@@ -86,19 +90,30 @@ export function JourneyPage() {
     setLiveError('')
     const reqParams = hasGps ? { to: rawTo, lat, lng } : { to: rawTo, start: rawFrom }
     wayfinderApi.route(reqParams, controller.signal)
-      .then(data => { if (!controller.signal.aborted) { setLiveRoute(data); setLiveError('') } })
+      .then(data => { if (!controller.signal.aborted) { setLivePlan({ key: routeKey, route: data }); setLiveError('') } })
       .catch(err => {
         if (controller.signal.aborted) return
-        setLiveRoute(null)
+        setLivePlan(null)
         setLiveError(err instanceof ApiError ? err.message : 'Không tải được hành trình từ máy chủ.')
       })
       .finally(() => { if (!controller.signal.aborted) setLiveLoading(false) })
     return () => controller.abort()
-  }, [isLive, rawTo, rawFrom, fromLabel, hasGps, lat, lng, toPlace?.name, toPlace?.building, fromPlace?.name])
+  }, [isLive, rawTo, rawFrom, fromLabel, hasGps, lat, lng, routeKey, toPlace?.name, toPlace?.building, fromPlace?.name])
 
   const stepParam = Number(params.get('buoc') ?? 0)
+  const liveRoute = livePlan?.key === routeKey ? livePlan.route : null
+  const liveSteps = isLive && !liveLoading && !liveError && liveRoute ? splitRouteSteps(liveRoute.steps) : null
+  const demoRoute = !isLive && fromPlace && toPlace ? findRoute(fromPlace.id, toPlace.id) : null
+  const stepCount = liveSteps?.travelSteps.length ?? demoRoute?.length
+  const step = Math.min(Math.max(Number.isFinite(stepParam) ? Math.floor(stepParam) : 0, 0), stepCount ?? 0)
+  const arrived = step === stepCount
   useEffect(() => { return () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() } }, [])
-  useEffect(() => { setSpeaking(false); if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [stepParam])
+  useEffect(() => { setSpeaking(false); if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [step, journeyKey])
+  const { message: arrivalMessage, replay: replayArrival } = useArrivalGreeting(journeyKey, arrived ? (isLive ? liveRoute?.destination : toPlace?.name) : undefined)
+  const arrivalGreeting = arrived && <>
+    <p>{arrivalMessage}</p>
+    {replayArrival && <button type="button" className="button button-quiet arrival-replay" onClick={replayArrival}><Volume2 size={18} />Nghe lại lời chào</button>}
+  </>
 
   function speakText(text: string) {
     if (!speechAvailable) return
@@ -130,17 +145,15 @@ export function JourneyPage() {
   const cameraControls = { onStep: goStep, onMode: chooseMode, onExit: () => setShowExit(true), destinationId: rawTo }
   const modeButton = <div className="card-mode"><JourneyModeButton current="card" onChange={chooseMode} /></div>
 
-  const welcome = event && arrivalCtx && <EventWelcome key={event.id + ':' + rawTo} event={event} arrival={arrivalCtx} mode={mode} place={toPlace} onCameraActiveChange={handleEncounterCameraChange} />
+  const welcome = event && arrivalCtx && <EventWelcome key={event.id + ':' + rawTo} event={event} arrival={arrivalCtx} mode={mode} place={toPlace} greeting={arrivalGreeting} onCameraActiveChange={handleEncounterCameraChange} />
   const cardWelcome = <div className="focused-page journey-page">{modeButton}{welcome}</div>
 
   if (isLive) {
     if (!rawTo || (!rawFrom && !hasGps)) return <NotFound title="Chưa có hành trình này" description="Chọn lại điểm xuất phát và điểm đến để bắt đầu." />
     if (liveLoading) return <div className="narrow-page"><div className="locating-status" role="status"><LoaderCircle size={20} className="recognition-spinner" /><span>Đang tải chỉ dẫn từng bước…</span></div></div>
-    if (liveError || !liveRoute) return <div className="narrow-page"><EmptyState title="Không tìm được hành trình" description={liveError || 'Chưa có đường nối phù hợp.'} action={<Link className="button button-primary" to={link(`/di-den?to=${rawTo}`)}>Chọn lại điểm xuất phát</Link>} /></div>
+    if (!liveRoute || !liveSteps) return <div className="narrow-page"><EmptyState title="Không tìm được hành trình" description={liveError || 'Chưa có đường nối phù hợp.'} action={<Link className="button button-primary" to={link(`/di-den?to=${rawTo}`)}>Chọn lại điểm xuất phát</Link>} /></div>
 
-    const { travelSteps, arrivalStep } = splitRouteSteps(liveRoute.steps)
-    const step = Math.min(Math.max(Number.isFinite(stepParam) ? Math.floor(stepParam) : 0, 0), travelSteps.length)
-    const arrived = step === travelSteps.length
+    const { travelSteps, arrivalStep } = liveSteps
     const curStep = travelSteps[step]
     const tracking = curStep && {
       waypoint: curStep,
@@ -162,7 +175,7 @@ export function JourneyPage() {
     </div>
     const dir: StepDirection = curStep ? stepDirection(curStep) : 'arrive'
     const Direction = stepDirIcons[dir]
-    const mascotMood = arrived ? 'jump' : dir === 'left' ? 'left' : dir === 'right' ? 'right' : dir === 'back' ? 'wait' : 'walk'
+    const mascotMood = dir === 'left' ? 'left' : dir === 'right' ? 'right' : dir === 'back' ? 'wait' : 'walk'
     const progress = travelSteps.length ? Math.round((step / travelSteps.length) * 100) : 100
     const startDisplay = fromLabel || liveRoute.start
     const cameraSuspended = shouldSuspendJourneyCamera({ mode, arrived, hasWelcome: Boolean(welcome), encounterCameraActive })
@@ -177,10 +190,12 @@ export function JourneyPage() {
         <EventJourneyBadge />
         <div className="active-journey-layout">
           <section className="active-direction" aria-live="polite">
-            <div className="direction-heading"><h1 tabIndex={-1}>{arrived ? 'Tới nơi rồi!' : liveRoute.destination}</h1><p>{arrived ? (arrivalStep?.text || `Bạn đã tới ${liveRoute.destination}.`) : `Chặng ${step + 1} trong ${travelSteps.length} chặng`}</p></div>
+            <div className="direction-heading"><h1 tabIndex={-1}>{arrived ? 'Tới nơi rồi!' : liveRoute.destination}</h1>{!arrived && <p>Chặng {step + 1} trong {travelSteps.length} chặng</p>}</div>
             <div className={`direction-stage ${arrived ? 'arrived' : ''}`}>
-              <div className="journey-companion"><Mascot mood={mascotMood} size={122} /><span className="companion-arrow"><Direction size={50} strokeWidth={1.5} aria-hidden="true" /></span></div>
-              <h2>{arrived ? liveRoute.destination : stepDirLabels[dir]}</h2>
+              {arrived ? <><ArrivalMascot key={journeyKey} mascot={defaultEventMascot} />{arrivalGreeting}</> : <>
+                <div className="journey-companion"><Mascot mood={mascotMood} size={122} /><span className="companion-arrow"><Direction size={50} strokeWidth={1.5} aria-hidden="true" /></span></div>
+                <h2>{stepDirLabels[dir]}</h2>
+              </>}
               <p>{arrived ? (arrivalStep?.side ? `Điểm đến ở ${arrivalStep.side}. Đối chiếu biển tên trước khi vào.` : 'Đối chiếu biển tên trước khi vào phòng.') : curStep.text}</p>
               {!arrived && curStep.passes.length > 0 && <p className="helper-text">Đi ngang qua: {curStep.passes.map(p => `${p.name} (${p.side})`).join(', ')}</p>}
               <span className="direction-location"><MapPin size={15} />{arrived ? (arrivalStep?.building || toPlace?.building || 'VinUniversity') : (curStep.building || (curStep.mapKind === 'outdoor' ? 'Ngoài trời' : 'Trong nhà'))}</span>
@@ -210,7 +225,7 @@ export function JourneyPage() {
         <div className="journey-top">
           <button className="back-link" onClick={() => setShowExit(true)}><X size={19} />Kết thúc</button>
           <span>{liveRoute.totalMeters > 0 ? `Tổng ${liveRoute.totalMeters} m` : 'VinUni Wayfinder'}</span>
-          {speechAvailable && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(curStep?.text ?? arrivalStep?.text ?? `Bạn đã tới ${liveRoute.destination}.`)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
+          {speechAvailable && !arrived && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(curStep.text)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
         </div>
         {undoToast}{exitDialog}
       </div>
@@ -219,10 +234,8 @@ export function JourneyPage() {
 
   const from = fromPlace
   const to = toPlace
-  const route = from && to ? findRoute(from.id, to.id) : null
-  const step = route ? Math.min(Math.max(Number.isFinite(stepParam) ? Math.floor(stepParam) : 0, 0), route.length) : 0
+  const route = demoRoute
   if (!from || !to || !route) return <NotFound title="Chưa có hành trình này" description="Chọn lại điểm xuất phát và điểm đến để bắt đầu." />
-  const arrived = step === route.length
   const edge = route[step]
   const Direction = edge ? turnIcons[edge.turn] : Check
   const current = getPlace(step === 0 ? from.id : route[step - 1].to)!
@@ -242,7 +255,14 @@ export function JourneyPage() {
       <div className="active-journey-layout">
         <section className="active-direction" aria-live="polite">
           <div className="direction-heading"><h1 tabIndex={-1}>{arrived ? 'Tới nơi rồi!' : to.name}</h1><p>{arrived ? 'Bạn vừa hoàn thành hành trình mẫu.' : `Chặng ${step + 1} trong ${route.length} chặng`}</p></div>
-          <div className={`direction-stage ${arrived ? 'arrived' : ''}`}><div className="journey-companion"><Mascot mood={arrived ? 'jump' : edge.turn === 'left' ? 'left' : edge.turn === 'right' ? 'right' : 'walk'} size={122} /><span className="companion-arrow"><Direction size={50} strokeWidth={1.5} aria-hidden="true" /></span></div><h2>{arrived ? to.name : turnLabels[edge.turn]}</h2><p>{arrived ? 'Đối chiếu biển tên trước khi vào phòng.' : edge.instruction}</p><span className="direction-location"><MapPin size={15} />{arrived ? 'Toà I, tầng trệt' : `Từ ${current.short}`}</span></div>
+          <div className={`direction-stage ${arrived ? 'arrived' : ''}`}>
+            {arrived ? <><ArrivalMascot key={journeyKey} mascot={defaultEventMascot} />{arrivalGreeting}</> : <>
+              <div className="journey-companion"><Mascot mood={edge.turn === 'straight' ? 'walk' : edge.turn} size={122} /><span className="companion-arrow"><Direction size={50} strokeWidth={1.5} aria-hidden="true" /></span></div>
+              <h2>{turnLabels[edge.turn]}</h2>
+            </>}
+            <p>{arrived ? 'Đối chiếu biển tên trước khi vào phòng.' : edge.instruction}</p>
+            <span className="direction-location"><MapPin size={15} />{arrived ? 'Toà I, tầng trệt' : `Từ ${current.short}`}</span>
+          </div>
           {speechMessage && <p className="inline-feedback" role="status">{speechMessage}</p>}
           <div className="journey-progress"><div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Tiến độ hành trình"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><span>{step}/{route.length} chặng đã xác nhận</span></div>
           {arrived ? (
@@ -255,7 +275,7 @@ export function JourneyPage() {
       <div className="journey-top">
         <button className="back-link" onClick={() => setShowExit(true)}><X size={19} />Kết thúc</button>
         <span>Tuyến minh hoạ</span>
-        {speechAvailable && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(edge?.instruction ?? `Bạn đã tới ${to.name}.`)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
+        {speechAvailable && !arrived && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(edge.instruction)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
       </div>
       {exitDialog}
     </div>

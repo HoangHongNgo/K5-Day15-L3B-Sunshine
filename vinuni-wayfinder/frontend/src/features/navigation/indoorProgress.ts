@@ -45,9 +45,13 @@ export function indoorProgress({ meters, walked, turnDeg, nextTurn, promptAt = A
   return { state: ratio >= NEAR_RATIO ? 'near' : 'walking', ratio, remaining }
 }
 
+export function hasMotionReading(reading: DeviceMotionEventAcceleration | null) {
+  return reading !== null && Number.isFinite(reading.x) && Number.isFinite(reading.y) && Number.isFinite(reading.z)
+}
+
 /**
- * Chọn cách tự chuyển chặng: ngoài trời dùng GPS; trong nhà ưu tiên đếm bước + la bàn (đã thử ổn trên điện thoại),
- * chỉ gửi ảnh camera định kỳ khi máy không có cảm biến chuyển động.
+ * Chọn cách tự chuyển chặng: ngoài trời dùng GPS; trong nhà dùng đếm bước khi nhận được dữ liệu cảm biến.
+ * Camera là phương án dự phòng khi chưa có dữ liệu gia tốc hợp lệ.
  */
 export function trackingModes({ outdoorGps, indoorStep, motionSensor, cameraReady }: {
   outdoorGps: boolean; indoorStep: boolean; motionSensor: boolean; cameraReady: boolean

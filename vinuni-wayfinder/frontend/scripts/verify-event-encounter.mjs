@@ -140,13 +140,14 @@ try {
 
   await page.context().setGeolocation(eventLocation)
   await check.click()
-  // Native AR CTA stays on the stable unlocked event surface alongside Mở camera AR and survives rejection.
-  const nativeAr = button('Đặt Tia vào không gian thật')
+  // A rejected native AR session keeps both actions available on the unlocked event.
+  const nativeAr = button('Gặp Tia trong AR')
+  const plainCamera = button('Chụp ảnh gửi album CLB')
   await expect(nativeAr).toBeVisible()
-  await expect(button('Mở camera AR')).toBeVisible()
+  await expect(plainCamera).toBeVisible()
   await nativeAr.click()
   await expect(page.getByText(/Thiết bị chưa mở được AR/)).toBeVisible()
-  await expect(button('Mở camera AR')).toBeVisible()
+  await expect(plainCamera).toBeVisible()
 
   await page.evaluate(() => {
     const getMedia = navigator.mediaDevices.getUserMedia
@@ -155,16 +156,16 @@ try {
       return Promise.reject(new DOMException('Denied', 'NotAllowedError'))
     }
   })
-  await button('Mở camera AR').click()
+  await plainCamera.click()
   await expect(page.getByText(/Bạn chưa cấp quyền camera/)).toBeVisible()
   await button('Đóng camera').click()
   await check.click()
-  await button('Mở camera AR').click()
+  await plainCamera.click()
 
   const dialog = page.getByRole('dialog', { name: 'Chụp ảnh cùng mascot' })
   await expect(dialog).toBeVisible()
   // No duplicate Native AR button inside fullscreen EncounterCamera.
-  await expect(dialog.getByRole('button', { name: /Đặt .* vào không gian thật/ })).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: 'Gặp Tia trong AR', exact: true })).toHaveCount(0)
 
   const placement = dialog.getByRole('button', { name: /Đặt .* trong khung hình/ })
   const shutter = dialog.getByRole('button', { name: /Chụp ảnh cùng/ })
@@ -329,7 +330,7 @@ try {
   await page.goto(detail + '?chup-anh=1')
   await page.setViewportSize({ width: 844, height: 390 })
   await check.click()
-  await button('Mở camera AR').click()
+  await plainCamera.click()
   await expect(dialog).toBeVisible()
   assert.deepEqual(await page.locator('.encounter-viewport').boundingBox(), { x: 0, y: 0, width: 844, height: 390 })
   await expect(shutter).toBeDisabled()

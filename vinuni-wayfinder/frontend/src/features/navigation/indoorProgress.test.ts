@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { headingDelta, indoorProgress, nextTurnOf, trackingModes } from './indoorProgress'
+import { hasMotionReading, headingDelta, indoorProgress, nextTurnOf, trackingModes } from './indoorProgress'
 import type { BackendStep } from '../wayfinder/wayfinderApi'
 
 const step = (text: string, kind = 'walk'): BackendStep => ({ kind, text, meters: 20, approx: false, mapKind: 'indoor', building: 'I',
@@ -64,6 +64,13 @@ describe('indoorProgress', () => {
 })
 
 describe('trackingModes', () => {
+  it('treats missing or incomplete motion readings as unavailable and accepts real zero readings', () => {
+    expect(hasMotionReading(null)).toBe(false)
+    expect(hasMotionReading({ x: null, y: null, z: null })).toBe(false)
+    expect(hasMotionReading({ x: 0, y: Infinity, z: 9.8 })).toBe(false)
+    expect(hasMotionReading({ x: 0, y: 0, z: 0 })).toBe(true)
+  })
+
   it('prefers step counting indoors and stops sending camera frames when motion sensors exist', () => {
     expect(trackingModes({ outdoorGps: false, indoorStep: true, motionSensor: true, cameraReady: true }))
       .toEqual({ gps: false, pdr: true, photo: false })

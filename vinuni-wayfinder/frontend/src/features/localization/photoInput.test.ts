@@ -15,3 +15,13 @@ it('is a single shutter: no upload step, manual room choice kept as a fallback',
   expect(html).not.toContain('type="file"')
   expect(html).not.toContain('/anh-mau')
 })
+
+it('hides global app chrome on fullscreen camera routes (/anh and /hanh-trinh) while keeping normal pages', async () => {
+  const { isFullscreenChromeRoute } = await import('../../App')
+  expect(isFullscreenChromeRoute('/anh')).toBe(true)
+  expect(isFullscreenChromeRoute('/hanh-trinh')).toBe(true)
+  expect(isFullscreenChromeRoute('/')).toBe(false)
+  expect(isFullscreenChromeRoute('/di-den')).toBe(false)
+  expect(isFullscreenChromeRoute('/vi-tri')).toBe(false)
+  expect(isFullscreenChromeRoute('/su-kien/demo')).toBe(false)
+})

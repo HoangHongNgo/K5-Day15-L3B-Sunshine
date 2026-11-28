@@ -34,6 +34,10 @@ function subscribeToMotion(change: () => void) {
   return () => preference.removeEventListener('change', change)
 }
 
+export function isFullscreenChromeRoute(pathname: string) {
+  return pathname === '/hanh-trinh' || pathname === '/anh'
+}
+
 export default function App() {
   const { isLive, places } = useWayfinder()
   const { mascot } = useEventJourney()
@@ -43,6 +47,7 @@ export default function App() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const isJourney = pathname === '/hanh-trinh'
+  const isFullscreen = isFullscreenChromeRoute(pathname)
   const isClub = pathname.startsWith('/clb')
   const isCollect = pathname === '/thu-thap'
   const isNavigation = ['/di-den', '/vi-tri', '/anh', '/hanh-trinh'].includes(pathname)
@@ -64,7 +69,7 @@ export default function App() {
   return (
     <MotionContext.Provider value={{ paused: motionPaused }}>
       <a href="#main-content" className="skip-link" onClick={e => { e.preventDefault(); document.getElementById('main-content')?.focus() }}>Đến nội dung chính</a>
-      {!isJourney && <>
+      {!isFullscreen && <>
         <header className="site-header">
           <div className="header-inner">
             <Brand />
@@ -88,7 +93,7 @@ export default function App() {
           {!pwa.online ? 'Bạn đang ngoại tuyến. Tìm kiếm và tuyến mẫu vẫn dùng được; tour của trường cần mạng.' : pwa.error || (storageError ? 'Chưa thể lưu lâu dài trên thiết bị này. Danh sách chỉ được giữ trong phiên hiện tại.' : '')}
         </div>
       )}
-      {pwa.needRefresh[0] && !isJourney && (
+      {pwa.needRefresh[0] && !isFullscreen && (
         <div className="update-banner" role="status">
           <span>VinUni AR Map có phiên bản mới.</span>
           <button onClick={() => void pwa.updateServiceWorker(true)}>Cập nhật ngay</button>
@@ -120,7 +125,7 @@ export default function App() {
         </Routes>
         <RouteFocus />
       </main>
-      {!isJourney && !isClub && !isCollect && <nav className="bottom-nav" aria-label="Điều hướng trên điện thoại">{nav}</nav>}
+      {!isFullscreen && !isClub && !isCollect && <nav className="bottom-nav" aria-label="Điều hướng trên điện thoại">{nav}</nav>}
     </MotionContext.Provider>
   )
 }

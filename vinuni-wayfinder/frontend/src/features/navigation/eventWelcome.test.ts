@@ -24,6 +24,7 @@ function journey(mode: string, arrived: boolean) {
 it.each(['camera', 'card'])('shows the event mascot at the confirmed venue in %s mode', mode => {
   const html = journey(mode, true)
   expect(html).toContain('Tia chào bạn!')
+  expect(html).toContain('Bạn đã đến Trung tâm Khởi nghiệp rồi!')
   expect(html).toContain('Robotics Open Lab')
   expect(html).toContain('<canvas')
   expect(html.includes('<video')).toBe(mode === 'camera')
@@ -35,7 +36,9 @@ it.each(['camera', 'card'])('shows the event mascot at the confirmed venue in %s
   expect(html).not.toContain('Tới nơi rồi!')
 })
 it('reserves the greeting for the last waypoint', () => {
-  expect(journey('camera', false)).not.toContain('Tia chào bạn!')
+  const html = journey('camera', false)
+  expect(html).not.toContain('Tia chào bạn!')
+  expect(html).not.toContain('Bạn đã đến Trung tâm Khởi nghiệp rồi!')
 })
 
 it('tracks navigation camera suspension cleanly across encounter open, review, close, mode change and unmount', async () => {
