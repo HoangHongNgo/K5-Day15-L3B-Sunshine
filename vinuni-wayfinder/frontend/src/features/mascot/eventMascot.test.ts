@@ -37,7 +37,7 @@ it('renders different shapes and colors from each recipe, with feet on the floor
 it('binds speech to visible mouth geometry for generated, built-in and legacy mascots', async () => {
   for (const input of [robot, builtInMascots[0]]) {
     const { model, animations, dispose } = models.createEventMascot(input)
-    expect(animations.map(clip => clip.name)).toEqual(expect.arrayContaining(['wave', 'jump', 'dance', 'talk']))
+    expect(animations.map(clip => clip.name)).toEqual(expect.arrayContaining(['idle', 'walk', 'wave', 'jump', 'dance', 'talk']))
     const mouth = model.getObjectByName('mouth')!
     const rest = new Box3().setFromObject(mouth)
     const mixer = new AnimationMixer(model)

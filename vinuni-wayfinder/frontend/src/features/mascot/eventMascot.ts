@@ -52,7 +52,7 @@ export function createEventMascot(asset: MascotAsset) {
   sculpture.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale)
   return {
     model,
-    animations: createTiaAnimations(model.name),
+    animations: createTiaAnimations(model.name, { humanoid: false }),
     dispose() {
       model.traverse(object => {
         if (object instanceof Mesh) {

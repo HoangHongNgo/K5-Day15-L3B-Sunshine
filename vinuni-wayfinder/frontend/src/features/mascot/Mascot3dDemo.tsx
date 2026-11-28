@@ -1,13 +1,13 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUp, Download, Hand, Move, Music2, Pause, RotateCcw, RotateCw, Square, MessageCircle } from 'lucide-react'
+import { ArrowLeft, ArrowUp, Download, Footprints, Hand, Move, Music2, Pause, RotateCcw, RotateCw, Square, MessageCircle } from 'lucide-react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createEventMascot } from './eventMascot'
 import { useEvents } from '../events/EventContext'
 import { defaultEventMascot, resolveEventMascot, type MascotAsset } from '../events/events'
 import { MotionContext } from './Mascot'
-import type { TiaMotion } from './tiaAnimations'
+import { createMascotPatrol, resetMascotPatrol, stepMascotPatrol, type TiaMotion } from './tiaAnimations'
 import './mascot3d.css'
 
 type ViewAction = 'front' | 'back' | 'left' | 'right' | 'in' | 'out' | 'reset'
@@ -16,9 +16,14 @@ export default function Mascot3dDemo() {
   const [params] = useSearchParams()
   const { events, allMascots } = useEvents()
   const eventId = params.get('event')
+  const mascotId = params.get('mascot')
   const event = events.find(item => item.id === eventId && item.status === 'published')
   if (eventId && !event) return <p role="status">Chưa có dữ liệu cho sự kiện này. <Link to="/su-kien">Xem danh sách sự kiện</Link></p>
-  const mascot = event ? resolveEventMascot(allMascots, event.mascotId) : defaultEventMascot
+  const mascot = event
+    ? resolveEventMascot(allMascots, event.mascotId)
+    : mascotId
+      ? resolveEventMascot(allMascots, mascotId)
+      : defaultEventMascot
   return <MascotModelViewer key={mascot.id} mascot={mascot} eventId={event?.id}/>
 }
 
@@ -102,13 +107,27 @@ export function MascotModelViewer({ mascot, eventId }: { mascot: MascotAsset; ev
     observer.observe(container)
     resize()
     let activeMotion: ViewerMotion | null = null
-    let motionPaused = false
+    let motionPaused = paused
+    let contextAvailable = true
+    const patrol = createMascotPatrol(0.48, 0.34, 1.2)
+    const idleClip = asset.animations.find(clip => clip.name === 'idle')
+    function syncClip() {
+      mixer.stopAllAction()
+      resetMascotPatrol(asset.model, patrol)
+      const clip = activeMotion ? asset.animations.find(item => item.name === activeMotion) : idleClip
+      if (clip) {
+        mixer.clipAction(clip).reset().play()
+        mixer.update(0)
+      }
+    }
     function schedule() {
       let lastTime: number | null = null
-      renderer.setAnimationLoop(!motionPaused && !document.hidden && (activeMotion || controls.autoRotate) ? time => {
+      const shouldAnimate = contextAvailable && !motionPaused && !document.hidden && Boolean(activeMotion || idleClip || controls.autoRotate)
+      renderer.setAnimationLoop(shouldAnimate ? time => {
         const delta = lastTime === null ? 0 : Math.min((time - lastTime) / 1000, .1)
         lastTime = time
-        if (activeMotion) mixer.update(delta)
+        if (activeMotion || idleClip) mixer.update(delta)
+        if (activeMotion === 'walk') stepMascotPatrol(asset.model, patrol, delta)
         if (controls.autoRotate) controls.update(delta)
         render()
       } : null)
@@ -118,16 +137,17 @@ export function MascotModelViewer({ mascot, eventId }: { mascot: MascotAsset; ev
       schedule()
     }
     play.current = value => {
-      mixer.stopAllAction()
       activeMotion = value
-      if (value) {
-        mixer.clipAction(asset.animations.find(clip => clip.name === value)!).reset().play()
-        mixer.update(0)
-      }
+      syncClip()
       schedule()
       render()
     }
-    pause.current = value => { motionPaused = value; schedule() }
+    pause.current = value => {
+      motionPaused = value
+      schedule()
+    }
+    syncClip()
+    schedule()
     document.addEventListener('visibilitychange', schedule)
     view.current = action => {
       if (action === 'reset') { camera.position.copy(initial); controls.target.copy(target) }
@@ -139,6 +159,7 @@ export function MascotModelViewer({ mascot, eventId }: { mascot: MascotAsset; ev
     }
     function contextLost(event: Event) {
       event.preventDefault()
+      contextAvailable = false
       renderer.setAnimationLoop(null)
       mixer.stopAllAction()
       activeMotion = null
@@ -148,7 +169,14 @@ export function MascotModelViewer({ mascot, eventId }: { mascot: MascotAsset; ev
       setRotating(false)
       setMotion(null)
     }
-    function restored() { setFailed(false); setReady(true); controls.autoRotate = false; resize() }
+    function restored() {
+      contextAvailable = true
+      syncClip()
+      schedule()
+      resize()
+      setFailed(false)
+      setReady(true)
+    }
     renderer.domElement.addEventListener('webglcontextlost', contextLost)
     renderer.domElement.addEventListener('webglcontextrestored', restored)
     setReady(true)
@@ -231,13 +259,14 @@ export function MascotModelViewer({ mascot, eventId }: { mascot: MascotAsset; ev
         </div>
       </div>
       <div className="mascot3d-actions" role="group" aria-label={'Động tác của ' + mascot.name}>
+        <button aria-pressed={motion === 'walk'} disabled={!ready || paused} onClick={() => chooseMotion('walk')}><Footprints size={17} />Đi bộ</button>
         <button aria-pressed={motion === 'wave'} disabled={!ready || paused} onClick={() => chooseMotion('wave')}><Hand size={17} />Vẫy tay</button>
         <button aria-pressed={motion === 'jump'} disabled={!ready || paused} onClick={() => chooseMotion('jump')}><ArrowUp size={17} />Nhảy</button>
         <button aria-pressed={motion === 'dance'} disabled={!ready || paused} onClick={() => chooseMotion('dance')}><Music2 size={17} />Múa xoay</button>
         <button aria-pressed={motion === 'talk'} disabled={!ready || paused} onClick={() => chooseMotion('talk')}><MessageCircle size={17} />Mở miệng nói</button>
         <button disabled={!ready || !motion} onClick={() => chooseMotion(null)}><Square size={14} />Dừng động tác</button>
       </div>
-      <p className="mascot3d-motion-status" role="status">{paused ? 'Chuyển động đang tạm dừng theo cài đặt giảm chuyển động của thiết bị.' : motion ? `${mascot.name} đang ${{wave:'vẫy tay', jump:'nhảy', dance:'múa xoay', talk:'mở miệng nói'}[motion]}.` : ''}</p>
+      <p className="mascot3d-motion-status" role="status">{paused ? 'Chuyển động đang tạm dừng theo cài đặt giảm chuyển động của thiết bị.' : motion ? `${mascot.name} đang ${{walk:'đi bộ dạo quanh', wave:'vẫy tay', jump:'nhảy', dance:'múa xoay', talk:'mở miệng nói'}[motion]}.` : ''}</p>
       <div className="mascot3d-controls" aria-label="Điều khiển góc nhìn">
         <div><button onClick={() => chooseView('front')} disabled={!ready}>Mặt trước</button><button onClick={() => chooseView('back')} disabled={!ready}>Mặt sau</button><button aria-label="Đặt lại góc nhìn" onClick={() => chooseView('reset')} disabled={!ready}><RotateCcw size={17} /></button></div>
         <button aria-pressed={rotating} onClick={() => { spin.current(!rotating); setRotating(!rotating) }} disabled={!ready || paused}>{rotating ? <Pause size={16} /> : <RotateCw size={16} />}Tự xoay</button>
@@ -245,7 +274,9 @@ export function MascotModelViewer({ mascot, eventId }: { mascot: MascotAsset; ev
       </div>
       <aside className="mascot3d-details">
         <h2>Mô hình {mascot.name}</h2>
-        <p>Tệp GLB chứa mô hình 3D và bốn động tác để dùng trong phần mềm hỗ trợ glTF.</p>
+        <p>{mascot.kind === 'model3d' && mascot.recipe
+          ? 'Tệp GLB chứa mô hình 3D và sáu chuyển động: đi bộ, thở, vẫy tay, nhảy, múa xoay và nói.'
+          : 'Tệp GLB chứa mô hình 3D, khung xương và sáu chuyển động: đi bộ, thở, vẫy tay, nhảy, múa xoay và nói.'}</p>
         <button className="mascot3d-download" onClick={() => void download()} disabled={!ready || exporting}><Download size={18} />{exporting ? 'Đang xuất mô hình…' : 'Tải mô hình .GLB'}</button>
         {error && <p role="alert">{error}</p>}
       </aside>

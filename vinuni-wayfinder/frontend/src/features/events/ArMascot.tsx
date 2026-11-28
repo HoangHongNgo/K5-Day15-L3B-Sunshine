@@ -6,7 +6,8 @@ import * as THREE from 'three'
 import type { MascotAsset } from './events'
 import type { EncounterMotion } from './encounterStage'
 import { createEventMascot } from '../mascot/eventMascot'
-import { joystickMove, joystickVector } from './mascotAr'
+import { chooseArLocomotionClip, joystickMove, joystickVector, prepareSceneForUsdz } from './mascotAr'
+import { createXrLaunchGuard } from './xrLaunchGuard'
 import { dataUrlToBlob, savePhoto } from './photoSave'
 import './arMascot.css'
 
@@ -47,12 +48,12 @@ function buildArMascot(mascot: MascotAsset) {
   return { root, inner, shadow, asset }
 }
 
-export function ArMascotButton({ mascot, beforeStart, className = 'button button-quiet' }: {
-  mascot: MascotAsset; beforeStart?: () => void; className?: string
+export function ArMascotButton({ mascot, beforeStart, onActiveChange, className = 'button button-quiet' }: {
+  mascot: MascotAsset; beforeStart?: () => void; onActiveChange?: (active: boolean) => void; className?: string
 }) {
   const support = useArSupport()
   if (support === 'quicklook') return <QuickLookButton mascot={mascot} beforeStart={beforeStart} className={className} />
-  if (support === 'webxr') return <WebXrButton mascot={mascot} beforeStart={beforeStart} className={className} />
+  if (support === 'webxr') return <WebXrButton mascot={mascot} beforeStart={beforeStart} onActiveChange={onActiveChange} className={className} />
   return null
 }
 
@@ -67,11 +68,16 @@ function QuickLookButton({ mascot, beforeStart, className }: { mascot: MascotAss
       root.remove(shadow)
       const scene = new THREE.Scene()
       scene.add(root)
-      const data = await new USDZExporter().parseAsync(scene, { quickLookCompatible: true })
-      asset.dispose()
-      if (!alive) return
-      made = URL.createObjectURL(new Blob([data as BlobPart], { type: 'model/vnd.usdz+zip' }))
-      setUrl(made)
+      const cleanupUsdz = prepareSceneForUsdz(scene)
+      try {
+        const data = await new USDZExporter().parseAsync(scene, { quickLookCompatible: true })
+        if (!alive) return
+        made = URL.createObjectURL(new Blob([data], { type: 'model/vnd.usdz+zip' }))
+        setUrl(made)
+      } finally {
+        cleanupUsdz()
+        asset.dispose()
+      }
     })().catch(() => {})
     return () => { alive = false; if (made) URL.revokeObjectURL(made) }
   }, [mascot])
@@ -89,32 +95,54 @@ function QuickLookButton({ mascot, beforeStart, className }: { mascot: MascotAss
 type XrUi = { surface: boolean; placed: boolean; cameraAccess: boolean; message: string }
 
 /** Android Chrome: WebXR immersive-ar + hit-test. Chạm để đặt, joystick để đi, nút hoạt ảnh, chụp ghép camera nếu được. */
-function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; beforeStart?: () => void; className: string }) {
+function WebXrButton({ mascot, beforeStart, onActiveChange, className }: {
+  mascot: MascotAsset; beforeStart?: () => void; onActiveChange?: (active: boolean) => void; className: string
+}) {
   const overlay = useRef<HTMLDivElement>(null)
   const stick = useRef({ x: 0, y: 0 })
   const ctl = useRef<{ end: () => void; play: (m: EncounterMotion) => void; scale: (k: number) => void; capture: () => void } | null>(null)
+  const launchGuard = useRef<ReturnType<typeof createXrLaunchGuard> | null>(null)
+  const activeCallback = useRef(onActiveChange)
+  activeCallback.current = onActiveChange
   const [active, setActive] = useState(false)
   const [ui, setUi] = useState<XrUi>({ surface: false, placed: false, cameraAccess: false, message: '' })
   const [knob, setKnob] = useState({ x: 0, y: 0 })
-  useEffect(() => () => ctl.current?.end(), [])
+  useEffect(() => {
+    const guard = createXrLaunchGuard()
+    launchGuard.current = guard
+    return () => {
+      ctl.current?.end()
+      guard.dispose()
+      if (launchGuard.current === guard) launchGuard.current = null
+    }
+  }, [])
 
   function start() {
     const root = overlay.current
-    if (!root || !navigator.xr || ctl.current) return
+    const guard = launchGuard.current
+    if (!root || !navigator.xr || !guard || ctl.current || guard.isBusy()) return
     beforeStart?.()
     root.hidden = false
     // Gọi requestSession ngay trong lần chạm (bắt buộc).
-    navigator.xr.requestSession('immersive-ar', {
-      requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay', 'camera-access', 'light-estimation'],
-      domOverlay: { root },
-    }).then(session => runSession(session, root)).catch(() => {
-      root.hidden = true
-      setUi(u => ({ ...u, message: 'Thiết bị chưa mở được AR. Hãy cập nhật Chrome và Google Play Services for AR.' }))
-    })
+    guard.launch(
+      () => navigator.xr!.requestSession('immersive-ar', {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay', 'camera-access', 'light-estimation'],
+        domOverlay: { root },
+      }),
+      (session, isDisposed) => runSession(session, root, isDisposed),
+      {
+        onActiveChange: next => activeCallback.current?.(next),
+        onError: () => {
+          root.hidden = true
+          setActive(false)
+          setUi(u => ({ ...u, message: 'Thiết bị chưa mở được AR. Hãy cập nhật Chrome và Google Play Services for AR.' }))
+        },
+      },
+    )
   }
 
-  async function runSession(session: XRSession, root: HTMLDivElement) {
+  async function runSession(session: XRSession, root: HTMLDivElement, isDisposed: () => boolean) {
     setActive(true)
     setUi({ surface: false, placed: false, cameraAccess: false, message: '' })
     const canvas = document.createElement('canvas')
@@ -123,6 +151,11 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
     renderer.xr.enabled = true
     renderer.xr.setReferenceSpaceType('local')
     await renderer.xr.setSession(session)
+    if (isDisposed()) {
+      renderer.dispose()
+      root.hidden = true
+      return
+    }
     const cameraAccess = (session.enabledFeatures ?? []).includes('camera-access')
     setUi(u => ({ ...u, cameraAccess }))
 
@@ -150,14 +183,47 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
 
     const viewer = await session.requestReferenceSpace('viewer')
     const hitSource = await session.requestHitTestSource?.({ space: viewer })
+    if (isDisposed()) {
+      root.removeEventListener('beforexrselect', guard)
+      hitSource?.cancel()
+      mixer.stopAllAction()
+      asset.dispose()
+      renderer.dispose()
+      root.hidden = true
+      return
+    }
     if (!hitSource) {
+      root.removeEventListener('beforexrselect', guard)
       void session.end().catch(() => {})
+      launchGuard.current?.markEnded()
       asset.dispose(); renderer.dispose(); root.hidden = true; setActive(false)
       setUi(u => ({ ...u, message: 'Thiết bị chưa hỗ trợ dò mặt phẳng.' }))
       return
     }
     const ref = renderer.xr.getReferenceSpace()!
+    const clipNames = asset.animations.map(c => c.name)
+    const hasWalkClip = clipNames.includes('walk')
     let placed = false, surface = false, captureWanted = false, last = 0, facing = 0
+    let oneShotActive = false
+    let currentLoopClip: 'walk' | 'idle' | null = null
+
+    function syncLocomotion(moving: boolean) {
+      const wanted = chooseArLocomotionClip({ moving, oneShotActive, clips: clipNames })
+      if (!wanted || wanted === currentLoopClip) return
+      const clip = asset.animations.find(c => c.name === wanted)
+      if (!clip) return
+      mixer.stopAllAction()
+      currentLoopClip = wanted
+      const action = mixer.clipAction(clip).reset()
+      action.setLoop(THREE.LoopRepeat, Infinity)
+      action.play()
+    }
+
+    mixer.addEventListener('finished', () => {
+      oneShotActive = false
+      currentLoopClip = null
+      syncLocomotion(Boolean(stick.current.x || stick.current.y))
+    })
 
     function place() {
       if (!reticle.visible) return
@@ -172,6 +238,8 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
       const clip = asset.animations.find(c => c.name === motion)
       if (!clip) return
       mixer.stopAllAction()
+      oneShotActive = true
+      currentLoopClip = null
       const action = mixer.clipAction(clip).reset()
       action.setLoop(THREE.LoopOnce, 1)
       action.play()
@@ -193,14 +261,20 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
         const xrCam = renderer.xr.getCamera()
         const yaw = new THREE.Euler().setFromQuaternion(xrCam.quaternion, 'YXZ').y
         const move = joystickMove(stick.current, yaw, WALK_SPEED, dt)
+        const moving = move.facing != null
         body.position.x += move.dx
         body.position.z += move.dz
         if (move.facing != null) {
+          if (oneShotActive) {
+            oneShotActive = false
+            currentLoopClip = null
+          }
           const diff = Math.atan2(Math.sin(move.facing - facing), Math.cos(move.facing - facing))
           facing += diff * Math.min(1, dt * 10)
           body.rotation.y = facing
         }
-        inner.position.y = move.facing != null ? Math.abs(Math.sin(time / 110)) * .025 * sizeK : 0
+        syncLocomotion(moving)
+        inner.position.y = moving && !hasWalkClip ? Math.abs(Math.sin(time / 110)) * .025 * sizeK : 0
         inner.scale.setScalar(baseScale * sizeK)
         shadow.scale.setScalar(shadowBase * sizeK)
       }
@@ -277,6 +351,7 @@ function WebXrButton({ mascot, beforeStart, className }: { mascot: MascotAsset; 
       asset.dispose()
       renderer.dispose()
       ctl.current = null
+      launchGuard.current?.markEnded()
       root.hidden = true
       stick.current = { x: 0, y: 0 }
       setKnob({ x: 0, y: 0 })

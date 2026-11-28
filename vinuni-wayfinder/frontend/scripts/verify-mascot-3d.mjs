@@ -14,6 +14,18 @@ try {
   page.setDefaultTimeout(7000)
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
+  await page.addInitScript(() => {
+    let frameTime = 0
+    const requestFrame = window.requestAnimationFrame.bind(window)
+    window.requestAnimationFrame = callback => requestFrame(() => callback(frameTime))
+    window.advanceMascotFrames = async count => {
+      for (let i = 0; i < count; i++) {
+        frameTime += 100
+        await new Promise(resolve => requestFrame(resolve))
+      }
+    }
+  })
+  const advanceFrames = count => page.evaluate(count => window.advanceMascotFrames(count), count)
   await page.goto(`${base}/mascot-3d`, { waitUntil: 'networkidle' })
   await expect(page.getByRole('heading', { name: 'Chào Tia, người bạn mới.' })).toBeVisible()
   const canvas = page.locator('.mascot3d-canvas canvas')
@@ -33,26 +45,45 @@ try {
   assert.ok(!front.equals(await canvas.screenshot()), 'Dragging must change the view')
   await page.getByRole('button', { name: 'Mặt trước', exact: true }).click()
   await page.screenshot({ path: 'artifacts/tia-front.png', fullPage: true })
-  const still = await canvas.screenshot()
-  for (const name of ['Vẫy tay', 'Nhảy', 'Múa xoay']) {
+  const atRest = await canvas.screenshot()
+  await advanceFrames(5)
+  assert.ok(!atRest.equals(await canvas.screenshot()), 'Tia must breathe at rest')
+
+  const walk = page.getByRole('button', { name: 'Đi bộ', exact: true })
+  const stop = page.getByRole('button', { name: 'Dừng động tác', exact: true })
+  await walk.click()
+  await expect(walk).toHaveAttribute('aria-pressed', 'true')
+  const walkStart = await canvas.screenshot()
+  await advanceFrames(6)
+  const midWalk = await canvas.screenshot()
+  assert.ok(!walkStart.equals(midWalk), 'Walking must change the pose and stage position')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(walk).toBeDisabled()
+  assert.ok(midWalk.equals(await canvas.screenshot()), 'Pausing must preserve the current walk pose and position')
+  await advanceFrames(6)
+  assert.ok(midWalk.equals(await canvas.screenshot()), 'The pause must keep the current frame frozen')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(walk).toBeEnabled()
+  assert.ok(midWalk.equals(await canvas.screenshot()), 'Resuming must begin at the paused frame')
+  await advanceFrames(4)
+  assert.ok(!midWalk.equals(await canvas.screenshot()), 'Resuming must advance the walk')
+  await stop.click()
+  await expect(walk).toHaveAttribute('aria-pressed', 'false')
+  assert.ok(atRest.equals(await canvas.screenshot()), 'Stopping the walk must return Tia to the center at idle')
+  await advanceFrames(5)
+  assert.ok(!atRest.equals(await canvas.screenshot()), 'Idle must keep animating after stopping an action')
+
+  for (const name of ['Vẫy tay', 'Nhảy', 'Múa xoay', 'Mở miệng nói']) {
     const button = page.getByRole('button', { name, exact: true })
     await button.click()
     await expect(button).toHaveAttribute('aria-pressed', 'true')
-    // A rendered frame must change, rather than merely changing a selected button.
-    await expect.poll(async () => still.equals(await canvas.screenshot()), { timeout: 3000 }).toBe(false)
+    const start = await canvas.screenshot()
+    await advanceFrames(5)
+    assert.ok(!start.equals(await canvas.screenshot()), `${name} must animate the model`)
     if (name === 'Vẫy tay') await page.screenshot({ path: 'artifacts/tia-wave.png', fullPage: true })
-    await page.getByRole('button', { name: 'Dừng động tác', exact: true }).click()
+    await stop.click()
     await expect(button).toHaveAttribute('aria-pressed', 'false')
-    await expect.poll(async () => still.equals(await canvas.screenshot())).toBe(true)
   }
-  // The device motion setting must also pause model animation and camera rotation.
-  await page.getByRole('button', { name: 'Vẫy tay', exact: true }).click()
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(page.getByRole('button', { name: 'Vẫy tay', exact: true })).toBeDisabled()
-  const pausedFrame = await canvas.screenshot()
-  assert.ok(pausedFrame.equals(await canvas.screenshot()), 'Global pause must stop the model')
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.getByRole('button', { name: 'Dừng động tác', exact: true }).click()
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Tải mô hình .GLB' }).click()
   const download = await downloadPromise
@@ -65,10 +96,18 @@ try {
   assert.ok(gltf.meshes.length > 10, 'Export must include the mascot geometry')
   assert.ok(gltf.nodes.some(node => node.name === 'tail'), 'Export must include the back of the character')
   assert.ok(!gltf.nodes.some(node => node.name === 'display-plinth'), 'Display platform must not be part of the mascot')
-  assert.deepEqual(gltf.animations.map(animation => animation.name).sort(), ['dance', 'jump', 'talk', 'wave'])
+  const joints = new Set(gltf.skins.flatMap(skin => skin.joints.map(index => gltf.nodes[index].name)))
+  assert.ok(joints.has('Hips') && joints.has('LeftLeg') && joints.has('Tail3'), 'GLB must contain Tia’s bound body and tail bones')
+  assert.deepEqual(gltf.animations.map(animation => animation.name).sort(), ['dance', 'idle', 'jump', 'talk', 'walk', 'wave'])
   assert.ok(gltf.animations.every(animation => animation.channels.length > 0), 'GLB must include playable animation channels')
   const loaded = await new GLTFLoader().parseAsync(glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength), '')
   const mixer = new AnimationMixer(loaded.scene)
+  const leg = loaded.scene.getObjectByName('LeftLeg')
+  const restLeg = leg.quaternion.clone()
+  mixer.clipAction(loaded.animations.find(clip => clip.name === 'walk')).play()
+  mixer.update(.35)
+  assert.ok(leg.quaternion.angleTo(restLeg) > .1, 'Downloaded walk must bend the knee')
+  mixer.stopAllAction()
   const paw = loaded.scene.getObjectByName('paw-1')
   const rest = paw.getWorldPosition(new Vector3())
   mixer.clipAction(loaded.animations.find(clip => clip.name === 'wave')).play()
@@ -91,6 +130,16 @@ try {
   await page.getByRole('button', { name: 'Tự xoay' }).click()
   assert.deepEqual(errors, [])
 
+  const reduced = await context.newPage()
+  await reduced.emulateMedia({ reducedMotion: 'reduce' })
+  await reduced.goto(`${base}/mascot-3d`)
+  const reducedCanvas = reduced.locator('.mascot3d-canvas canvas')
+  await expect(reduced.getByRole('status').filter({ hasText: 'giảm chuyển động' })).toBeVisible()
+  await expect(reduced.getByRole('button', { name: 'Đi bộ', exact: true })).toBeDisabled()
+  const reducedFrame = await reducedCanvas.screenshot()
+  assert.ok(reducedFrame.equals(await reducedCanvas.screenshot()), 'Initial reduced-motion preference must leave Tia still')
+  await reduced.close()
+
   const fallback = await context.newPage()
   await fallback.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext
@@ -101,7 +150,7 @@ try {
   await fallback.goto(`${base}/mascot-3d`)
   await expect(fallback.getByRole('alert')).toContainText('chưa mở được 3D')
   await expect(fallback.getByRole('button', { name: 'Tải mô hình .GLB' })).toBeDisabled()
-  console.log(JSON.stringify({ checks: ['3D front/back', 'drag rotation', 'reduced motion', 'auto rotation toggle', 'wave/jump/dance and stop', 'global motion pause', 'GLB geometry and animation export', '320–1440px layout', 'WebGL fallback'], glbBytes: glb.length, errors }, null, 2))
+  console.log(JSON.stringify({ checks: ['3D front/back', 'drag rotation', 'idle and walk', 'wave/jump/dance/talk', 'stop to idle', 'reduced motion and resume', 'auto rotation toggle', 'GLB skeleton and six animations', '320–1440px layout', 'WebGL fallback'], glbBytes: glb.length, errors }, null, 2))
 } finally {
   await browser.close()
 }
