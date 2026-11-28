@@ -1,6 +1,7 @@
 """VinUni Wayfinder API (FastAPI). Chạy: uvicorn app.main:app --port 8000"""
 from __future__ import annotations
 
+import atexit
 import io
 import secrets
 import tempfile
@@ -12,9 +13,10 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from fastapi import Body, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from PIL import Image, ImageOps
+from starlette.concurrency import run_in_threadpool
 
 from . import auth_store as auth_mod
 from . import events_store as ev_mod
@@ -26,6 +28,7 @@ from .embedder import DIM, MODEL_NAME, embedder
 from .index import VectorIndex
 from .routing import SiteGraph
 from .store import DATA, MAPS_SRC, SAFE_NAME, SiteConflict, load_site, save_site
+from .video_uploads import CHUNK_SIZE, MAX_UPLOAD, UploadError, VideoUploadStore, normalize_suffix
 
 app = FastAPI(title='VinUni Wayfinder')
 REMOTE = supa.client() if supa.ENABLED else None
@@ -43,10 +46,12 @@ POOL_M = 8.0
 AUTO_P, PICKER_P = 0.7, 0.5          # ngưỡng heuristic, chưa hiệu chỉnh trên dữ liệu thật
 PHOTO_TTL = 600                       # giây giữ vector ảnh để sửa sai / gộp ảnh thứ 2
 FRAMES_PER_VIDEO = 40
-MAX_UPLOAD = 200 * 1024 * 1024
 
 _photos: dict[str, dict] = {}
 _jobs: dict[str, dict] = {}          # tác vụ xử lý video chạy nền
+_jobs_lock = threading.Lock()
+video_uploads = VideoUploadStore()
+atexit.register(video_uploads.cleanup_all)
 _graph_cache: dict = {'key': None, 'graph': None}
 
 
@@ -207,24 +212,66 @@ def _extract_frames(path: str, n_out: int):
 
 @app.post('/api/spots/{node_id}/video')
 async def add_spot_video(node_id: str, video: UploadFile = File(...)):
-    g = graph()
-    if node_id not in g.nodes:
+    if node_id not in graph().nodes:
         err(404, 'no_node', 'Không có điểm này trên bản đồ')
-    with tempfile.NamedTemporaryFile(suffix=Path(video.filename or 'v.mp4').suffix, delete=False) as tmp:
-        size = 0
-        while chunk := await video.read(1 << 20):
-            size += len(chunk)
-            if size > MAX_UPLOAD:
-                err(413, 'too_large', 'Video quá lớn (tối đa 200 MB)')
-            tmp.write(chunk)
-        tmp_path = tmp.name
-    # Cắt khung + embed + lưu có thể mất vài phút (nạp model lần đầu ~2 phút) nên chạy nền;
-    # một request HTTP dài sẽ bị proxy/tunnel/điện thoại ngắt và mất hết.
-    _prune_jobs()
-    job_id = secrets.token_hex(6)
-    _jobs[job_id] = {'status': 'running', 'stage': 'extract', 'spot': node_id, 't': time.time()}
-    threading.Thread(target=_run_video_job, args=(job_id, node_id, tmp_path), daemon=True).start()
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=normalize_suffix(video.filename), delete=False) as tmp:
+            tmp_path = tmp.name
+            size = 0
+            while chunk := await video.read(1 << 20):
+                size += len(chunk)
+                if size > MAX_UPLOAD:
+                    err(413, 'too_large', 'Video quá lớn (tối đa 200 MiB)')
+                tmp.write(chunk)
+        job_id = _queue_video_job(node_id, tmp_path)
+    except BaseException:
+        if tmp_path is not None:
+            Path(tmp_path).unlink(missing_ok=True)
+        raise
     return JSONResponse(status_code=202, content={'ok': True, 'job': job_id})
+
+
+@app.put('/api/spots/{node_id}/video/uploads/{upload_id}')
+def start_spot_video_upload(node_id: str, upload_id: str, metadata: dict = Body(...)):
+    if node_id not in graph().nodes:
+        err(404, 'no_node', 'Không có điểm này trên bản đồ')
+    try:
+        return video_uploads.init_upload(node_id, upload_id, metadata.get('size'), metadata.get('filename'))
+    except UploadError as exc:
+        err(exc.status, exc.code, exc.message)
+
+
+@app.put('/api/spots/{node_id}/video/uploads/{upload_id}/chunks/{part}')
+async def upload_spot_video_chunk(node_id: str, upload_id: str, part: int, request: Request):
+    content_type = request.headers.get('content-type', '').partition(';')[0].strip().lower()
+    if content_type != 'application/octet-stream':
+        err(415, 'invalid_chunk_type', 'Phần video phải có định dạng application/octet-stream')
+    data = bytearray()
+    async for chunk in request.stream():
+        if len(data) + len(chunk) > CHUNK_SIZE:
+            err(413, 'chunk_too_large', 'Mỗi phần video tối đa 2 MiB')
+        data.extend(chunk)
+    try:
+        status, result = await run_in_threadpool(
+            video_uploads.put_chunk, node_id, upload_id, part, bytes(data), _queue_video_job,
+        )
+    except UploadError as exc:
+        err(exc.status, exc.code, exc.message)
+    return JSONResponse(status_code=status, content=result)
+
+
+def _queue_video_job(node_id: str, tmp_path: str) -> str:
+    with _jobs_lock:
+        _prune_jobs()
+        job_id = secrets.token_hex(6)
+        _jobs[job_id] = {'status': 'running', 'stage': 'extract', 'spot': node_id, 't': time.time()}
+        try:
+            threading.Thread(target=_run_video_job, args=(job_id, node_id, tmp_path), daemon=True).start()
+        except RuntimeError:
+            _jobs.pop(job_id, None)
+            raise
+    return job_id
 
 
 @app.get('/api/spots/jobs/{job_id}')
@@ -232,7 +279,9 @@ def video_job(job_id: str):
     j = _jobs.get(job_id)
     if j is None:
         err(404, 'no_job', 'Không tìm thấy tác vụ (máy chủ có thể đã khởi động lại). Hãy tải video lại.')
-    return {k: v for k, v in j.items() if k != 't'}
+    result = j.copy()
+    result.pop('t', None)
+    return result
 
 
 def _prune_jobs():

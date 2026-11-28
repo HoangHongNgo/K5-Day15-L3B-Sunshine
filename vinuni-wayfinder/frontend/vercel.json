@@ -7,11 +7,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://skins-cad-range-number.trycloudflare.com/api/:path*"
+      "destination": "https://minhphuong.tail65ddfe.ts.net/api/:path*"
     },
     {
       "source": "/maps/:path*",
-      "destination": "https://skins-cad-range-number.trycloudflare.com/maps/:path*"
+      "destination": "https://minhphuong.tail65ddfe.ts.net/maps/:path*"
     },
     {
       "source": "/thu-thap",

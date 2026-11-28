@@ -1,4 +1,6 @@
 // Lời gọi backend. Lỗi có dạng {detail: {code, message}} -> ném ApiError với message tiếng Việt.
+import { uploadVideoChunked } from './videoUpload'
+
 export class ApiError extends Error {
   constructor(code, message, status) {
     super(message)
@@ -75,22 +77,12 @@ export const api = {
     fd.append('file', file)
     return req('/api/import', { method: 'POST', body: fd })
   },
-  // Upload video có tiến trình (fetch không báo tiến trình upload)
   uploadVideo(nodeId, file, onProgress, onStage) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-      xhr.open('POST', '/api/spots/' + encodeURIComponent(nodeId) + '/video')
-      xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total)
-      xhr.onload = () => {
-        let body = null
-        try { body = JSON.parse(xhr.responseText) } catch { /* */ }
-        if (xhr.status >= 200 && xhr.status < 300) resolve(body?.job ? pollJob(body.job, onStage) : body)
-        else reject(new ApiError(body?.detail?.code || 'http_' + xhr.status, body?.detail?.message || 'Lỗi tải video (' + xhr.status + ')', xhr.status))
-      }
-      xhr.onerror = () => reject(new ApiError('offline', 'Mất kết nối khi tải video', 0))
-      const fd = new FormData()
-      fd.append('video', file)
-      xhr.send(fd)
+    return uploadVideoChunked(nodeId, file, {
+      onProgress,
+      onStage,
+      pollJobImpl: pollJob,
+      createError: (code, message, status) => new ApiError(code, message, status),
     })
   },
 }

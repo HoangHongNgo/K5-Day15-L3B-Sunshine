@@ -293,7 +293,7 @@ function NodePanel({ node, site, map, update, spots, reloadSpots, flash, onClose
       <h4>Ảnh nhận diện</h4>
       <p className="muted">{c ? `${c.frames} khung từ ${c.videos} video, ${c.corrections} lần sửa` : 'Chưa có ảnh.'} Nên có ≥ 2 video quay ở thời điểm/hướng khác nhau.</p>
       <div className="thumbs">{(spots.thumbs[node.id] || []).map((t) => <img key={t} src={`/api/frames/${node.id}/${t}`} alt="" />)}</div>
-      <p className="muted small">Đứng tại điểm này, quay chậm 10–15 giây, xoay một vòng nhìn dọc các hướng hành lang. Tránh quay mặt người.</p>
+      <p className="muted small">Đứng tại điểm này, quay chậm 10–15 giây, xoay một vòng nhìn dọc các hướng hành lang. Tránh quay mặt người. Tối đa 200 MiB.</p>
       {upload ? <p>Đang tải lên {Math.round(upload.p * 100)}%{upload.p >= 1 ? ({ embed: ' — đang tính vector (lần đầu nạp model ~2 phút)…', save: ' — đang lưu…' }[upload.stage] || ' — đang cắt khung…') : ''}</p> : (
         <div className="row wrap">
           <button className="btn primary" onClick={() => vidRef.current.click()}>🎥 Quay video tại điểm này</button>
