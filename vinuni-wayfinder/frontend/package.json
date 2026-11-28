@@ -12,7 +12,8 @@
     "verify": "node scripts/verify.mjs",
     "verify:v2": "node scripts/verify-v2.mjs",
     "verify:campus": "node scripts/verify-campus.mjs",
-    "verify:events": "node scripts/verify-events.mjs"
+    "verify:events": "node scripts/verify-events.mjs",
+    "build:ar": "vite-node scripts/build-ar-usdz.ts"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.2.7",

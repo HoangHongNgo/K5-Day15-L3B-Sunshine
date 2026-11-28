@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { AnimationMixer, Box3, Mesh, Raycaster, Vector3 } from 'three'
+import { describe, expect, it, vi } from 'vitest'
+import { AnimationMixer, Bone, Box3, Mesh, MeshPhysicalMaterial, Raycaster, Skeleton, SkinnedMesh, Vector3 } from 'three'
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { createTiaMascot } from './tiaModel'
+import { createMascotPatrol, resetMascotPatrol, stepMascotPatrol } from './tiaAnimations'
 
 describe('mascot 3D thử nghiệm', () => {
   it('waves the paw and arm together around the shoulder, then returns to rest', () => {
@@ -116,5 +118,171 @@ describe('mascot 3D thử nghiệm', () => {
     expect(resources.size).toBeGreaterThan(0)
     dispose()
     expect(released).toBe(resources.size)
+  })
+
+  it('rigs Tia with an anatomical 3D humanoid skeleton, normalized skin weights, and fox secondary bones', () => {
+    const asset = createTiaMascot()
+    expect(asset.skeleton).toBeInstanceOf(Skeleton)
+    const requiredBones = [
+      'Hips', 'Spine', 'Chest', 'Neck', 'Head',
+      'LeftEar', 'RightEar', 'mouth', 'ScarfTail',
+      'shoulder--1', 'LeftUpperArm', 'LeftForeArm', 'LeftHand',
+      'shoulder-1', 'RightUpperArm', 'RightForeArm', 'RightHand',
+      'LeftUpLeg', 'LeftLeg', 'LeftFoot',
+      'RightUpLeg', 'RightLeg', 'RightFoot',
+      'Tail1', 'Tail2', 'Tail3',
+    ]
+    for (const name of requiredBones) {
+      const bone = asset.model.getObjectByName(name)
+      expect(bone, `missing bone ${name}`).toBeInstanceOf(Bone)
+    }
+
+    const skinnedMeshes: SkinnedMesh[] = []
+    asset.model.traverse(obj => {
+      if (obj instanceof SkinnedMesh) skinnedMeshes.push(obj)
+    })
+    expect(skinnedMeshes.length).toBeGreaterThanOrEqual(2)
+    for (const mesh of skinnedMeshes) {
+      expect(mesh.skeleton).toBe(asset.skeleton)
+      const skinIndex = mesh.geometry.getAttribute('skinIndex')
+      const skinWeight = mesh.geometry.getAttribute('skinWeight')
+      expect(skinIndex).toBeDefined()
+      expect(skinWeight).toBeDefined()
+      for (let i = 0; i < skinWeight.count; i++) {
+        const sum = skinWeight.getX(i) + skinWeight.getY(i) + skinWeight.getZ(i) + skinWeight.getW(i)
+        expect(sum).toBeCloseTo(1, 4)
+        for (let k = 0; k < 4; k++) {
+          const idx = skinIndex.getComponent(i, k)
+          expect(idx).toBeGreaterThanOrEqual(0)
+          expect(idx).toBeLessThan(asset.skeleton.bones.length)
+        }
+      }
+    }
+    asset.dispose()
+  })
+
+  it('walks with a contra-lateral humanoid gait and patrols smoothly along a stage path', () => {
+    const asset = createTiaMascot()
+    const walk = asset.animations.find(clip => clip.name === 'walk')
+    expect(walk).toBeDefined()
+    const mixer = new AnimationMixer(asset.model)
+    const leftFoot = asset.model.getObjectByName('LeftFoot')!
+    const rightFoot = asset.model.getObjectByName('RightFoot')!
+    const rightPaw = asset.model.getObjectByName('paw-1')!
+    const restRightFoot = rightFoot.getWorldPosition(new Vector3())
+    const restLeftFoot = leftFoot.getWorldPosition(new Vector3())
+    const restRightPaw = rightPaw.getWorldPosition(new Vector3())
+
+    mixer.clipAction(walk!).play()
+    mixer.update(walk!.duration * 0.25)
+    const q1RightFoot = rightFoot.getWorldPosition(new Vector3())
+    const q1LeftFoot = leftFoot.getWorldPosition(new Vector3())
+    const q1RightPaw = rightPaw.getWorldPosition(new Vector3())
+    expect(q1RightFoot.z - restRightFoot.z).toBeGreaterThan(0.08)
+    expect(q1LeftFoot.z - restLeftFoot.z).toBeLessThan(-0.08)
+    // Contra-lateral arm swing: right arm swings back when right leg steps forward
+    expect(q1RightPaw.z - restRightPaw.z).toBeLessThan(-0.04)
+
+    mixer.update(walk!.duration * 0.5)
+    const q3RightFoot = rightFoot.getWorldPosition(new Vector3())
+    const q3LeftFoot = leftFoot.getWorldPosition(new Vector3())
+    expect(q3LeftFoot.z - restLeftFoot.z).toBeGreaterThan(0.08)
+    expect(q3RightFoot.z - restRightFoot.z).toBeLessThan(-0.08)
+
+    // Verify feet never clip deep below the floor throughout the walk cycle
+    mixer.stopAllAction()
+    mixer.clipAction(walk!).play()
+    for (let i = 0; i <= 40; i++) {
+      mixer.update(walk!.duration / 40)
+      const bounds = new Box3().setFromObject(asset.model)
+      expect(bounds.min.y).toBeGreaterThanOrEqual(-0.015)
+    }
+
+    // Spatial patrol controller moves and steers Tia smoothly, then resets cleanly
+    const patrol = createMascotPatrol()
+    stepMascotPatrol(asset.model, patrol, 0.6)
+    expect(Math.hypot(asset.model.position.x, asset.model.position.z)).toBeGreaterThan(0.05)
+    resetMascotPatrol(asset.model, patrol)
+    expect(asset.model.position.toArray()).toEqual([0, 0, 0])
+    expect(asset.model.quaternion.toArray()).toEqual([0, 0, 0, 1])
+
+    mixer.stopAllAction()
+    mixer.uncacheRoot(asset.model)
+    asset.dispose()
+  })
+
+  it('breathes, twitches ears, and wags the multi-bone fox tail during idle without displacing the root', () => {
+    const asset = createTiaMascot()
+    const idle = asset.animations.find(clip => clip.name === 'idle')
+    expect(idle).toBeDefined()
+    const tailTip = asset.model.getObjectByName('Tail3')!
+    const restTip = tailTip.getWorldPosition(new Vector3())
+    const mixer = new AnimationMixer(asset.model)
+    mixer.clipAction(idle!).play()
+    let maxWag = 0
+    for (let i = 0; i < 20; i++) {
+      mixer.update(idle!.duration / 20)
+      const pos = tailTip.getWorldPosition(new Vector3())
+      maxWag = Math.max(maxWag, Math.abs(pos.x - restTip.x))
+      expect(asset.model.position.toArray()).toEqual([0, 0, 0])
+    }
+    expect(maxWag).toBeGreaterThan(0.04)
+    mixer.stopAllAction()
+    mixer.uncacheRoot(asset.model)
+    asset.dispose()
+  })
+
+  it('uses tactile physical plush/clearcoat materials, multi-tone fur vertex colors, and exports cleanly to GLB', async () => {
+    const asset = createTiaMascot()
+    let hasPlushSheen = false
+    let hasGlossyClearcoat = false
+    let hasVertexColoredFur = false
+    asset.model.traverse(obj => {
+      if (!(obj instanceof Mesh)) return
+      if (obj.geometry.getAttribute('color')) hasVertexColoredFur = true
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+      for (const mat of mats) {
+        if (mat instanceof MeshPhysicalMaterial) {
+          if (mat.sheen > 0.7) hasPlushSheen = true
+          if (mat.clearcoat > 0.8) hasGlossyClearcoat = true
+        }
+      }
+    })
+    expect(hasPlushSheen).toBe(true)
+    expect(hasGlossyClearcoat).toBe(true)
+    expect(hasVertexColoredFur).toBe(true)
+
+    class NodeFileReader {
+      result: ArrayBuffer | string | null = null
+      onloadend: (() => void) | null = null
+      readAsArrayBuffer(blob: Blob) {
+        void blob.arrayBuffer().then(buf => { this.result = buf; this.onloadend?.() })
+      }
+      readAsDataURL(blob: Blob) {
+        void blob.arrayBuffer().then(buf => {
+          this.result = `data:${blob.type || 'application/octet-stream'};base64,${Buffer.from(buf).toString('base64')}`
+          this.onloadend?.()
+        })
+      }
+    }
+    vi.stubGlobal('FileReader', NodeFileReader)
+    try {
+      const gltf = await new GLTFExporter().parseAsync(asset.model, { binary: false, animations: asset.animations }) as {
+        skins?: Array<{ joints: number[] }>
+        animations?: Array<{ name: string; channels: unknown[] }>
+      }
+      expect(gltf.skins?.length).toBeGreaterThanOrEqual(1)
+      expect(gltf.skins![0].joints.length).toBe(asset.skeleton.bones.length)
+      expect(gltf.animations?.map(a => a.name)).toEqual(['idle', 'walk', 'wave', 'jump', 'dance', 'talk'])
+      for (const anim of gltf.animations!) {
+        expect(anim.channels.length).toBeGreaterThan(0)
+      }
+      const glb = await new GLTFExporter().parseAsync(asset.model, { binary: true, animations: asset.animations })
+      expect(glb).toBeInstanceOf(ArrayBuffer)
+      expect(new TextDecoder().decode(new Uint8Array(glb as ArrayBuffer, 0, 4))).toBe('glTF')
+    } finally {
+      vi.unstubAllGlobals()
+      asset.dispose()
+    }
   })
 })

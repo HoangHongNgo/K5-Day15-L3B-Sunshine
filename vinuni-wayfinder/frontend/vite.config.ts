@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import { brand } from './src/shared/brand'
 import { VitePWA } from 'vite-plugin-pwa'
 import { mascotApi } from './server/mascotApi'
+import { usdzStatic } from './server/usdzStatic'
 import { resolveServerEnv } from './server/rootEnv'
 
 const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
@@ -30,7 +31,7 @@ export default defineConfig(({ mode }) => {
   const wayfinderBackend = resolveServerEnv('WAYFINDER_BACKEND', { frontendRoot, mode }) || 'http://127.0.0.1:8000'
   const wayfinderProxy = Object.fromEntries(wayfinderProxyPaths.map(path => [path, wayfinderBackend]))
   return {
-    plugins: [react(), mascotApi(), VitePWA({
+    plugins: [react(), mascotApi(), usdzStatic(), VitePWA({
       registerType: 'prompt',
       includeAssets: ['icons/*.png', 'images/*.webp', 'pets/vini/*', 'pets/boba/*'],
       manifest: {

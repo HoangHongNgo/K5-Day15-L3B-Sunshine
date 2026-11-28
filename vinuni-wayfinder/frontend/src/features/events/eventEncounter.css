@@ -29,11 +29,17 @@ body:has(.encounter-dialog[open]) { overflow: hidden; }
   right: max(var(--camera-edge), env(safe-area-inset-right));
   display: flex; align-items: center; pointer-events: none;
 }
-.encounter-top { top: max(12px, env(safe-area-inset-top)); justify-content: space-between; }
+.encounter-top { top: max(12px, env(safe-area-inset-top)); justify-content: space-between; gap: 8px; }
 .encounter-bottom { bottom: var(--camera-bottom); justify-content: center; }
 .encounter-camera .camera-control, .encounter-review-heading button {
   display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
   background: #101722dc; color: white; border: 1px solid #ffffff60; pointer-events: auto;
+}
+.encounter-camera .camera-control[aria-expanded="true"] { background: #26395ff2; border-color: #9ecbff; }
+.encounter-camera .encounter-talk {
+  position: absolute; left: 0; width: auto; min-width: 46px; padding: 0 12px; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; border-radius: 999px;
+  font-size: 13px; font-weight: 600; white-space: nowrap;
 }
 .encounter-adjust { position: absolute; right: 0; }
 .encounter-camera .encounter-shutter {
@@ -73,4 +79,13 @@ body:has(.encounter-dialog[open]) { overflow: hidden; }
 .encounter-size span { font-variant-numeric: tabular-nums; }
 .encounter-size input { grid-column: 1 / -1; width: 100%; min-height: 30px; margin: 0; }
 .event-encounter .encounter-grant { pointer-events: auto; border: 0; cursor: pointer; font: inherit; font-size: 13px; min-height: 40px; }
-.event-encounter .encounter-ar { width: auto; padding: 0 12px; gap: 6px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; border-radius: 12px; }
+.encounter-actions > p[role="status"] { flex-basis: 100%; }
+@media (max-height: 480px) {
+  .encounter-dialog { --camera-edge: 12px; }
+  .encounter-camera .encounter-shutter { width: 62px; height: 62px; }
+  .encounter-tools {
+    bottom: calc(var(--camera-bottom) + 74px);
+    max-height: calc(100% - var(--camera-bottom) - max(64px, env(safe-area-inset-top)) - 74px);
+    padding: 12px; gap: 8px;
+  }
+}

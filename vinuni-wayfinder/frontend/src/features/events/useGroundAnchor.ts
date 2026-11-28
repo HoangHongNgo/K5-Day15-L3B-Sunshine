@@ -12,7 +12,7 @@ type Options = {
   enabled: boolean
   /** Kích thước khung camera hiển thị, để suy ra trường nhìn ngang. */
   viewport: () => { width: number; height: number } | null
-  onFoot: (foot: ScreenFoot) => void
+  onFoot: (foot: ScreenFoot | null) => void
 }
 
 /**
@@ -24,6 +24,7 @@ export function useGroundAnchor({ enabled, viewport, onFoot }: Options) {
   const pose = useRef<Pose | null>(null)
   const anchor = useRef<GroundAnchor | null>(null)
   const readySince = useRef(0)
+  const manualPlaced = useRef(false)
   const foot = useRef(onFoot)
   const view = useRef(viewport)
   foot.current = onFoot
@@ -39,6 +40,7 @@ export function useGroundAnchor({ enabled, viewport, onFoot }: Options) {
     anchor.current = null
     pose.current = null
     readySince.current = 0
+    manualPlaced.current = false
     setStatus('searching')
     const needsPermission = typeof DeviceOrientationEvent !== 'undefined' &&
       typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission === 'function'
@@ -46,7 +48,7 @@ export function useGroundAnchor({ enabled, viewport, onFoot }: Options) {
     const fallback = window.setTimeout(() => {
       if (gotEvent) return
       setStatus(needsPermission ? 'needs-permission' : 'fallback')
-      foot.current({ x: FOOT_X, y: 0.88, zoom: 1 })
+      if (!manualPlaced.current) foot.current({ x: FOOT_X, y: 0.88, zoom: 1 })
     }, NO_SENSOR_MS)
 
     function onOrientation(e: DeviceOrientationEvent) {
@@ -68,8 +70,7 @@ export function useGroundAnchor({ enabled, viewport, onFoot }: Options) {
         if (!anchor.current) return
         setStatus('locked')
       }
-      const screen = projectAnchor(anchor.current, pose.current, v)
-      if (screen) foot.current(screen)
+      foot.current(projectAnchor(anchor.current, pose.current, v))
     }
     window.addEventListener('deviceorientation', onOrientation)
     return () => { window.clearTimeout(fallback); window.removeEventListener('deviceorientation', onOrientation) }
@@ -77,14 +78,17 @@ export function useGroundAnchor({ enabled, viewport, onFoot }: Options) {
 
   return {
     status,
+    /** Ghi nhận người dùng đã chạm đặt thủ công để fallback không kéo mascot đi chỗ khác. */
+    markManualPlacement() {
+      manualPlaced.current = true
+    },
     /** Chạm vào khung hình: neo lại tại điểm chạm nếu điểm đó nằm trên sàn. */
     reanchor(x: number, y: number) {
       if (!pose.current || status !== 'locked') return false
       const next = anchorAt(pose.current, x, y, { aspect: aspect() })
       if (!next) return false
       anchor.current = next
-      const screen = projectAnchor(next, pose.current, { aspect: aspect() })
-      if (screen) foot.current(screen)
+      foot.current(projectAnchor(next, pose.current, { aspect: aspect() }))
       return true
     },
     /** iOS: phải xin quyền trong một lần chạm. */

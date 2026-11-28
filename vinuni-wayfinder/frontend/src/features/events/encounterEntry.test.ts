@@ -35,10 +35,11 @@ it('keeps real GPS as the default and offers an explicit mock for a new local te
   expect(html).not.toContain('Mở camera AR')
 })
 
-it('opens the check-in camera straight away after the walker arrives by route, without a GPS check', () => {
+it('unlocks one-tap check-in CTA after the walker arrives by route, without auto-opening a second camera or GPS check', () => {
   const html = renderToStaticMarkup(createElement(EventEncounter, {
     event: { ...initialEvents[0], demo: false }, mascot: defaultMascot, anchor: { lat: 21, lon: 105 }, arrived: true,
   }))
-  expect(html).toContain('<video')
+  expect(html).toContain(`Chụp ảnh check-in cùng ${defaultMascot.name}`)
+  expect(html).not.toContain('<video')
   expect(html).not.toContain('Kiểm tra vị trí')
 })

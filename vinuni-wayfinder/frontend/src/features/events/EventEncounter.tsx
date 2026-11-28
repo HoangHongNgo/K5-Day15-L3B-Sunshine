@@ -1,31 +1,42 @@
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowUp, Camera, Download, Hand, LocateFixed, MessageCircle, Music2, RefreshCw, ScanLine, Send, SlidersHorizontal, SwitchCamera, X } from 'lucide-react'
+import { ArrowUp, Camera, Download, Footprints, Hand, LocateFixed, MessageCircle, Music2, RefreshCw, ScanLine, Send, SlidersHorizontal, SwitchCamera, X } from 'lucide-react'
 import { MotionContext } from '../mascot/Mascot'
 import { isAnchor, type CampusEvent, type EventAnchor, type MascotAsset } from './events'
 import EventVoice from './EventVoice'
 import { ApiError, prepPhotoBlob, wayfinderApi } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
 import { matchesIndoorVenue } from './indoorEncounter'
-import { createEncounterStage, type EncounterMotion } from './encounterStage'
+import { createEncounterStage, toggleEncounterMotion, type EncounterMotion } from './encounterStage'
+import {
+  canCaptureEncounter,
+  encounterCameraHint,
+  initialEncounterPhase,
+  isFootVisible,
+  toggleCameraPanel,
+  type CameraPanel,
+  type CameraStatus,
+  type EncounterPhase,
+} from './encounterControls'
 import { useGroundAnchor } from './useGroundAnchor'
 import { dataUrlToBlob, savePhoto } from './photoSave'
 import { useArSupport, useQuickLook, useWebXrMascot } from './ArMascot'
-import { arrivalPhase } from './mascotAr'
 import { requestSensorPermission } from '../../shared/lib/sensors.js'
 import { assessEncounterLocation, captureEncounterPhoto, encounterAccuracy, encounterRadius, submitEncounterPhoto } from './eventEncounterMedia'
 import './eventEncounter.css'
 
 type EncounterProps = {
   event: CampusEvent; mascot: MascotAsset; anchor: EventAnchor | null
-  /** Đã tới nơi theo tuyến dẫn đường: coi như đã ở điểm sự kiện, mở camera check-in ngay. */
+  /** Đã tới nơi theo tuyến dẫn đường: mở khoá sẵn check-in một chạm mà không cần kiểm tra GPS lại. */
   arrived?: boolean
+  /** Thông báo khi trải nghiệm check-in/AR cần dùng phần cứng camera để camera dẫn đường nhường trước. */
+  onCameraActiveChange?: (active: boolean) => void
 }
 
 export default function EventEncounter(props: EncounterProps) {
   return <Encounter key={JSON.stringify([props.event.id, props.event.demo, props.event.locationId, props.mascot.id, props.anchor?.lat, props.anchor?.lon])} {...props} />
 }
 
-function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
+function Encounter({ event, mascot, anchor, arrived = false, onCameraActiveChange }: EncounterProps) {
   const { isLive, health } = useWayfinder()
   const [mockEnabled, setMockEnabled] = useState(event.demo === true)
   // Offset toward the equator to keep the demo fix valid even at the poles.
@@ -35,13 +46,12 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
   }) : null
   const demoNearby = mockFix?.status === 'near'
   const atVenue = arrived || demoNearby
-  // AR thật (WebXR) là mặc định khi máy hỗ trợ; máy khác dùng camera + mascot đứng trên mặt sàn.
+  // AR thật là mặc định khi máy hỗ trợ (WebXR trên Android, Quick Look trên iPhone): một nút, một chạm.
   const ar = useArSupport()
-  const xr = useWebXrMascot(mascot, undefined, ar === 'webxr')
+  const xr = useWebXrMascot(mascot, undefined, ar === 'webxr', onCameraActiveChange)
   const ql = useQuickLook(mascot, ar === 'quicklook')
   const realAr = ar === 'webxr' || ar === 'quicklook'
-  const [phase, setPhase] = useState<'waiting' | 'entry' | 'unlocked' | 'camera' | 'review' | 'sent'>(arrived ? arrivalPhase(ar) : demoNearby ? 'unlocked' : 'entry')
-  useEffect(() => { if (phase === 'waiting' && ar !== 'checking') setPhase(arrivalPhase(ar)) }, [phase, ar])
+  const [phase, setPhase] = useState<EncounterPhase>(() => initialEncounterPhase({ arrived, demoNearby }))
   const [checking, setChecking] = useState<'gps' | 'photo' | null>(null)
   const indoorRequest = useRef<AbortController | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -52,7 +62,13 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
   const checkedAt = useRef(0)
   const request = useRef(0)
   const submitting = useRef(false)
-  useEffect(() => () => { request.current++; indoorRequest.current?.abort() }, [])
+  const cameraActiveCallback = useRef(onCameraActiveChange)
+  cameraActiveCallback.current = onCameraActiveChange
+  useEffect(() => () => {
+    request.current++
+    indoorRequest.current?.abort()
+    cameraActiveCallback.current?.(false)
+  }, [])
 
   async function checkIndoor(file: File) {
     if (file.size > 10 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
@@ -122,8 +138,9 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
     setMessage('')
     setPhoto(null)
     setConsent(false)
-    if (ar === 'webxr') { xr.start(); setPhase('unlocked'); return }
-    if (ar === 'quicklook' && ql.open()) { setPhase('unlocked'); return }
+    if (ar === 'webxr') { xr.start(); return }
+    if (ar === 'quicklook' && ql.open()) return
+    onCameraActiveChange?.(true)
     setPhase('camera')
   }
   /** Camera thường (ghép ảnh trên máy) để chụp và gửi ảnh vào album CLB. */
@@ -131,12 +148,14 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
     setMessage('')
     setPhoto(null)
     setConsent(false)
+    onCameraActiveChange?.(true)
     setPhase('camera')
   }
   function exitCamera() {
     setPhoto(null)
     setConsent(false)
     setMessage('')
+    onCameraActiveChange?.(false)
     setPhase(atVenue ? 'unlocked' : 'entry')
   }
   function reviewPhoto(src: string) {
@@ -163,6 +182,7 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
     try {
       await submitEncounterPhoto(event.id, photo.src, consent)
       setPhoto(null)
+      onCameraActiveChange?.(false)
       setPhase('sent')
     } catch (reason) {
       setMessage(reason instanceof Error && !(reason instanceof TypeError) ? reason.message : 'Chưa kết nối được máy chủ. Ảnh vẫn ở đây để bạn thử lại.')
@@ -192,12 +212,14 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
           <Camera size={17}/>{checking === 'photo' ? 'Đang nhận diện địa điểm…' : 'Định vị trong nhà bằng ảnh'}
         </button>
       </div>)}
-    {phase === 'waiting' && <p role="status">Đang mở camera check-in…</p>}
     {xr.message && <p role="status">{xr.message}</p>}
     {xr.overlay}
-    {phase === 'unlocked' && <button type="button" className="button button-primary" onClick={openCamera} disabled={ar === 'quicklook' && !ql.ready}>
-      <Camera size={17}/>{ar === 'quicklook' && !ql.ready ? 'Đang chuẩn bị AR…' : realAr ? `Gặp ${mascot.name} trong AR` : arrived ? `Chụp ảnh check-in cùng ${mascot.name}` : 'Mở camera AR'}</button>}
-    {phase === 'unlocked' && realAr && <button type="button" className="button button-quiet" onClick={openPlainCamera}>Chụp ảnh gửi album CLB</button>}
+    {phase === 'unlocked' && <div className="encounter-actions">
+      <button type="button" className="button button-primary" onClick={openCamera} disabled={ar === 'checking' || (ar === 'quicklook' && !ql.ready)}>
+        <Camera size={17}/>{ar === 'checking' || (ar === 'quicklook' && !ql.ready) ? 'Đang chuẩn bị AR…'
+          : realAr ? `Gặp ${mascot.name} trong AR` : arrived ? `Chụp ảnh check-in cùng ${mascot.name}` : 'Mở camera AR'}</button>
+      {realAr && <button type="button" className="button button-quiet" onClick={openPlainCamera}>Chụp ảnh gửi album CLB</button>}
+    </div>}
     {(phase === 'camera' || phase === 'review') && <PhotoDialog onClose={exitCamera} busy={sending}>
       {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto} />}
       {phase === 'review' && photo && <div className="encounter-review">
@@ -218,7 +240,10 @@ function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
       </div>}
     </PhotoDialog>}
     {phase === 'sent' && <><p role="status">Đã gửi ảnh cho {event.club} chờ duyệt.</p>
-      <button className="button button-quiet" type="button" onClick={openCamera}><Camera size={16}/>Chụp ảnh khác</button></>}
+      <div className="encounter-actions">
+        <button className="button button-quiet" type="button" onClick={openCamera}><Camera size={16}/>Chụp ảnh khác</button>
+        {realAr && <button className="button button-quiet" type="button" onClick={openPlainCamera}>Chụp ảnh gửi album CLB</button>}
+      </div></>}
     {phase !== 'review' && message && <p role="status">{message}</p>}
   </section>
 }
@@ -243,9 +268,11 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
   const stage = useRef<ReturnType<typeof createEncounterStage> | null>(null)
   const [facing, setFacing] = useState<'environment' | 'user'>('environment')
   const [selfie, setSelfie] = useState(false)
-  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
-  const [toolsOpen, setToolsOpen] = useState(false)
-  const [talk, setTalk] = useState(false)
+  const [status, setStatus] = useState<CameraStatus>('loading')
+  const [placed, setPlaced] = useState(false)
+  const [canWalk, setCanWalk] = useState(false)
+  const [panel, setPanel] = useState<CameraPanel>('none')
+  const [loopMotion, setLoopMotion] = useState<'walk' | null>(null)
   const [error, setError] = useState('')
   const { paused } = useContext(MotionContext)
   const animatingSpeech = useRef(false)
@@ -257,14 +284,20 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
     onFoot: foot => {
       const s = stage.current
       if (!s) return
-      if (foot.x < -.15 || foot.x > 1.15 || foot.y > 1.2 || foot.y < 0) { s.hide(); return }
+      if (!isFootVisible(foot)) {
+        s.hide()
+        setPlaced(false)
+        return
+      }
       groundZoom.current = foot.zoom
       s.place(foot.x, foot.y)
       s.setZoom(userZoom.current * foot.zoom)
+      setPlaced(true)
     },
   })
   const onSpeakingChange = useCallback((speaking: boolean) => {
     if (speaking && !paused) {
+      setLoopMotion(null)
       animatingSpeech.current = true
       stage.current?.play('talk')
     } else if (animatingSpeech.current) {
@@ -272,7 +305,13 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       stage.current?.play(null)
     }
   }, [paused])
-  useEffect(() => { if (paused) stage.current?.play(null) }, [paused])
+  useEffect(() => {
+    stage.current?.setIdle(!paused)
+    if (paused) {
+      setLoopMotion(null)
+      stage.current?.play(null)
+    }
+  }, [paused, status])
 
   useEffect(() => {
     const player = video.current!, canvas = overlay.current!
@@ -287,7 +326,11 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       if (cancelled) return
       release()
       setStatus('failed')
-      setTalk(false)
+      setPlaced(false)
+      setCanWalk(false)
+      setPanel('none')
+      setLoopMotion(null)
+      animatingSpeech.current = false
       setError(message)
     }
     const lost = (e: Event) => {
@@ -297,8 +340,12 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
     const ended = () => fail('Camera đã ngắt kết nối. Hãy đổi camera hoặc đóng và mở lại.')
     async function start() {
       setStatus('loading')
-      setToolsOpen(false)
-      setTalk(false)
+      setPlaced(false)
+      setCanWalk(false)
+      setPanel('none')
+      setLoopMotion(null)
+      animatingSpeech.current = false
+      groundZoom.current = 1
       setError('')
       if (!navigator.mediaDevices?.getUserMedia) { fail('Camera cần HTTPS hoặc localhost và trình duyệt hỗ trợ camera.'); return }
       let frontCamera = false
@@ -321,8 +368,13 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       }
       try {
         stage.current = createEncounterStage(canvas, mascot)
+        setCanWalk(stage.current.hasMotion('walk'))
         // Camera trước (selfie) không có mặt sàn để neo: đứng cố định góc dưới phải.
-        if (frontCamera) stage.current.place(.72, .9)
+        if (frontCamera) {
+          stage.current.place(.72, .9)
+          stage.current.setZoom(userZoom.current)
+          setPlaced(true)
+        }
         canvas.addEventListener('webglcontextlost', lost)
         setStatus('ready')
       } catch { fail('Trình duyệt chưa dựng được mascot 3D. Hãy thử thiết bị hỗ trợ WebGL 2.') }
@@ -341,12 +393,19 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
     if (status === 'ready') stage.current?.setZoom(userZoom.current * groundZoom.current)
   }, [zoomPercent, status])
 
+  const canCapture = canCaptureEncounter(status, placed)
+  const hint = encounterCameraHint({ status, error, selfie, placed, groundStatus: ground.status, mascotName: mascot.name })
+
   function place(px: number, py: number) {
     if (status !== 'ready') return
+    ground.markManualPlacement()
+    groundZoom.current = 1
     stage.current?.place(px, py)
+    stage.current?.setZoom(userZoom.current)
+    setPlaced(true)
   }
   function capture() {
-    if (!stage.current || !overlay.current || !video.current || status !== 'ready') return
+    if (!stage.current || !overlay.current || !video.current || !canCapture) return
     try {
       stage.current.render()
       onCapture(captureEncounterPhoto(video.current, overlay.current, selfie))
@@ -354,8 +413,9 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
   }
   function play(motion: EncounterMotion) {
     animatingSpeech.current = false
-    setTalk(false)
-    stage.current?.play(motion)
+    const { nextLoop, play: target } = toggleEncounterMotion(loopMotion, motion)
+    setLoopMotion(nextLoop)
+    stage.current?.play(target)
   }
   return <div className="encounter-camera">
     <div className="encounter-viewport">
@@ -373,29 +433,33 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       <button type="button" className="camera-control" onClick={onClose} aria-label="Đóng camera"><X /></button>
       <button type="button" className="camera-control" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')} aria-label="Đổi camera"><SwitchCamera /></button>
     </div>
-    {(error || status === 'loading') && <p className="encounter-hint" role={error ? 'alert' : 'status'}>{error || 'Đang mở camera…'}</p>}
-    {!error && status === 'ready' && !selfie && ground.status === 'searching' &&
-      <p className="encounter-hint" role="status">Hướng camera xuống mặt sàn để {mascot.name} đứng cạnh bạn</p>}
-    {!error && status === 'ready' && !selfie && ground.status === 'needs-permission' &&
-      <button type="button" className="encounter-hint encounter-grant" onClick={() => void ground.grant()}>Bật cảm biến để {mascot.name} đứng trên mặt sàn</button>}
-    {toolsOpen && status === 'ready' && <div className="encounter-tools">
+    {hint && (hint.action === 'grant'
+      ? <button type="button" className="encounter-hint encounter-grant" onClick={() => void ground.grant()}>{hint.text}</button>
+      : <p className="encounter-hint" role={hint.role}>{hint.text}</p>)}
+    {panel === 'voice' && status === 'ready' && <div className="encounter-tools">
+      <EventVoice eventId={eventId} onSpeakingChange={onSpeakingChange} />
+    </div>}
+    {panel === 'tools' && status === 'ready' && <div className="encounter-tools">
       <label className="encounter-size">Kích thước mascot <span aria-hidden="true">{zoomPercent}%</span>
         <input type="range" min={60} max={140} step={10} value={zoomPercent} aria-valuetext={zoomPercent + '%'}
           onChange={e => setZoomPercent(e.currentTarget.valueAsNumber)} />
       </label>
       <div className="encounter-actions">
-        <button type="button" className="button button-quiet" aria-expanded={talk} onClick={() => setTalk(!talk)}><MessageCircle size={16}/>Nói chuyện</button>
+        {canWalk && <button type="button" className="button button-quiet" aria-pressed={loopMotion === 'walk'} disabled={paused} onClick={() => play('walk')}><Footprints size={16}/>Đi bộ</button>}
         <button type="button" className="button button-quiet" disabled={paused} onClick={() => play('wave')}><Hand size={16}/>Vẫy tay</button>
         <button type="button" className="button button-quiet" disabled={paused} onClick={() => play('jump')}><ArrowUp size={16}/>Nhảy</button>
         <button type="button" className="button button-quiet" disabled={paused} onClick={() => play('dance')}><Music2 size={16}/>Nhảy múa</button>
       </div>
-      {talk && <EventVoice eventId={eventId} onSpeakingChange={onSpeakingChange}/>}
     </div>}
     <div className="encounter-bottom">
+      <button type="button" className="camera-control encounter-talk" aria-expanded={panel === 'voice'}
+        disabled={status !== 'ready'} onClick={() => { setLoopMotion(null); setPanel(current => toggleCameraPanel(current, 'voice')) }}>
+        <MessageCircle size={18} aria-hidden="true" /><span>Nói chuyện</span>
+      </button>
       <button type="button" className="encounter-shutter" aria-label={`Chụp ảnh cùng ${mascot.name}`}
-        disabled={status !== 'ready'} onClick={capture}><Camera size={26}/></button>
-      <button type="button" className="camera-control encounter-adjust" aria-label="Tùy chỉnh mascot" aria-expanded={toolsOpen}
-        disabled={status !== 'ready'} onClick={() => { setToolsOpen(!toolsOpen); setTalk(false) }}><SlidersHorizontal /></button>
+        disabled={!canCapture} onClick={capture}><Camera size={26}/></button>
+      <button type="button" className="camera-control encounter-adjust" aria-label="Tùy chỉnh mascot" aria-expanded={panel === 'tools'}
+        disabled={status !== 'ready'} onClick={() => setPanel(current => toggleCameraPanel(current, 'tools'))}><SlidersHorizontal /></button>
     </div>
   </div>
 }

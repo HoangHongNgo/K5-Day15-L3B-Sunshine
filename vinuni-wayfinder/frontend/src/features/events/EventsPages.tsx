@@ -269,12 +269,15 @@ export function EventEditor() {
 }
 
 function EditorForm({ initial }: { initial?: CampusEvent }) {
+  const [params] = useSearchParams()
   const { places, getPlace, isLive } = useWayfinder()
   const { account } = useAuth()
   const [draft, setDraft] = useState<CampusEvent>(() => {
     if (initial) return { ...initial, stops: initial.stops ?? [] }
     const fresh = emptyEvent()
     if (account?.clubName) fresh.club = account.clubName
+    const requestedMascot = params.get('mascot')
+    if (requestedMascot) fresh.mascotId = requestedMascot
     return fresh
   })
   const [error, setError] = useState('')
@@ -414,7 +417,7 @@ function EditorForm({ initial }: { initial?: CampusEvent }) {
 }
 
 export function ClubMascots() {
-  const [selected, setSelected] = useState('vini')
+  const [selected, setSelected] = useState(defaultEventMascot.id)
   return (
     <ClubShell>
       <div className="studio-heading">
@@ -423,10 +426,11 @@ export function ClubMascots() {
           <h1 tabIndex={-1}>Những người bạn của CLB.</h1>
           <p>Tạo một lần, dùng lại cho những cuộc hẹn sau.</p>
         </div>
+        <Link to={`/mascot-3d?mascot=${encodeURIComponent(selected)}`} className="button button-quiet">Xem mô hình 360°<ArrowUpRight size={17} /></Link>
       </div>
       <section className="library-section"><h2>Thư viện của bạn</h2><MascotPicker selected={selected} onChange={setSelected} /></section>
       <MascotCreator onUse={setSelected} />
-      <Link to="/clb/su-kien/moi" className="button button-quiet library-next">Tạo sự kiện và chọn mascot<ArrowRight size={18} /></Link>
+      <Link to={`/clb/su-kien/moi?mascot=${encodeURIComponent(selected)}`} className="button button-quiet library-next">Tạo sự kiện và chọn mascot<ArrowRight size={18} /></Link>
     </ClubShell>
   )
 }
