@@ -7,11 +7,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://vinuni-wayfinder-backend-production.up.railway.app/api/:path*"
+      "destination": "https://skins-cad-range-number.trycloudflare.com/api/:path*"
     },
     {
       "source": "/maps/:path*",
-      "destination": "https://vinuni-wayfinder-backend-production.up.railway.app/maps/:path*"
+      "destination": "https://skins-cad-range-number.trycloudflare.com/maps/:path*"
     },
     {
       "source": "/thu-thap",
