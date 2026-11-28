@@ -14,6 +14,7 @@ import { AutoArrival } from './AutoArrival'
 import { JourneyCamera } from './JourneyCamera'
 import { JourneyModeButton, rememberJourneyMode, type JourneyMode } from './JourneyModeButton'
 import { resolveArrivalContext } from './eventArrival'
+import { nextTurnOf } from './indoorProgress'
 
 const turnIcons: Record<Turn, LucideIcon> = { straight: ArrowUp, left: ArrowLeft, right: ArrowRight }
 const turnLabels: Record<Turn, string> = { straight: 'Đi thẳng', left: 'Rẽ trái', right: 'Rẽ phải' }
@@ -47,7 +48,15 @@ export function JourneyPage() {
   const [speechMessage, setSpeechMessage] = useState('')
   const [showExit, setShowExit] = useState(false)
   const journeyKey = JSON.stringify([rawFrom, rawTo, lat, lng, stopParam, event?.id])
-  const [trackedJourney, setTrackedJourney] = useState<string | null>(null)
+  // Tự chuyển chặng bật sẵn; người dùng tắt thì chỉ tắt cho hành trình này.
+  const [autoOffJourney, setAutoOffJourney] = useState<string | null>(null)
+  const [undoStep, setUndoStep] = useState<number | null>(null)
+  const [photoNoticeClosed, setPhotoNoticeClosed] = useState(false)
+  useEffect(() => {
+    if (undoStep == null) return
+    const timer = window.setTimeout(() => setUndoStep(null), 6000)
+    return () => window.clearTimeout(timer)
+  }, [undoStep])
   const speechAvailable = 'speechSynthesis' in window
 
   useEffect(() => {
@@ -100,6 +109,7 @@ export function JourneyPage() {
 
   function goStep(next: number) {
     const q = new URLSearchParams(params)
+    setUndoStep(null)
     q.set('buoc', String(next))
     setParams(q, { replace: true })
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -130,11 +140,21 @@ export function JourneyPage() {
     const tracking = curStep && {
       waypoint: curStep,
       finalNode: step === travelSteps.length - 1 ? arrivalStep?.target.node : undefined,
-      enabled: trackedJourney === journeyKey,
-      onToggle: (enabled: boolean) => setTrackedJourney(enabled ? journeyKey : null),
-      onArrival: () => goStep(step + 1),
+      enabled: autoOffJourney !== journeyKey,
+      onToggle: (enabled: boolean) => setAutoOffJourney(enabled ? null : journeyKey),
+      onArrival: () => { goStep(step + 1); setUndoStep(step) },
       paused: showExit,
+      nextTurn: nextTurnOf(travelSteps[step + 1]),
     }
+    const photoStart = params.get('tuAnh') === '1' && step === 0 && !photoNoticeClosed
+    const undoToast = undoStep != null && undoStep < travelSteps.length ? <div className="arrival-undo" role="status">
+      <span>Đã chuyển sang chặng tiếp theo.</span>
+      <button type="button" onClick={() => { setUndoStep(null); goStep(undoStep) }}>Hoàn tác</button>
+    </div> : photoStart && <div className="arrival-undo" role="status">
+      <span>Bắt đầu từ {fromLabel || liveRoute.start}.</span>
+      <Link to={link(`/anh?to=${encodeURIComponent(rawTo)}`)}>Không phải ở đây?</Link>
+      <button type="button" aria-label="Đóng" onClick={() => setPhotoNoticeClosed(true)}><X size={16} /></button>
+    </div>
     const dir: StepDirection = curStep ? stepDirection(curStep) : 'arrive'
     const Direction = stepDirIcons[dir]
     const mascotMood = arrived ? 'jump' : dir === 'left' ? 'left' : dir === 'right' ? 'right' : dir === 'back' ? 'wait' : 'walk'
@@ -143,7 +163,7 @@ export function JourneyPage() {
     if (arrived && welcome && mode === 'card') return cardWelcome
     if (mode === 'camera' && (!arrived || welcome)) return <><JourneyCamera {...cameraControls} welcome={arrived && welcome} tracking={tracking} live
       destination={liveRoute.destination} step={step} direction={stepDirLabels[dir]} icon={Direction} mood={mascotMood} instruction={curStep?.text ?? ''}
-      waypoints={travelSteps.map(s => ({ label: s.target.label || s.text, meters: s.meters, approx: s.approx }))} />{exitDialog}</>
+      waypoints={travelSteps.map(s => ({ label: s.target.label || s.text, meters: s.meters, approx: s.approx }))} />{undoToast}{exitDialog}</>
 
     return (
       <div className="focused-page journey-page">
@@ -186,7 +206,7 @@ export function JourneyPage() {
           <span>{liveRoute.totalMeters > 0 ? `Tổng ${liveRoute.totalMeters} m` : 'VinUni Wayfinder'}</span>
           {speechAvailable && <IconButton label={speaking ? 'Dừng giọng đọc' : 'Đọc chỉ dẫn'} onClick={() => speakText(curStep?.text ?? arrivalStep?.text ?? `Bạn đã tới ${liveRoute.destination}.`)} pressed={speaking}>{speaking ? <VolumeX size={21} /> : <Volume2 size={21} />}</IconButton>}
         </div>
-        {exitDialog}
+        {undoToast}{exitDialog}
       </div>
     )
   }

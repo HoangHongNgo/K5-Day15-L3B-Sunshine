@@ -44,3 +44,12 @@ body:has(.walk-camera) { overflow: hidden; }
 .arrival-tracking, .arrival-tracking-note { margin: 8px 0; font-size: .85rem; }
 .arrival-tracking label { display: inline-flex; gap: 8px; align-items: center; min-height: 38px; font-weight: 600; cursor: pointer; }
 .arrival-tracking small { display: block; }
+.arrival-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.arrival-ask p { flex-basis: 100%; margin: 0; font-weight: 600; }
+.arrival-ask .button { min-height: 38px; padding: 6px 14px; border-radius: 6px; }
+.arrival-undo { position: fixed; z-index: 500; left: 50%; top: calc(env(safe-area-inset-top) + 72px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px; width: max-content; max-width: calc(100vw - 32px); padding: 10px 14px;
+  border-radius: 12px; background: #1b2235; color: #fff; box-shadow: 0 12px 28px -12px rgba(0,0,0,.5); font-size: .9rem; }
+.arrival-undo button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: #ffd166; font-weight: 700; cursor: pointer; }
+.arrival-undo a { color: #ffd166; font-weight: 700; min-height: 36px; display: inline-flex; align-items: center; }
+.arrival-grant { min-height: 38px; margin-top: 6px; padding: 6px 14px; border-radius: 6px; }

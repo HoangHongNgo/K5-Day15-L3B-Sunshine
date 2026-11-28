@@ -7,16 +7,24 @@ import { ApiError, prepPhotoBlob, wayfinderApi } from '../wayfinder/wayfinderApi
 import { useWayfinder } from '../wayfinder/WayfinderContext'
 import { matchesIndoorVenue } from './indoorEncounter'
 import { createEncounterStage, type EncounterMotion } from './encounterStage'
+import { useGroundAnchor } from './useGroundAnchor'
+import { dataUrlToBlob, savePhoto } from './photoSave'
+import { ArMascotButton } from './ArMascot'
+import { requestSensorPermission } from '../../shared/lib/sensors.js'
 import { assessEncounterLocation, captureEncounterPhoto, encounterAccuracy, encounterRadius, submitEncounterPhoto } from './eventEncounterMedia'
 import './eventEncounter.css'
 
-type EncounterProps = { event: CampusEvent; mascot: MascotAsset; anchor: EventAnchor | null }
+type EncounterProps = {
+  event: CampusEvent; mascot: MascotAsset; anchor: EventAnchor | null
+  /** Đã tới nơi theo tuyến dẫn đường: coi như đã ở điểm sự kiện, mở camera check-in ngay. */
+  arrived?: boolean
+}
 
 export default function EventEncounter(props: EncounterProps) {
   return <Encounter key={JSON.stringify([props.event.id, props.event.demo, props.event.locationId, props.mascot.id, props.anchor?.lat, props.anchor?.lon])} {...props} />
 }
 
-function Encounter({ event, mascot, anchor }: EncounterProps) {
+function Encounter({ event, mascot, anchor, arrived = false }: EncounterProps) {
   const { isLive, health } = useWayfinder()
   const [mockEnabled, setMockEnabled] = useState(event.demo === true)
   // Offset toward the equator to keep the demo fix valid even at the poles.
@@ -25,7 +33,8 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
     longitude: anchor.lon, accuracy: 5,
   }) : null
   const demoNearby = mockFix?.status === 'near'
-  const [phase, setPhase] = useState<'entry' | 'unlocked' | 'camera' | 'review' | 'sent'>(demoNearby ? 'unlocked' : 'entry')
+  const atVenue = arrived || demoNearby
+  const [phase, setPhase] = useState<'entry' | 'unlocked' | 'camera' | 'review' | 'sent'>(arrived ? 'camera' : demoNearby ? 'unlocked' : 'entry')
   const [checking, setChecking] = useState<'gps' | 'photo' | null>(null)
   const indoorRequest = useRef<AbortController | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -96,7 +105,9 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
     }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 })
   }
   function openCamera() {
-    if (!demoNearby && Date.now() - checkedAt.current > 60000) {
+    // iOS chỉ cho xin quyền con quay trong lần chạm này; cần để mascot đứng trên mặt sàn.
+    void requestSensorPermission().catch(() => {})
+    if (!atVenue && Date.now() - checkedAt.current > 60000) {
       setPhase('entry')
       setMessage('Hãy xác nhận lại vị trí trước khi mở camera.')
       return
@@ -110,7 +121,7 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
     setPhoto(null)
     setConsent(false)
     setMessage('')
-    setPhase(demoNearby ? 'unlocked' : 'entry')
+    setPhase(atVenue ? 'unlocked' : 'entry')
   }
   function reviewPhoto(src: string) {
     const filename = `wayfinder-${event.id}-${Date.now()}.jpg`
@@ -118,14 +129,15 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
     setConsent(false)
     setMessage('')
     setPhase('review')
-    // Start the local download while the shutter click still has user activation.
-    const download = document.createElement('a')
-    download.href = src
-    download.download = filename
-    document.body.appendChild(download)
-    try { download.click() }
-    catch { setMessage('Hãy chọn “Lưu ảnh về máy” để tải ảnh.') }
-    finally { download.remove() }
+    // Gọi ngay trong lần chạm nút chụp: Safari chỉ cho mở bảng chia sẻ khi còn "user activation".
+    void saveToPhone(src, filename)
+  }
+  async function saveToPhone(src: string, filename: string) {
+    try {
+      const result = await savePhoto(dataUrlToBlob(src), filename)
+      setMessage(result === 'shared' ? 'Đã mở bảng chia sẻ. Chọn “Lưu hình ảnh” để lưu vào Ảnh.'
+        : result === 'downloaded' ? 'Ảnh đã tải về máy (thư mục Tải xuống).' : 'Chưa lưu. Bấm “Lưu vào Ảnh” khi bạn muốn lưu.')
+    } catch { setMessage('Chưa lưu được ảnh. Hãy bấm “Lưu vào Ảnh” để thử lại.') }
   }
   async function submit() {
     if (submitting.current || !consent || !photo) return
@@ -145,7 +157,7 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
     <header className="encounter-heading"><span className="encounter-heading-icon"><ScanLine size={23}/></span>
       <div><h2>Gặp {mascot.name} trong AR</h2><p>{event.title}</p></div>
     </header>
-    {demoNearby && <p>GPS mô phỏng · Bạn đang cách điểm gặp {mockFix.meters} m.</p>}
+    {demoNearby && !arrived && <p>GPS mô phỏng · Bạn đang cách điểm gặp {mockFix.meters} m.</p>}
     {phase === 'entry' && (isAnchor(anchor) ? <>
       <p>Đến trong bán kính {encounterRadius} m quanh điểm sự kiện để đặt {mascot.name} vào khung hình và chụp ảnh cùng nhau. Vị trí được kiểm tra trên thiết bị.</p>
       <button type="button" className="button button-primary" disabled={!!checking} onClick={checkPosition}>
@@ -164,7 +176,8 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
           <Camera size={17}/>{checking === 'photo' ? 'Đang nhận diện địa điểm…' : 'Định vị trong nhà bằng ảnh'}
         </button>
       </div>)}
-    {phase === 'unlocked' && <button type="button" className="button button-primary" onClick={openCamera}><Camera size={17}/>Mở camera AR</button>}
+    {(phase === 'unlocked' || phase === 'sent') && <ArMascotButton mascot={mascot} />}
+    {phase === 'unlocked' && <button type="button" className="button button-primary" onClick={openCamera}><Camera size={17}/>{arrived ? `Chụp ảnh check-in cùng ${mascot.name}` : 'Mở camera AR'}</button>}
     {(phase === 'camera' || phase === 'review') && <PhotoDialog onClose={exitCamera} busy={sending}>
       {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto} />}
       {phase === 'review' && photo && <div className="encounter-review">
@@ -173,10 +186,10 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
         <img className="encounter-preview" src={photo.src} alt={`Ảnh vừa chụp cùng ${mascot.name}`}/>
         <div className="encounter-review-actions">
           <div className="encounter-actions">
-            <a className="button button-primary" href={photo.src} download={photo.filename}><Download size={17}/>Lưu ảnh về máy</a>
+            <button type="button" className="button button-primary" onClick={() => void saveToPhone(photo.src, photo.filename)}><Download size={17}/>Lưu vào Ảnh</button>
             <button type="button" className="button button-quiet" disabled={sending} onClick={openCamera}><RefreshCw size={16}/>Chụp lại</button>
           </div>
-          <p>Ảnh được tải dưới dạng JPG. Nếu điện thoại mở ảnh xem trước, bạn có thể nhấn giữ để lưu.</p>
+          <p>iPhone: chọn “Lưu hình ảnh” trong bảng chia sẻ để ảnh vào app Ảnh. Android: chọn Ảnh hoặc Lưu.</p>
           <label className="encounter-consent"><input type="checkbox" checked={consent} disabled={sending} onChange={e => setConsent(e.target.checked)}/>
             Tôi đồng ý gửi ảnh này cho {event.club} để BTC duyệt và đăng vào album công khai của sự kiện.</label>
           <button type="button" className="button button-quiet" disabled={!consent || sending} onClick={() => void submit()}><Send size={16}/>{sending ? 'Đang gửi…' : 'Gửi ảnh cho CLB'}</button>
@@ -216,6 +229,20 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
   const [error, setError] = useState('')
   const { paused } = useContext(MotionContext)
   const animatingSpeech = useRef(false)
+  const groundZoom = useRef(1)
+  const userZoom = useRef(1)
+  const ground = useGroundAnchor({
+    enabled: status === 'ready' && !selfie,
+    viewport: () => overlay.current ? { width: overlay.current.clientWidth, height: overlay.current.clientHeight } : null,
+    onFoot: foot => {
+      const s = stage.current
+      if (!s) return
+      if (foot.x < -.15 || foot.x > 1.15 || foot.y > 1.2 || foot.y < 0) { s.hide(); return }
+      groundZoom.current = foot.zoom
+      s.place(foot.x, foot.y)
+      s.setZoom(userZoom.current * foot.zoom)
+    },
+  })
   const onSpeakingChange = useCallback((speaking: boolean) => {
     if (speaking && !paused) {
       animatingSpeech.current = true
@@ -254,13 +281,15 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       setTalk(false)
       setError('')
       if (!navigator.mediaDevices?.getUserMedia) { fail('Camera cần HTTPS hoặc localhost và trình duyệt hỗ trợ camera.'); return }
+      let frontCamera = false
       try {
         const media = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: facing }, width: { ideal: 1280 } } })
         if (cancelled) { media.getTracks().forEach(track => track.stop()); return }
         stream = media
         const track = media.getVideoTracks()[0]
         track?.addEventListener('ended', ended)
-        setSelfie((track?.getSettings().facingMode || facing) === 'user')
+        frontCamera = (track?.getSettings().facingMode || facing) === 'user'
+        setSelfie(frontCamera)
         player.srcObject = media
         await player.play()
         if (cancelled || !track || track.readyState === 'ended') { if (!cancelled) ended(); return }
@@ -272,7 +301,8 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       }
       try {
         stage.current = createEncounterStage(canvas, mascot)
-        stage.current.place(.5, .72)
+        // Camera trước (selfie) không có mặt sàn để neo: đứng cố định góc dưới phải.
+        if (frontCamera) stage.current.place(.72, .9)
         canvas.addEventListener('webglcontextlost', lost)
         setStatus('ready')
       } catch { fail('Trình duyệt chưa dựng được mascot 3D. Hãy thử thiết bị hỗ trợ WebGL 2.') }
@@ -287,7 +317,8 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
     }
   }, [facing, mascot])
   useEffect(() => {
-    if (status === 'ready') stage.current?.setZoom(zoomPercent / 100)
+    userZoom.current = zoomPercent / 100
+    if (status === 'ready') stage.current?.setZoom(userZoom.current * groundZoom.current)
   }, [zoomPercent, status])
 
   function place(px: number, py: number) {
@@ -312,16 +343,25 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       <canvas key={facing} ref={overlay} aria-hidden="true" />
       {status === 'ready' && <button type="button" className="encounter-placement" aria-label={`Đặt ${mascot.name} trong khung hình`}
         onClick={e => {
-          if (!e.detail) { place(.5, .78); return }
+          if (!e.detail) { place(.72, .88); return }
           const rect = e.currentTarget.getBoundingClientRect()
-          place((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height)
+          const x = (e.clientX - rect.left) / rect.width, y = (e.clientY - rect.top) / rect.height
+          if (!ground.reanchor(x, y)) place(x, y)
         }}/>}
     </div>
     <div className="encounter-top">
       <button type="button" className="camera-control" onClick={onClose} aria-label="Đóng camera"><X /></button>
+      <ArMascotButton mascot={mascot} className="camera-control encounter-ar" beforeStart={() => {
+        (video.current?.srcObject as MediaStream | null)?.getTracks().forEach(t => t.stop())
+        onClose()
+      }} />
       <button type="button" className="camera-control" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')} aria-label="Đổi camera"><SwitchCamera /></button>
     </div>
     {(error || status === 'loading') && <p className="encounter-hint" role={error ? 'alert' : 'status'}>{error || 'Đang mở camera…'}</p>}
+    {!error && status === 'ready' && !selfie && ground.status === 'searching' &&
+      <p className="encounter-hint" role="status">Hướng camera xuống mặt sàn để {mascot.name} đứng cạnh bạn</p>}
+    {!error && status === 'ready' && !selfie && ground.status === 'needs-permission' &&
+      <button type="button" className="encounter-hint encounter-grant" onClick={() => void ground.grant()}>Bật cảm biến để {mascot.name} đứng trên mặt sàn</button>}
     {toolsOpen && status === 'ready' && <div className="encounter-tools">
       <label className="encounter-size">Kích thước mascot <span aria-hidden="true">{zoomPercent}%</span>
         <input type="range" min={60} max={140} step={10} value={zoomPercent} aria-valuetext={zoomPercent + '%'}

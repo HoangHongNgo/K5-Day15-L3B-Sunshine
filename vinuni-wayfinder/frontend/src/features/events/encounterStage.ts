@@ -34,6 +34,13 @@ export function createEncounterStage(canvas: HTMLCanvasElement, mascot: MascotAs
   offset.position.set(-center.x, -bounds.min.y, -center.z)
   offset.add(asset.model)
   const placement = new THREE.Group()
+  // Bóng đổ dẹt dưới chân để mascot trông như đứng trên sàn.
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(.5, 40),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .28, depthWrite: false }))
+  shadow.scale.set(size.x * .95, Math.max(size.x * .16, size.y * .035), 1)
+  shadow.position.set(0, size.y * .012, -Math.max(size.z, 1))
+  shadow.renderOrder = -1
+  placement.add(shadow)
   placement.add(offset)
   placement.visible = false
   scene.add(placement)
@@ -72,6 +79,11 @@ export function createEncounterStage(canvas: HTMLCanvasElement, mascot: MascotAs
       placement.visible = true
       updatePlacement()
     },
+    hide() {
+      if (!placement.visible) return
+      placement.visible = false
+      render()
+    },
     setZoom(value: number) {
       zoom = value
       updatePlacement()
@@ -97,6 +109,8 @@ export function createEncounterStage(canvas: HTMLCanvasElement, mascot: MascotAs
       mixer.stopAllAction()
       mixer.uncacheRoot(asset.model)
       asset.dispose()
+      shadow.geometry.dispose()
+      ;(shadow.material as THREE.Material).dispose()
       renderer.dispose()
       renderer.forceContextLoss()
     },

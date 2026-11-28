@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useContext, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SaveButton } from '../../shared/FavoritesContext'
 import { useEvents } from '../events/EventContext'
@@ -10,6 +10,8 @@ import type { Place } from '../wayfinder/data'
 import type { JourneyMode } from './JourneyModeButton'
 import type { ArrivalContext } from './eventArrival'
 import './eventWelcome.css'
+
+const EventEncounter = lazy(() => import('../events/EventEncounter'))
 
 type Props = { event: CampusEvent; arrival: ArrivalContext; mode: JourneyMode; place?: Place }
 
@@ -45,7 +47,9 @@ export function EventWelcome({ event, arrival, mode, place }: Props) {
       <p>Chào mừng bạn đến với {event.title}.</p>
       {arrival.currentStop && arrival.currentStop.id !== 'main' && <p>{arrival.currentStop.label}</p>}
       {arrival.nextStop && arrival.nextStopRoute && <Link className="button button-primary" to={`${arrival.nextStopRoute}&mode=${mode}`}>Đi tiếp tới {arrival.nextStop.label}</Link>}
-      <Link className="button button-primary" to={`/su-kien/${event.id}?chup-anh=1`}>Chụp ảnh cùng {mascot.name}</Link>
+      <Suspense fallback={<p role="status">Đang mở camera check-in…</p>}>
+        <EventEncounter event={event} mascot={mascot} anchor={event.arAnchor ?? null} arrived />
+      </Suspense>
       <Link className="button button-quiet" to={`/su-kien/${event.id}`}>Xem sự kiện</Link>
       <details>
         <summary>Mã QR Check-in tại cửa</summary>

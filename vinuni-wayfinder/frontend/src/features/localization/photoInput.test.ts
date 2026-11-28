@@ -7,9 +7,11 @@ import { PhotoLocationPage } from './PhotoLocationPage'
 vi.mock('../events/EventContext', () => ({ useEventJourney: () => ({ link: (path: string) => path }) }))
 vi.mock('./MascotCamera', () => ({ default: () => null }))
 
-it('offers the user’s own image and manual location without sample images', () => {
+it('is a single shutter: no upload step, manual room choice kept as a fallback', () => {
   const html = renderToStaticMarkup(createElement(MemoryRouter, {}, createElement(PhotoLocationPage)))
-  expect(html).toContain('Chọn ảnh có sẵn')
-  expect(html).toContain('Chọn vị trí bằng tên phòng')
+  expect(html).toContain('Chụp để định vị')
+  expect(html).toContain('Chọn bằng tên phòng')
+  expect(html).not.toContain('Chọn ảnh có sẵn')
+  expect(html).not.toContain('type="file"')
   expect(html).not.toContain('/anh-mau')
 })
