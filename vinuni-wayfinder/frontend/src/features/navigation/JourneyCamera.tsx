@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronUp, Flag, LocateFixed, MapPin, type LucideIcon } from 'lucide-react'
 import { Mascot, type MascotMood } from '../mascot/Mascot'
-import { wayfinderApi } from '../wayfinder/wayfinderApi'
+import { AutoArrival, type ArrivalTracking } from './AutoArrival'
+import { locateVideoFrame } from './waypointArrival'
 import { JourneyModeButton, type JourneyMode } from './JourneyModeButton'
 import './journeyCamera.css'
 
 type Waypoint = { label: string; meters?: number; approx?: boolean }
 
 type Props = {
+  tracking?: ArrivalTracking
   welcome?: ReactNode
   destination: string
   waypoints: Waypoint[]
@@ -22,7 +24,7 @@ type Props = {
   onExit: () => void
 }
 
-export function JourneyCamera({ welcome, destination, waypoints, step, instruction, direction, icon: Icon, mood, live, onMode, onStep, onExit }: Props) {
+export function JourneyCamera({ tracking, welcome, destination, waypoints, step, instruction, direction, icon: Icon, mood, live, onMode, onStep, onExit }: Props) {
   const player = useRef<HTMLVideoElement>(null)
   const locating = useRef<AbortController | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -80,16 +82,7 @@ export function JourneyCamera({ welcome, destination, waypoints, step, instructi
     setBusy(true)
     setFeedback('Đang nhận diện vị trí…')
     try {
-      const canvas = document.createElement('canvas')
-      const scale = Math.min(1, 512 / Math.max(video.videoWidth, video.videoHeight))
-      canvas.width = Math.round(video.videoWidth * scale)
-      canvas.height = Math.round(video.videoHeight * scale)
-      const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error()
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const photo = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85))
-      if (!photo || ctrl.signal.aborted) throw new Error()
-      const result = await wayfinderApi.locate(photo, undefined, ctrl.signal)
+      const result = await locateVideoFrame(video, ctrl.signal)
       if (!ctrl.signal.aborted) setFeedback(result.tier === 'auto' && result.label
         ? `Vị trí nhận diện: ${result.label}.` : 'Chưa rõ vị trí. Hãy hướng camera về biển phòng và thử lại.')
     } catch {
@@ -121,10 +114,11 @@ export function JourneyCamera({ welcome, destination, waypoints, step, instructi
           <span>{p.label}</span>{p.meters != null && p.meters > 0 && <small>{p.approx ? '≈ ' : ''}{Math.round(p.meters)} m</small>}
         </li>)}</ol> : <p className="walk-next"><Flag size={14} />{next ? `Tiếp theo · ${next.label}` : `Điểm đến · ${destination}`}</p>}
         {(cameraStatus || feedback) && <p className="walk-status" role="status">{cameraStatus || feedback}</p>}
+        {tracking && <AutoArrival key={step} {...tracking} video={player} cameraReady={!cameraStatus && !busy} />}
         <div className="walk-actions">
           {step > 0 && <button type="button" className="walk-expand" aria-label="Chặng trước" onClick={() => { setFeedback(''); onStep(step - 1) }}><ChevronLeft /></button>}
           <button type="button" className="walk-confirm" onClick={() => { setFeedback(''); onStep(step + 1) }}><Check size={19} />Đã tới mốc</button>
-          {live && <button type="button" className="walk-locate" disabled={busy || !!cameraStatus} onClick={() => void locate()}><LocateFixed size={18} />Định vị lại</button>}
+          {live && <button type="button" className="walk-locate" disabled={busy || !!cameraStatus || tracking?.enabled} onClick={() => void locate()}><LocateFixed size={18} />Định vị lại</button>}
         </div>
         {expanded && <button type="button" className="walk-end" onClick={onExit}>Kết thúc hành trình</button>}
       </section>

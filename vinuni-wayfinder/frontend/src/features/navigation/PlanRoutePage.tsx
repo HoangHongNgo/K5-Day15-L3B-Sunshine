@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Check, CheckCheck, ChevronDown, ChevronRight, Footprints, LoaderCircle, LocateFixed, MapPin } from 'lucide-react'
+import { ArrowRight, Camera, Check, CheckCheck, ChevronDown, ChevronRight, Footprints, LoaderCircle, LocateFixed, MapPin } from 'lucide-react'
 import { BackLink, DemoNote, parseCoord } from '../../shared/ui'
 import { useEventJourney } from '../events/EventContext'
 import { EventJourneyBadge } from '../events/EventsPages'
@@ -8,6 +8,7 @@ import { Mascot } from '../mascot/Mascot'
 import { findRoute } from '../wayfinder/data'
 import { ApiError, splitRouteSteps, wayfinderApi, type BackendRouteResponse } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
+import { requestSensorPermission } from '../../shared/lib/sensors.js'
 import { JourneyModeButton, preferredJourneyMode, rememberJourneyMode, type JourneyMode } from './JourneyModeButton'
 
 export function PlanRoutePage() {
@@ -96,6 +97,8 @@ export function PlanRoutePage() {
   }
 
   function submit(e: FormEvent<HTMLFormElement>) {
+    // iOS: xin quyền cảm biến trong lần chạm này để đếm bước / la bàn chạy ngay khi vào hành trình.
+    void requestSensorPermission().catch(() => {})
     e.preventDefault()
     if (!canSubmit) return
     const q = new URLSearchParams({ to, mode })
@@ -146,7 +149,7 @@ export function PlanRoutePage() {
                 </div>
               </div>
             </div>
-            <Link className="inline-camera" to={link(`/vi-tri${to ? `?to=${to}` : ''}`)}><LocateFixed size={19} />Chưa biết mình đang ở đâu?<ChevronRight size={17} /></Link>
+            <Link className="inline-camera" to={link(`/anh${to ? `?to=${to}` : ''}`)}><Camera size={19} />Chụp ảnh để biết mình đang ở đâu<ChevronRight size={17} /></Link>
             {isLive && routeLoading && <p className="inline-feedback" role="status"><LoaderCircle size={18} className="recognition-spinner" />Đang tính đường đi từ backend…</p>}
             {isLive && routeError && <p className="error-message" role="alert">{routeError}</p>}
             {!isLive && from && to && !mockRoute && <p className="error-message" role="alert">Chưa có đường nối hai địa điểm này. Hãy chọn một điểm khác.</p>}

@@ -375,19 +375,6 @@ body { background: var(--color-paper); }
 .mock-steps li > span { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; border: 1px solid var(--color-field-edge); }
 .mock-steps .active { color: var(--color-ink); }
 .mock-steps .active > span { background: var(--brand-red); border-color: var(--brand-red); }
-.sample-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
-.sample-card { display: flex; flex-direction: column; border: 1px solid var(--glass-border); border-radius: 25px; overflow: hidden; background: var(--glass); }
-.sample-card:hover { border-color: var(--color-accent); }
-.sample-image { position: relative; overflow: hidden; }
-.sample-image img { width: 100%; aspect-ratio: 2; object-fit: cover; }
-.sample-number { position: absolute; top: 10px; left: 10px; display: grid; place-items: center; width: 29px; height: 29px; background: var(--color-paper-2); border: 1px solid var(--color-field-edge); border-radius: 50%; color: var(--color-ink); font-size: 10px; }
-.sample-copy { padding: 20px; min-width: 0; }
-.sample-scenario { display: block; font-size: 10px; color: var(--color-accent); margin-bottom: 7px; }
-.sample-copy h2 { font-size: 17px; font-weight: 500; }
-.sample-copy p { font-size: 12px; color: var(--color-muted); margin-top: 8px; line-height: 1.7; }
-.sample-cta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 18px; color: var(--color-accent); font-size: 12px; min-height: 28px; }
-.sample-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 28px; color: var(--color-muted); font-size: 12px; line-height: 1.8; }
-.sample-note > svg { flex-shrink: 0; margin-top: 3px; }
 .recognition-page { max-width: 860px; }
 .recognition-page h1 { max-width: 28ch; }
 .recognition-layout { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 32px; align-items: start; }
@@ -441,17 +428,6 @@ body { background: var(--color-paper); }
   .mock-steps { gap: 15px; font-size: 10px; margin: 22px 0; }
   .mock-steps li { gap: 6px; }
   .mock-steps li > span { width: 23px; height: 23px; }
-  .sample-grid { grid-template-columns: minmax(0,1fr); gap: 14px; }
-  .sample-card { flex-direction: row; min-height: 144px; border-radius: 21px; }
-  .sample-image { flex: 0 0 104px; }
-  .sample-image img { height: 100%; min-height: 144px; aspect-ratio: auto; object-fit: cover; }
-  .sample-copy { padding: 13px; }
-  .sample-copy h2 { font-size: 14px; }
-  .sample-copy p { font-size: 11px; margin-top: 5px; }
-  .sample-scenario { font-size: 9px; margin-bottom: 5px; }
-  .sample-cta { font-size: 11px; margin-top: 9px; }
-  .sample-number { width: 23px; height: 23px; top: 8px; left: 8px; font-size: 9px; }
-  .sample-note { font-size: 11px; margin-top: 22px; }
   .recognition-layout { grid-template-columns: minmax(0,1fr); gap: 30px; }
   .recognition-photo { display: flex; align-items: center; gap: 13px; padding: 11px; border-radius: 18px; }
   .recognition-photo > img { width: 104px; height: 70px; border-radius: 12px; }
@@ -463,6 +439,5 @@ body { background: var(--color-paper); }
   .candidate-icon { width: 30px; }
 }
 @media (max-width: 359px) {
-  .sample-image { flex-basis: 88px; }
   .recognition-photo > .mascot-sprite { display: none; }
 }

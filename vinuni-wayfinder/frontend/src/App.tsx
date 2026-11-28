@@ -10,7 +10,6 @@ import { PlanRoutePage } from './features/navigation/PlanRoutePage'
 import { ChooseLocationPage } from './features/navigation/ChooseLocationPage'
 import { JourneyPage } from './features/navigation/JourneyPage'
 import { PhotoLocationPage } from './features/localization/PhotoLocationPage'
-import { DemoPhotoGallery, PhotoLocating, PhotoConfirmation, LegacyPhotoRedirect } from './features/localization/PhotoFlow'
 import { MotionContext } from './features/mascot/Mascot'
 import { useEventJourney } from './features/events/EventContext'
 import { ClubDashboard, ClubMascots, EventEditor, EventsList, EventDetail } from './features/events/EventsPages'
@@ -46,7 +45,7 @@ export default function App() {
   const isJourney = pathname === '/hanh-trinh'
   const isClub = pathname.startsWith('/clb')
   const isCollect = pathname === '/thu-thap'
-  const isNavigation = ['/di-den', '/vi-tri', '/anh', '/anh-mau', '/nhan-dien', '/xac-nhan-vi-tri', '/ghim-anh', '/hanh-trinh'].includes(pathname)
+  const isNavigation = ['/di-den', '/vi-tri', '/anh', '/hanh-trinh'].includes(pathname)
 
   useEffect(() => {
     const onHash = () => { if (window.location.hash === '#thu-thap') navigate('/thu-thap', { replace: true }) }
@@ -111,10 +110,8 @@ export default function App() {
           <Route path="/di-den" element={<PlanRoutePage />} />
           <Route path="/vi-tri" element={<ChooseLocationPage />} />
           <Route path="/anh" element={<PhotoLocationPage />} />
-          <Route path="/anh-mau" element={<DemoPhotoGallery />} />
-          <Route path="/nhan-dien" element={<PhotoLocating />} />
-          <Route path="/xac-nhan-vi-tri" element={<PhotoConfirmation />} />
-          <Route path="/ghim-anh" element={<LegacyPhotoRedirect />} />
+          {/* Bộ ảnh mẫu (prototype) đã bỏ: link cũ chuyển về màn chụp ảnh định vị. */}
+          {['/anh-mau', '/nhan-dien', '/xac-nhan-vi-tri', '/ghim-anh'].map(path => <Route key={path} path={path} element={<ToPhotoLocate />} />)}
           <Route path="/hanh-trinh" element={<JourneyPage />} />
           <Route path="/da-luu" element={<SavedPage />} />
           <Route path="/ve-ung-dung" element={<AboutPage />} />
@@ -126,4 +123,12 @@ export default function App() {
       {!isJourney && !isClub && !isCollect && <nav className="bottom-nav" aria-label="Điều hướng trên điện thoại">{nav}</nav>}
     </MotionContext.Provider>
   )
+}
+
+function ToPhotoLocate() {
+  const { search } = useLocation()
+  const q = new URLSearchParams(search)
+  const keep = new URLSearchParams()
+  for (const key of ['to', 'event']) { const v = q.get(key); if (v) keep.set(key, v) }
+  return <Navigate to={`/anh${keep.size ? `?${keep}` : ''}`} replace />
 }

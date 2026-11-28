@@ -169,7 +169,7 @@ export function useEventJourney() {
   const { events } = useEvents()
   const { getPlace } = useWayfinder()
   const { pathname, search } = useLocation()
-  const routes = ['/di-den', '/hanh-trinh', '/vi-tri', '/anh', '/anh-mau', '/nhan-dien', '/xac-nhan-vi-tri', '/ghim-anh']
+  const routes = ['/di-den', '/hanh-trinh', '/vi-tri', '/anh']
   const event = routes.includes(pathname) ? activeEvent(events, new URLSearchParams(search), getPlace) : undefined
   const mascot = defaultMascot
   return { event, mascot, link: (path: string) => withEvent(path, event) }

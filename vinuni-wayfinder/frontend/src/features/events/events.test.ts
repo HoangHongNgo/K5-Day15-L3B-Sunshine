@@ -12,7 +12,7 @@ describe('Event-scoped companions', () => {
   it('distinguishes events sharing one venue and preserves photo-flow parameters', () => {
     const second = { ...event, id: 'another-event', mascotId: 'vini' }
     expect(activeEvent([event, second], new URLSearchParams({ to: event.locationId, event: second.id }))?.mascotId).toBe('vini')
-    expect(withEvent('/anh-mau?to=startup&mau=campus', event)).toBe('/anh-mau?to=startup&mau=campus&event=robotics-open-lab')
+    expect(withEvent('/anh?to=startup', event)).toBe('/anh?to=startup&event=robotics-open-lab')
     expect(withEvent('/di-den?to=i109', event)).toBe('/di-den?to=i109')
     expect(withEvent('/di-den?to=startup')).toBe('/di-den?to=startup')
   })

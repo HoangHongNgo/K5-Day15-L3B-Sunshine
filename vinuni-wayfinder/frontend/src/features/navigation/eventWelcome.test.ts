@@ -28,8 +28,9 @@ it.each(['camera', 'card'])('shows the event mascot at the confirmed venue in %s
   expect(html).toContain('<canvas')
   expect(html.includes('<video')).toBe(mode === 'camera')
   expect(html).toContain('/su-kien/robotics-open-lab')
-  expect(html).toContain('/su-kien/robotics-open-lab?chup-anh=1')
-  expect(html).toContain('Chụp ảnh cùng Tia')
+  // Tới nơi = màn check-in: camera chụp ảnh cùng mascot mở ngay, không phải sang trang sự kiện xác nhận vị trí.
+  expect(html).not.toContain('?chup-anh=1')
+  expect(html).toContain('Đang mở camera check-in')
   expect(html).toContain('Mã QR Check-in tại cửa')
   expect(html).not.toContain('Tới nơi rồi!')
 })
