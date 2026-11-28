@@ -3,14 +3,15 @@ import {
   canCaptureEncounter,
   encounterCameraHint,
   initialEncounterPhase,
+  initialFoot,
   isFootVisible,
   toggleCameraPanel,
 } from './encounterControls'
 
 describe('initialEncounterPhase', () => {
-  it('starts arrived events in unlocked phase so the greeting and CTA stay visible before opening check-in', () => {
-    expect(initialEncounterPhase({ arrived: true, demoNearby: false })).toBe('unlocked')
-    expect(initialEncounterPhase({ arrived: true, demoNearby: true })).toBe('unlocked')
+  it('opens the check-in camera the moment the walker arrives, so the mascot shows up with no extra tap', () => {
+    expect(initialEncounterPhase({ arrived: true, demoNearby: false })).toBe('camera')
+    expect(initialEncounterPhase({ arrived: true, demoNearby: true })).toBe('camera')
   })
 
   it('starts demo nearby events in unlocked phase and normal events in entry phase', () => {
@@ -86,5 +87,12 @@ describe('toggleCameraPanel', () => {
     expect(toggleCameraPanel('voice', 'tools')).toBe('tools')
     expect(toggleCameraPanel('tools', 'voice')).toBe('voice')
     expect(toggleCameraPanel('tools', 'tools')).toBe('none')
+  })
+})
+
+describe('initialFoot', () => {
+  it('stands the mascot at the bottom-right straight away, before any floor is detected or tap is made', () => {
+    expect(initialFoot(false)).toEqual({ x: 0.72, y: 0.88, zoom: 1 })
+    expect(initialFoot(true)).toEqual({ x: 0.72, y: 0.9, zoom: 1 })
   })
 })

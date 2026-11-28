@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thử AR Quick Look</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 16px; background: #0d1426; color: #f4f6fb; line-height: 1.45; }
+  h1 { font-size: 1.25rem; margin: 0 0 8px; }
+  ol { padding-left: 20px; }
+  li { margin: 14px 0; }
+  a.ar, button { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #18223a; border: 1px solid #2c3754; color: #fff; font: inherit; text-decoration: none; width: 100%; box-sizing: border-box; text-align: left; }
+  a.ar img { width: 48px; height: 48px; border-radius: 6px; background: #e0383e; }
+  pre { white-space: pre-wrap; font-size: .8rem; background: #05070d; padding: 10px; border-radius: 6px; }
+  small { color: #9aa6bf; }
+</style>
+</head>
+<body>
+<h1>Thử AR Quick Look (iPhone)</h1>
+<small>Mở trang này bằng Safari. Chạm từng mục, xem có vào được tab <b>AR</b> không, rồi báo lại kết quả 1/2/3.</small>
+<ol>
+  <li><a class="ar" rel="ar" href="/ar/test-cube.usdz"><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">1. Khối hộp đỏ — thẻ chuẩn của Apple</a></li>
+  <li><a class="ar" rel="ar" href="/ar/tia3d.usdz#allowsContentScaling=1"><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">2. Tia — thẻ chuẩn của Apple</a></li>
+  <li><button id="code" type="button">3. Tia — mở bằng code (giống app)</button></li>
+</ol>
+<pre id="info"></pre>
+<script>
+  var a = document.createElement('a')
+  document.getElementById('info').textContent =
+    'Hỗ trợ AR Quick Look: ' + !!(a.relList && a.relList.supports && a.relList.supports('ar')) +
+    '\nTrình duyệt: ' + navigator.userAgent
+  document.getElementById('code').onclick = function () {
+    var link = document.createElement('a')
+    link.rel = 'ar'
+    link.href = '/ar/tia3d.usdz#allowsContentScaling=1'
+    link.appendChild(document.createElement('img'))
+    link.click()
+  }
+</script>
+</body>
+</html>

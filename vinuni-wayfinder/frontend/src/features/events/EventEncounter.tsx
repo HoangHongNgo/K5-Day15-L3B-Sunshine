@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowUp, Camera, Download, Footprints, Hand, LocateFixed, MessageCircle, Music2, RefreshCw, ScanLine, Send, SlidersHorizontal, SwitchCamera, X } from 'lucide-react'
+import { ArrowUp, Box, Camera, Download, Footprints, Hand, LocateFixed, MessageCircle, Music2, RefreshCw, ScanLine, Send, SlidersHorizontal, SwitchCamera, X } from 'lucide-react'
 import { MotionContext } from '../mascot/Mascot'
 import { isAnchor, type CampusEvent, type EventAnchor, type MascotAsset } from './events'
 import EventVoice from './EventVoice'
@@ -64,6 +64,8 @@ function Encounter({ event, mascot, anchor, arrived = false, onCameraActiveChang
   const submitting = useRef(false)
   const cameraActiveCallback = useRef(onCameraActiveChange)
   cameraActiveCallback.current = onCameraActiveChange
+  // Tới nơi: camera mở sẵn ngay lần render đầu.
+  useEffect(() => { if (phase === 'camera') cameraActiveCallback.current?.(true) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => {
     request.current++
     indoorRequest.current?.abort()
@@ -151,6 +153,12 @@ function Encounter({ event, mascot, anchor, arrived = false, onCameraActiveChang
     onCameraActiveChange?.(true)
     setPhase('camera')
   }
+  /** Từ camera chuyển sang AR thật (WebXR / Quick Look) — gọi trong chính lần chạm nút. */
+  function launchRealAr() {
+    if (ar === 'webxr') xr.start()
+    else if (ar === 'quicklook') ql.open()
+    exitCamera()
+  }
   function exitCamera() {
     setPhoto(null)
     setConsent(false)
@@ -221,7 +229,8 @@ function Encounter({ event, mascot, anchor, arrived = false, onCameraActiveChang
       {realAr && <button type="button" className="button button-quiet" onClick={openPlainCamera}>Chụp ảnh gửi album CLB</button>}
     </div>}
     {(phase === 'camera' || phase === 'review') && <PhotoDialog onClose={exitCamera} busy={sending}>
-      {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto} />}
+      {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto}
+        onRealAr={realAr ? launchRealAr : undefined} realArReady={ar === 'webxr' || ql.ready} />}
       {phase === 'review' && photo && <div className="encounter-review">
         <div className="encounter-review-heading"><h2>Ảnh cùng {mascot.name}</h2>
           <button type="button" aria-label="Đóng ảnh" disabled={sending} onClick={exitCamera}><X /></button></div>
@@ -259,9 +268,13 @@ function PhotoDialog({ children, onClose, busy }: { children: ReactNode; onClose
     onCancel={e => { e.preventDefault(); if (!busy) onClose() }}>{children}</dialog>
 }
 
-type CameraProps = { eventId: string; mascot: MascotAsset; onClose: () => void; onCapture: (image: string) => void }
+type CameraProps = {
+  eventId: string; mascot: MascotAsset; onClose: () => void; onCapture: (image: string) => void
+  /** Có khi máy hỗ trợ AR thật: nút "AR thật" trên thanh trên của camera. */
+  onRealAr?: () => void; realArReady?: boolean
+}
 
-function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
+function EncounterCamera({ eventId, mascot, onClose, onCapture, onRealAr, realArReady = false }: CameraProps) {
   const video = useRef<HTMLVideoElement>(null)
   const overlay = useRef<HTMLCanvasElement>(null)
   const [zoomPercent, setZoomPercent] = useState(100)
@@ -431,6 +444,11 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
     </div>
     <div className="encounter-top">
       <button type="button" className="camera-control" onClick={onClose} aria-label="Đóng camera"><X /></button>
+      {onRealAr && <button type="button" className="camera-control encounter-ar" disabled={!realArReady} onClick={() => {
+        // Nhả camera trước để WebXR / Quick Look dùng được.
+        (video.current?.srcObject as MediaStream | null)?.getTracks().forEach(t => t.stop())
+        onRealAr()
+      }}><Box size={18} />AR thật</button>}
       <button type="button" className="camera-control" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')} aria-label="Đổi camera"><SwitchCamera /></button>
     </div>
     {hint && (hint.action === 'grant'

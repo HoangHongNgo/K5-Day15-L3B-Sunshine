@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { initialFoot } from './encounterControls'
 import { anchorAt, FOOT_X, FOOT_Y, groundReady, pitchDownFromBeta, projectAnchor, type GroundAnchor, type Pose, type ScreenFoot } from './groundAnchor'
 
 export type GroundStatus = 'searching' | 'locked' | 'fallback' | 'needs-permission'
@@ -42,6 +43,8 @@ export function useGroundAnchor({ enabled, viewport, onFoot }: Options) {
     readySince.current = 0
     manualPlaced.current = false
     setStatus('searching')
+    // Mascot hiện ngay ở góc dưới phải; khi dò được sàn thì neo vào sàn.
+    foot.current(initialFoot(false))
     const needsPermission = typeof DeviceOrientationEvent !== 'undefined' &&
       typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission === 'function'
     let gotEvent = false

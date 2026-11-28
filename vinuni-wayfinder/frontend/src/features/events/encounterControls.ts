@@ -11,8 +11,15 @@ export type EncounterHint = {
   action?: 'grant'
 }
 
+/** Tới nơi theo tuyến: mở camera check-in ngay (getUserMedia không cần chạm), mascot hiện liền. */
 export function initialEncounterPhase({ arrived, demoNearby }: { arrived: boolean; demoNearby: boolean }): EncounterPhase {
-  return arrived || demoNearby ? 'unlocked' : 'entry'
+  if (arrived) return 'camera'
+  return demoNearby ? 'unlocked' : 'entry'
+}
+
+/** Vị trí đứng mặc định (góc dưới phải) để mascot hiện ngay, trước khi con quay dò được mặt sàn. */
+export function initialFoot(selfie: boolean): ScreenFoot {
+  return { x: 0.72, y: selfie ? 0.9 : 0.88, zoom: 1 }
 }
 
 export function isFootVisible(foot: ScreenFoot | null): foot is ScreenFoot {

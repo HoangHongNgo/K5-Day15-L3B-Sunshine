@@ -34,7 +34,10 @@ export function JourneyCamera({ tracking, welcome, destination, waypoints, step,
   const waypoint = waypoints[step]
   const next = waypoints[step + 1]
 
+  // Tới nơi: nhường camera cho màn check-in (mở camera thứ hai cùng lúc làm treo/tắt luồng trên nhiều máy).
+  const yieldCamera = Boolean(welcome)
   useEffect(() => {
+    if (yieldCamera) { setCameraStatus(''); return }
     const video = player.current!
     let request = 0
     let stream: MediaStream | undefined
@@ -72,7 +75,7 @@ export function JourneyCamera({ tracking, welcome, destination, waypoints, step,
     void open()
     document.addEventListener('visibilitychange', open)
     return () => { document.removeEventListener('visibilitychange', open); release() }
-  }, [])
+  }, [yieldCamera])
 
   async function locate() {
     const video = player.current
