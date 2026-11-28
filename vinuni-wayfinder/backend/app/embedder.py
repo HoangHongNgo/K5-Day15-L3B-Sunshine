@@ -57,7 +57,12 @@ class Embedder:
                                     dtype=np.float32) / 255.0 - MEAN) / STD
                         for im in images[i:i + batch]])
                     x = torch.from_numpy(arr).permute(0, 3, 1, 2).to(self.device)
-                    y = self._model(x)
+                    try:
+                        y = self._model(x)
+                    except torch.cuda.OutOfMemoryError:   # GPU 4 GB: chạy lại từng ảnh
+                        torch.cuda.empty_cache()
+                        y = [self._model(x[j:j + 1]) for j in range(len(x))]
+                        y = torch.cat([t[0] if isinstance(t, tuple) else t for t in y])
                     y = y[0] if isinstance(y, tuple) else y
                     out.append(y.float().cpu().numpy())
         v = np.concatenate(out) if out else np.zeros((0, DIM), np.float32)

@@ -26,6 +26,28 @@ async function req(path, opts) {
   return handle(res)
 }
 
+// Backend xử lý video nền (cắt khung -> embed -> lưu); hỏi trạng thái đến khi xong.
+// Mất mạng thoáng qua khi đang poll thì thử lại, tối đa ~10 phút.
+export async function pollJob(job, onStage, { intervalMs = 1500, maxMs = 600000 } = {}) {
+  const t0 = Date.now()
+  let fails = 0
+  while (Date.now() - t0 < maxMs) {
+    await new Promise((r) => setTimeout(r, intervalMs))
+    let j
+    try {
+      j = await req('/api/spots/jobs/' + job)
+      fails = 0
+    } catch (e) {
+      if (e.status === 404 || ++fails > 5) throw e
+      continue
+    }
+    if (j.status === 'done') return j.result
+    if (j.status === 'error') throw new ApiError(j.code || 'processing_failed', j.message, 500)
+    onStage?.(j.stage)
+  }
+  throw new ApiError('timeout', 'Xử lý video quá lâu. Kiểm tra cửa sổ backend.', 0)
+}
+
 export const api = {
   health: () => req('/api/health'),
   destinations: () => req('/api/destinations'),
@@ -54,7 +76,7 @@ export const api = {
     return req('/api/import', { method: 'POST', body: fd })
   },
   // Upload video có tiến trình (fetch không báo tiến trình upload)
-  uploadVideo(nodeId, file, onProgress) {
+  uploadVideo(nodeId, file, onProgress, onStage) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       xhr.open('POST', '/api/spots/' + encodeURIComponent(nodeId) + '/video')
@@ -62,7 +84,7 @@ export const api = {
       xhr.onload = () => {
         let body = null
         try { body = JSON.parse(xhr.responseText) } catch { /* */ }
-        if (xhr.status >= 200 && xhr.status < 300) resolve(body)
+        if (xhr.status >= 200 && xhr.status < 300) resolve(body?.job ? pollJob(body.job, onStage) : body)
         else reject(new ApiError(body?.detail?.code || 'http_' + xhr.status, body?.detail?.message || 'Lỗi tải video (' + xhr.status + ')', xhr.status))
       }
       xhr.onerror = () => reject(new ApiError('offline', 'Mất kết nối khi tải video', 0))

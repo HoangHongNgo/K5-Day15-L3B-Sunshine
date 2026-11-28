@@ -4,7 +4,9 @@ from __future__ import annotations
 import io
 import secrets
 import tempfile
+import threading
 import time
+import traceback
 import unicodedata
 from pathlib import Path
 
@@ -44,6 +46,7 @@ FRAMES_PER_VIDEO = 40
 MAX_UPLOAD = 200 * 1024 * 1024
 
 _photos: dict[str, dict] = {}
+_jobs: dict[str, dict] = {}          # tác vụ xử lý video chạy nền
 _graph_cache: dict = {'key': None, 'graph': None}
 
 
@@ -215,34 +218,72 @@ async def add_spot_video(node_id: str, video: UploadFile = File(...)):
                 err(413, 'too_large', 'Video quá lớn (tối đa 200 MB)')
             tmp.write(chunk)
         tmp_path = tmp.name
+    # Cắt khung + embed + lưu có thể mất vài phút (nạp model lần đầu ~2 phút) nên chạy nền;
+    # một request HTTP dài sẽ bị proxy/tunnel/điện thoại ngắt và mất hết.
+    _prune_jobs()
+    job_id = secrets.token_hex(6)
+    _jobs[job_id] = {'status': 'running', 'stage': 'extract', 'spot': node_id, 't': time.time()}
+    threading.Thread(target=_run_video_job, args=(job_id, node_id, tmp_path), daemon=True).start()
+    return JSONResponse(status_code=202, content={'ok': True, 'job': job_id})
+
+
+@app.get('/api/spots/jobs/{job_id}')
+def video_job(job_id: str):
+    j = _jobs.get(job_id)
+    if j is None:
+        err(404, 'no_job', 'Không tìm thấy tác vụ (máy chủ có thể đã khởi động lại). Hãy tải video lại.')
+    return {k: v for k, v in j.items() if k != 't'}
+
+
+def _prune_jobs():
+    old = [k for k, v in _jobs.items() if time.time() - v['t'] > 3600 and v['status'] != 'running']
+    for k in old:
+        _jobs.pop(k, None)
+
+
+def _run_video_job(job_id: str, node_id: str, tmp_path: str):
+    job = _jobs[job_id]
     try:
-        images, seen = _extract_frames(tmp_path, FRAMES_PER_VIDEO)
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)   # không giữ video gốc
-    if len(images) < 5:
-        err(422, 'few_frames', f'Chỉ lấy được {len(images)} khung rõ nét; hãy quay lại chậm hơn, đủ sáng')
-    vid = f'v{int(time.time())}_{secrets.token_hex(2)}'
-    t0 = time.time()
-    vecs = embedder(images)
-    try:
-        index.add(vecs, node_id, 'video', vid)
-        thumb_set = images[:: max(1, len(images) // 4)][:4]
-        if REMOTE is not None:
-            rows = []
-            for j, im in enumerate(thumb_set):
-                buf = io.BytesIO()
-                im.copy().resize((im.width // 2, im.height // 2)).save(buf, 'JPEG', quality=70)
-                name = f'{vid}_{j}.jpg'
-                REMOTE.upload('frames', f'{node_id}/{name}', buf.getvalue(), 'image/jpeg')
-                rows.append({'spot': node_id, 'name': name})
-            REMOTE.insert('frame_thumbs', rows, on_conflict='spot,name')
-        else:
-            thumbs = DATA / 'frames' / node_id
-            thumbs.mkdir(parents=True, exist_ok=True)
-            for j, im in enumerate(thumb_set):
-                im.copy().resize((im.width // 2, im.height // 2)).save(thumbs / f'{vid}_{j}.jpg', quality=70)
+        try:
+            images, seen = _extract_frames(tmp_path, FRAMES_PER_VIDEO)
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)   # không giữ video gốc
+        if len(images) < 5:
+            job.update(status='error', code='few_frames',
+                       message=f'Chỉ lấy được {len(images)} khung rõ nét; hãy quay lại chậm hơn, đủ sáng')
+            return
+        vid = f'v{int(time.time())}_{secrets.token_hex(2)}'
+        t0 = time.time()
+        job['stage'] = 'embed'
+        vecs = embedder(images)
+        job['stage'] = 'save'
+        result = _save_video_vectors(node_id, images, vecs, vid, seen, t0)
+        job.update(status='done', stage='done', result=result)
     except supa.SupabaseError as e:
-        err(502, 'supabase', f'Lỗi Supabase: {e.message}')
+        job.update(status='error', code='supabase', message=f'Lỗi Supabase: {e.message}')
+    except Exception as e:  # noqa: BLE001 — báo lại cho người dùng thay vì chết im lặng
+        traceback.print_exc()
+        job.update(status='error', code='processing_failed',
+                   message=f'Xử lý video thất bại ở bước {job.get("stage")}: {type(e).__name__}: {e}')
+
+
+def _save_video_vectors(node_id, images, vecs, vid, seen, t0):
+    index.add(vecs, node_id, 'video', vid)
+    thumb_set = images[:: max(1, len(images) // 4)][:4]
+    if REMOTE is not None:
+        rows = []
+        for j, im in enumerate(thumb_set):
+            buf = io.BytesIO()
+            im.copy().resize((im.width // 2, im.height // 2)).save(buf, 'JPEG', quality=70)
+            name = f'{vid}_{j}.jpg'
+            REMOTE.upload('frames', f'{node_id}/{name}', buf.getvalue(), 'image/jpeg')
+            rows.append({'spot': node_id, 'name': name})
+        REMOTE.insert('frame_thumbs', rows, on_conflict='spot,name')
+    else:
+        thumbs = DATA / 'frames' / node_id
+        thumbs.mkdir(parents=True, exist_ok=True)
+        for j, im in enumerate(thumb_set):
+            im.copy().resize((im.width // 2, im.height // 2)).save(thumbs / f'{vid}_{j}.jpg', quality=70)
     return {'ok': True, 'video': vid, 'frames': len(images), 'seen': seen,
             'embedMs': round((time.time() - t0) * 1000), 'indexSize': len(index),
             'spot': index.counts().get(node_id)}
