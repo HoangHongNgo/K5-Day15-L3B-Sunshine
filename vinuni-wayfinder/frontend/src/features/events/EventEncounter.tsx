@@ -1,5 +1,5 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { ArrowUp, Camera, Hand, LocateFixed, MessageCircle, Music2, RefreshCw, ScanLine, Send, SwitchCamera, X } from 'lucide-react'
+import { useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowUp, Camera, Download, Hand, LocateFixed, MessageCircle, Music2, RefreshCw, ScanLine, Send, SlidersHorizontal, SwitchCamera, X } from 'lucide-react'
 import { MotionContext } from '../mascot/Mascot'
 import { isAnchor, type CampusEvent, type EventAnchor, type MascotAsset } from './events'
 import EventVoice from './EventVoice'
@@ -30,7 +30,7 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
   const indoorRequest = useRef<AbortController | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState('')
-  const [photo, setPhoto] = useState('')
+  const [photo, setPhoto] = useState<{ src: string; filename: string } | null>(null)
   const [consent, setConsent] = useState(false)
   const [sending, setSending] = useState(false)
   const checkedAt = useRef(0)
@@ -102,13 +102,30 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
       return
     }
     setMessage('')
-    setPhoto('')
+    setPhoto(null)
     setConsent(false)
     setPhase('camera')
   }
   function exitCamera() {
+    setPhoto(null)
+    setConsent(false)
     setMessage('')
     setPhase(demoNearby ? 'unlocked' : 'entry')
+  }
+  function reviewPhoto(src: string) {
+    const filename = `wayfinder-${event.id}-${Date.now()}.jpg`
+    setPhoto({ src, filename })
+    setConsent(false)
+    setMessage('')
+    setPhase('review')
+    // Start the local download while the shutter click still has user activation.
+    const download = document.createElement('a')
+    download.href = src
+    download.download = filename
+    document.body.appendChild(download)
+    try { download.click() }
+    catch { setMessage('Hãy chọn “Lưu ảnh về máy” để tải ảnh.') }
+    finally { download.remove() }
   }
   async function submit() {
     if (submitting.current || !consent || !photo) return
@@ -116,8 +133,8 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
     setSending(true)
     setMessage('')
     try {
-      await submitEncounterPhoto(event.id, photo, consent)
-      setPhoto('')
+      await submitEncounterPhoto(event.id, photo.src, consent)
+      setPhoto(null)
       setPhase('sent')
     } catch (reason) {
       setMessage(reason instanceof Error && !(reason instanceof TypeError) ? reason.message : 'Chưa kết nối được máy chủ. Ảnh vẫn ở đây để bạn thử lại.')
@@ -148,22 +165,40 @@ function Encounter({ event, mascot, anchor }: EncounterProps) {
         </button>
       </div>)}
     {phase === 'unlocked' && <button type="button" className="button button-primary" onClick={openCamera}><Camera size={17}/>Mở camera AR</button>}
-    {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera}
-      onCapture={image => { setPhoto(image); setConsent(false); setMessage(''); setPhase('review') }} />}
-    {phase === 'review' && <>
-      <img className="encounter-preview" src={photo} alt={`Ảnh vừa chụp cùng ${mascot.name}`}/>
-      <label className="encounter-consent"><input type="checkbox" checked={consent} disabled={sending} onChange={e => setConsent(e.target.checked)}/>
-        Tôi đồng ý gửi ảnh này cho {event.club}. CLB có thể duyệt và hiển thị ảnh trong album công khai của sự kiện.</label>
-      <div className="encounter-actions">
-        <button type="button" className="button button-primary" disabled={!consent || sending} onClick={() => void submit()}><Send size={16}/>{sending ? 'Đang gửi…' : 'Gửi ảnh cho CLB'}</button>
-        <button type="button" className="button button-quiet" disabled={sending} onClick={openCamera}><RefreshCw size={16}/>Chụp lại</button>
-        <button type="button" className="button button-quiet" disabled={sending} onClick={() => { setPhoto(''); setConsent(false); exitCamera() }}>Bỏ ảnh</button>
-      </div>
-    </>}
+    {(phase === 'camera' || phase === 'review') && <PhotoDialog onClose={exitCamera} busy={sending}>
+      {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto} />}
+      {phase === 'review' && photo && <div className="encounter-review">
+        <div className="encounter-review-heading"><h2>Ảnh cùng {mascot.name}</h2>
+          <button type="button" aria-label="Đóng ảnh" disabled={sending} onClick={exitCamera}><X /></button></div>
+        <img className="encounter-preview" src={photo.src} alt={`Ảnh vừa chụp cùng ${mascot.name}`}/>
+        <div className="encounter-review-actions">
+          <div className="encounter-actions">
+            <a className="button button-primary" href={photo.src} download={photo.filename}><Download size={17}/>Lưu ảnh về máy</a>
+            <button type="button" className="button button-quiet" disabled={sending} onClick={openCamera}><RefreshCw size={16}/>Chụp lại</button>
+          </div>
+          <p>Ảnh được tải dưới dạng JPG. Nếu điện thoại mở ảnh xem trước, bạn có thể nhấn giữ để lưu.</p>
+          <label className="encounter-consent"><input type="checkbox" checked={consent} disabled={sending} onChange={e => setConsent(e.target.checked)}/>
+            Tôi đồng ý gửi ảnh này cho {event.club} để BTC duyệt và đăng vào album công khai của sự kiện.</label>
+          <button type="button" className="button button-quiet" disabled={!consent || sending} onClick={() => void submit()}><Send size={16}/>{sending ? 'Đang gửi…' : 'Gửi ảnh cho CLB'}</button>
+          {message && <p role="status">{message}</p>}
+        </div>
+      </div>}
+    </PhotoDialog>}
     {phase === 'sent' && <><p role="status">Đã gửi ảnh cho {event.club} chờ duyệt.</p>
       <button className="button button-quiet" type="button" onClick={openCamera}><Camera size={16}/>Chụp ảnh khác</button></>}
-    {message && <p role="status">{message}</p>}
+    {phase !== 'review' && message && <p role="status">{message}</p>}
   </section>
+}
+
+function PhotoDialog({ children, onClose, busy }: { children: ReactNode; onClose: () => void; busy: boolean }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const dialog = ref.current!
+    dialog.showModal()
+    return () => dialog.close()
+  }, [])
+  return <dialog ref={ref} className="encounter-dialog" aria-label="Chụp ảnh cùng mascot"
+    onCancel={e => { e.preventDefault(); if (!busy) onClose() }}>{children}</dialog>
 }
 
 type CameraProps = { eventId: string; mascot: MascotAsset; onClose: () => void; onCapture: (image: string) => void }
@@ -176,7 +211,7 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
   const [facing, setFacing] = useState<'environment' | 'user'>('environment')
   const [selfie, setSelfie] = useState(false)
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
-  const [placed, setPlaced] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(false)
   const [talk, setTalk] = useState(false)
   const [error, setError] = useState('')
   const { paused } = useContext(MotionContext)
@@ -215,7 +250,7 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
     const ended = () => fail('Camera đã ngắt kết nối. Hãy đổi camera hoặc đóng và mở lại.')
     async function start() {
       setStatus('loading')
-      setPlaced(false)
+      setToolsOpen(false)
       setTalk(false)
       setError('')
       if (!navigator.mediaDevices?.getUserMedia) { fail('Camera cần HTTPS hoặc localhost và trình duyệt hỗ trợ camera.'); return }
@@ -237,6 +272,7 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
       }
       try {
         stage.current = createEncounterStage(canvas, mascot)
+        stage.current.place(.5, .72)
         canvas.addEventListener('webglcontextlost', lost)
         setStatus('ready')
       } catch { fail('Trình duyệt chưa dựng được mascot 3D. Hãy thử thiết bị hỗ trợ WebGL 2.') }
@@ -257,10 +293,9 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
   function place(px: number, py: number) {
     if (status !== 'ready') return
     stage.current?.place(px, py)
-    setPlaced(true)
   }
   function capture() {
-    if (!stage.current || !overlay.current || !video.current || !placed) return
+    if (!stage.current || !overlay.current || !video.current || status !== 'ready') return
     try {
       stage.current.render()
       onCapture(captureEncounterPhoto(video.current, overlay.current, selfie))
@@ -281,15 +316,13 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
           const rect = e.currentTarget.getBoundingClientRect()
           place((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height)
         }}/>}
-      {status !== 'failed' && (!placed || status === 'loading') &&
-        <span className="encounter-hint">{status === 'loading' ? 'Đang mở camera…' : 'Chạm vào khung hình để đặt mascot'}</span>}
     </div>
-    <div className="encounter-actions">
-      <button type="button" className="button button-quiet" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')}><SwitchCamera size={16}/>Đổi camera</button>
-      <button type="button" className="button button-quiet" onClick={onClose}><X size={16}/>Đóng camera</button>
+    <div className="encounter-top">
+      <button type="button" className="camera-control" onClick={onClose} aria-label="Đóng camera"><X /></button>
+      <button type="button" className="camera-control" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')} aria-label="Đổi camera"><SwitchCamera /></button>
     </div>
-    {error && <p role="alert">{error}</p>}
-    {placed && status === 'ready' && <>
+    {(error || status === 'loading') && <p className="encounter-hint" role={error ? 'alert' : 'status'}>{error || 'Đang mở camera…'}</p>}
+    {toolsOpen && status === 'ready' && <div className="encounter-tools">
       <label className="encounter-size">Kích thước mascot <span aria-hidden="true">{zoomPercent}%</span>
         <input type="range" min={60} max={140} step={10} value={zoomPercent} aria-valuetext={zoomPercent + '%'}
           onChange={e => setZoomPercent(e.currentTarget.valueAsNumber)} />
@@ -301,7 +334,12 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture }: CameraProps) {
         <button type="button" className="button button-quiet" disabled={paused} onClick={() => play('dance')}><Music2 size={16}/>Nhảy múa</button>
       </div>
       {talk && <EventVoice eventId={eventId} onSpeakingChange={onSpeakingChange}/>}
-      <button type="button" className="button button-primary" onClick={capture}><Camera size={17}/>Chụp ảnh cùng {mascot.name}</button>
-    </>}
+    </div>}
+    <div className="encounter-bottom">
+      <button type="button" className="encounter-shutter" aria-label={`Chụp ảnh cùng ${mascot.name}`}
+        disabled={status !== 'ready'} onClick={capture}><Camera size={26}/></button>
+      <button type="button" className="camera-control encounter-adjust" aria-label="Tùy chỉnh mascot" aria-expanded={toolsOpen}
+        disabled={status !== 'ready'} onClick={() => { setToolsOpen(!toolsOpen); setTalk(false) }}><SlidersHorizontal /></button>
+    </div>
   </div>
 }
