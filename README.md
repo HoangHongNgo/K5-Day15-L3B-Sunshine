@@ -6,7 +6,7 @@
 
 **Lát cắt của nhóm:** một sinh viên mới hoặc khách trong khuôn viên VinUni (Gia Lâm) · tìm đường tới một phòng/địa điểm/hoạt động · AI quyết định mình đang đứng ở đâu (GPS ngoài trời, nhận diện ảnh hành lang trong tầng trệt Toà G và Toà I) và nên dẫn đường / hỏi lại / từ chối · mascot dẫn đường bằng thẻ chỉ dẫn từng bước. Vini dẫn đường ở dạng 2D. Trải nghiệm sự kiện có mascot 3D riêng.
 
-**Trạng thái CP3 ngày 28/11/2026.** CLI đã chạy GPT-4.1 mini trên 20 câu, có usage và trace cho từng câu. Lượt 1 đang chờ người chấm duyệt. Web đã mở Camera hoặc Thẻ để dẫn đường và trả kết quả MegaLoc qua API production. Một ảnh đã cho kết quả, cần thêm ảnh có nhãn thực địa để đo độ chính xác trong hai tòa. [Demo](https://vinuni-wayfinder.vercel.app/) · [Báo cáo lượt 1](eval/report.md) · [Thiết kế](spec.md) · [Dữ liệu](data/DATA_CARD.md)
+**Hồ sơ sau CP4 ngày 28/11/2026.** CLI đã chạy GPT-4.1 mini trên 20 câu và có usage cùng trace cho từng câu. Lượt 1 đang chờ thành viên duyệt điểm. Nhánh hỏi lại đã được cập nhật và kiểm tra bằng cách phát lại 20 phản hồi đã lưu. Lượt API mới đang chờ khóa còn hiệu lực. Nhóm có một bản ghi demo trên điện thoại tới C401 và mở Tia trong AR. [Mở Wayfinder](https://vinuni-wayfinder.vercel.app/) · [Slide](demo-slides.pdf) · [Demo trên điện thoại](evidence/mobile-demo.md) · [Báo cáo đánh giá](eval/report.md)
 
 **Tham khảo:** cách định vị trong nhà tham khảo dự án Hound Around (BU Spark! DS+X 2026); mô hình nhận diện vị trí MegaLoc của Gabriele Berton và Carlo Masone. Nhóm tự cài đặt, không chép code. Dữ liệu quay (ảnh, sơ đồ, đồ thị, vector) không nằm trong repo công khai.
 
@@ -142,5 +142,5 @@ Nhóm dùng Codex cho lượt đánh giá CP3, nguồn câu B13–B20, mô phỏ
 | 4 | Bản chạy thử làm trọn lát cắt | `codebase/` · lệnh ở mục "Lệnh" |
 | 5 | Định nghĩa "tốt" + bộ câu thử | `data/DATA_CARD.md` · `eval/` |
 | 6 | Mô phỏng chi phí khi dùng thật | `cost/` |
-| 7 | Slide + demo + video dự phòng | `demo-slides.pdf` ở thư mục gốc · link video: ____ |
+| 7 | Slide + demo + video dự phòng | [Slide PDF ở thư mục gốc](demo-slides.pdf) · [Video dự phòng](https://raw.githubusercontent.com/HoangHongNgo/K5-Day15-L3B-Sunshine/main/slides/demo-du-phong.webm) · [Kịch bản demo](slides/outline.md) |
 | + | *Bonus:* người dùng thử | `validation/log.md` |

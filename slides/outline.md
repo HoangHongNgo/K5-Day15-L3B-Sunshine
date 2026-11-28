@@ -14,10 +14,15 @@
 | 7 | Kết luận | Go / iterate / stop — dẫn số ở trang 1, 5, 6 | — | ☐ |
 | 8 | Nếu có thêm 1 tuần | 2–3 việc, trỏ về lỗi còn lại / phản hồi người dùng | `eval/report.md` mục 4 · `validation/log.md` | ☐ |
 
-**Trước khi lên:** tải repo về một máy khác (hoặc thư mục mới), chạy theo mục "Chạy trong 3 phút" của `README.md` · `.env` có trên máy demo, đã gọi thử 1 câu trong vòng 1 giờ trước giờ demo · video dự phòng mở được bằng cửa sổ ẩn danh · biết bản chạy thử sẽ làm gì với **1 câu thử lạ** của giám khảo.
+**Tệp dùng khi demo:** [Bản PDF 8 trang](../demo-slides.pdf) · [Video dự phòng](demo-du-phong.webm) · [Ghi chép demo thực địa C401](../evidence/mobile-demo.md).
 
-Ai nói trang nào (mỗi người ≥1 phần):
+Chạy `python3 run.py` với khóa của nhóm. Dùng B01 để minh họa tuyến rõ ràng, rồi dùng B13 để minh họa yêu cầu trái với danh mục. Khi gặp lỗi mạng, mở video dự phòng để trình bày luồng thẻ chỉ dẫn bằng dữ liệu minh họa và kết quả thật của lời gọi MegaLoc production. Báo cáo kết quả chấm theo trạng thái trong [eval/report.md](../eval/report.md).
+
+Phân đoạn trình bày đề xuất để nhóm chốt:
 
 | Trang | Người nói |
 |---|---|
-| | |
+| 1–2 | Nguyễn Minh Phương |
+| 3–4 | Nguyễn Văn Hải Quân |
+| 5–6 | Nguyễn Ánh Dương |
+| 7–8 | Ngô Hồng Hoàng |

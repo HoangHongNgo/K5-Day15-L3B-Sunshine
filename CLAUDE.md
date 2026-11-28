@@ -123,7 +123,8 @@ Luồng màn: Chụp → Đang định vị → Xác nhận / Ảnh thứ hai �
 ## Việc còn lại
 
 - [x] Nối frontend vào backend wayfinder, gộp `web/` vào `vinuni-wayfinder/frontend/` và tổ chức theo feature (`src/features/`).
-- [ ] Thử end-to-end trên điện thoại (HTTPS, camera, GPS, la bàn) — chưa thử lần nào.
+- [x] Có một [bản ghi demo trên điện thoại tại tòa C](evidence/mobile-demo.md), từ mở sự kiện đến định vị bằng camera, theo các chặng và gặp Tia trong AR.
+- [ ] Xác minh GPS, la bàn và độ chính xác định vị qua nhiều lượt trên điện thoại.
 - [ ] Thu thập dữ liệu thật ở Tòa G và Tòa I; đi bộ kiểm đồ thị campus OSM, tên/vị trí phòng, hướng tên cửa Tòa G.
 - [ ] Bộ đo nhận diện bằng ảnh + hiệu chỉnh ngưỡng (thêm vào bộ chính là quyết định của nhóm, không thêm im lặng).
 

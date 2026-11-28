@@ -57,7 +57,13 @@ MODEL_PROVIDER=openai MODEL_NAME=gpt-4.1-mini MODEL_BASE_URL=https://api.openai.
 | Lượt | Run ID | Model | Số câu có output | Token vào / ra | Điểm chính thức |
 |---|---|---|---:|---:|---|
 | 1 | `run-1@20261128-060141` | gpt-4.1-mini | 20/20 | 17.291 / 1.345 | Chờ thành viên duyệt |
+| Sau CP4 | Phát lại trace của lượt 1 qua code cập nhật | Phản hồi đã lưu của GPT-4.1 mini | 20/20 | Dùng trace lượt 1 | Kiểm tra hồi quy, không phát sinh lần gọi mới |
+| 2 | Chờ khóa dùng được | gpt-4.1-mini | — | — | Kiểm tra kết nối nhận HTTP 401 |
 
 Trước lượt 1, ba câu thử B01–B03 trong bản sao riêng của khung nhận được 2.704 token vào và 190 token ra từ API. Bản sao bảo toàn kết quả thử giả cũ trong thư mục làm việc. Dấu vết đầy đủ của lượt chính ở [CSV](run-1.csv) và [trace](../traces/run-1.jsonl). Mã SHA-256 của bộ câu đã dùng là `2a2e25d783f3edbe1685eb96029050d1214111e7496abf4db183e158470f2223`.
 
 [Biên bản đối chiếu](report.md) có điểm đề xuất và các lỗi nội dung. Người chấm thứ hai dùng [phiếu 5 câu](review-run-1.csv) trước khi xem biên bản. Sau khi thành viên điền cột `pass` của lượt chính, chạy `python3 run.py score eval/run-1.csv`.
+
+## 6. Lỗi quan trọng
+
+B13 ưu tiên danh mục mẫu khi người dùng nêu rõ tòa khác. B14 khẳng định sai một tòa thật không tồn tại. B10 hỏi vị trí bằng mã nội bộ. Đợt sau CP4 giới hạn câu hỏi lại vào dữ liệu của bản đồ và mốc quan sát được. Lượt đánh giá sau cải tiến sẽ dùng lại bộ câu và tiêu chí đã chốt. [Đối chiếu từng câu](report.md)

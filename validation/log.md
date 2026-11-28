@@ -1,5 +1,7 @@
 # Người dùng thử *(bonus)*
 
+Nhóm đã cung cấp [một bản ghi demo trên điện thoại tại tòa C](../evidence/mobile-demo.md). Clip ghi nhận thao tác trên sản phẩm. Phần bonus bên dưới chờ phiên thử có người ngoài nhóm và ghi chép quan sát.
+
 > Điền ở guide bước 4.3 — 2–3 người ngoài nhóm, ~10 phút / người, theo 5 nhịp: làm quen · bối cảnh · giao việc · quan sát · hỏi sau. Ôn lại: ngày 5, ngày 13. Chấm ở rubric Bonus.
 > Không ghi tên: ghi vai. Hành vi quan sát được nặng hơn lời nói; toàn lời khen = phiên chưa đạt, giao việc khó hơn.
 > Người dùng thử **không thay được** bằng chứng pain ở `evidence/`.

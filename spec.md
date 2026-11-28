@@ -1,9 +1,10 @@
-# AI SPEC — Wayfinder chỉ đường trong khuôn viên VinUni (mascot dẫn đường) · Nhóm Sunshine · Phòng __ · Zone __
+# AI SPEC — Wayfinder chỉ đường trong khuôn viên VinUni (mascot dẫn đường) · Sunshine · L3B
 
 > Mốc nộp: §7 chốt chuẩn "đạt" tại **CP2 19:30 Thứ Sáu 27/11** · §0–§7 nộp **CP3 10:00 Thứ Bảy 28/11** · đủ §0–§10 **CP4 14:30 Thứ Bảy 28/11** · §10 changelog ghi tiếp đến **23:59 Thứ Bảy 28/11**.
 > Đầu mỗi mục ghi bước guide (`02-guide.md` trong repo đề) chỉ cách điền. Mỗi mục ngắn, có số và nguồn; chi tiết để ở file được trỏ tới. Xoá dòng hướng dẫn trong ngoặc vuông khi điền xong.
 
 Track: F (Làn khác) — bài toán: sinh viên mới khó tìm đường tới nơi tổ chức hoạt động trong trường
+Demo ghi nhận tại phòng C401. Zone nộp bài chờ nhóm xác nhận. [Bản ghi demo](evidence/mobile-demo.md)
 Data BTC cấp đã dùng (nếu có — không commit nguyên file): không (track F, dữ liệu tự dựng `synthetic`)
 
 ## §0. Người mới tìm phòng như thế nào
@@ -28,7 +29,9 @@ Tòa I được 15 người chọn là nơi dễ nhầm, tòa G được 8 ngư�
 | Tra phòng qua tên sự kiện | 9 người chọn nguyên nhân biết tên sự kiện nhưng thiếu tòa/phòng. | Cho phép bắt đầu tuyến từ trang sự kiện khi CLB đã điền địa điểm. |
 | Chỉ đường chỉ bằng camera | 5 người chọn camera có nhân vật ảo, 16 người chọn bản đồ 2D. Câu hỏi cho chọn nhiều phương án. | Loại phương án bắt buộc mở camera. Cho đổi Camera ↔ Thẻ giữa đường. |
 
-**Tác động cần đo** là số phút tiết kiệm và số lần tới đúng cửa trước giờ. Con số 3–5 phút là thời gian người trả lời cho biết đã mất. Để đo phần ứng dụng tiết kiệm được, cần bấm giờ các hành trình tương đương theo cách cũ và với Wayfinder, rồi ghi cả trường hợp đi sai. Khảo sát chưa thu số chuyến mỗi tháng nên chưa tính được tác động tháng. Các tần suất dùng để thử chi phí được ghi rõ là giả định trong [cấu hình mô phỏng](cost/personas.yaml). [Tổng hợp khảo sát](evidence/summary.md)
+**Tác động cần đo** là số phút tiết kiệm và số lần tới đúng cửa trước giờ. Con số 3–5 phút là thời gian người trả lời cho biết đã mất. Để đo phần ứng dụng tiết kiệm được, cần bấm giờ các hành trình tương đương theo cách cũ và với Wayfinder, rồi ghi cả trường hợp đi sai. Khảo sát chưa thu số chuyến mỗi tháng. Các tần suất dùng để thử chi phí được ghi rõ là giả định trong [cấu hình mô phỏng](cost/personas.yaml). [Tổng hợp khảo sát](evidence/summary.md)
+
+**Kịch bản cơ sở để ra quyết định.** Với 27 người dùng/tháng *(tự ước tính, lấy cỡ mẫu khảo sát làm quy mô pilot)*, 13/27 người chọn mức mất 3–5 phút, và 1 lần gặp cảnh đó/người/tháng *(tự ước tính)*, thời gian đi vòng của nhóm này là `27 × 13/27 × 1 × 3–5 = 39–65 phút/tháng`. Nếu Wayfinder giảm được một nửa thời gian đó *(giả định để kiểm tra)*, tác động dự kiến là **19,5–32,5 phút/tháng**, tương đương 0,72–1,20 phút/người/tháng tính trên cả nhóm 27 người. Mô hình này dùng mức mất thời gian tự báo cáo và bỏ qua hậu quả trễ, lỡ hoạt động, lỡ điểm danh. [Nguồn khảo sát, câu 7](evidence/summary.md) · [Kịch bản chi phí](cost/cost-estimate.md)
 
 ## §3. Giải pháp tương tự *(guide 2.1)*
 - **Hound Around** (BU Spark! DS+X 2026, app web chỉ đường trong toà CDS của Đại học Boston; nguồn: trang Devpost của dự án và repo GitHub công khai `DxubleBTW/Hound-Around`): đáng học — nhận diện vị trí bằng một ảnh hành lang, nói thẳng khi chưa chắc (top 3 hoặc xin ảnh thứ hai) thay vì đoán, và cho gõ số phòng khi không chụp được; đáng né — chỉ nhận diện sau khi chụp ảnh, không theo dõi liên tục, và dữ liệu quay phải làm tay cho từng toà; mình khác — thêm GPS ngoài trời giữa các toà, thêm màn thu thập dữ liệu ngay trên điện thoại, và dữ liệu là toà của VinUni. Nhóm tự cài đặt, không chép code (repo đó không có giấy phép khi nhóm kiểm). Số liệu độ chính xác của họ chỉ để tham khảo, đo trên toà khác.
@@ -96,6 +99,7 @@ flowchart LR
   | G1/G2 — nói rõ làm được gì | lời từ chối nói mascot chỉ dẫn đường trong trường, việc khác liên hệ BTC / phòng CTSV |
 
 - **Bản đã chạy ngày 28/11.** Frontend tại `vinuni-wayfinder/frontend/` gọi backend qua Vercel. Health trả 240 vector, MegaLoc đã nạp và lưu trữ dùng Supabase. Một ảnh gửi tới `/api/locate` trả nhãn “Hành lang phía Đông”, điểm 0,90, thời gian xử lý 432 ms và thời gian cả yêu cầu 1,07 giây. Đây là một phản hồi của hệ thống. Cần ảnh mới có nhãn do người đứng tại từng mốc xác nhận để đo độ chính xác ở G và I. [Ứng dụng](https://vinuni-wayfinder.vercel.app/) · [API health](https://vinuni-wayfinder.vercel.app/api/health)
+- **Demo trên điện thoại.** Bản ghi tòa C cho thấy người dùng mở sự kiện, chọn C401, định vị bằng camera, theo các chặng và mở Tia trong AR. Một phép thử sau CP4 dùng ảnh khuôn viên ngoài trời vẫn nhận `tier=auto`, điểm phiếu 0,70 và độ tương đồng 0,106. Bộ ảnh có nhãn cần bao gồm cả ảnh ngoài phạm vi để kiểm mức tự định vị. [Demo trên điện thoại](evidence/mobile-demo.md) · [Video thử API](slides/demo-du-phong.webm)
 - **Khung đánh giá CLI.** `codebase/agent.py` dùng GPT-4.1 mini chọn hành động. Công cụ tính đường đọc 12 địa điểm và 11 lối đi giả lập, công cụ tra lịch đọc 6 sự kiện giả lập. Kết quả benchmark đo luồng hỏi bằng văn bản. [Hồ sơ đánh giá](eval/README.md)
 
 ## §5. Chỗ khó — 4 lớp + ≥6 kịch bản + 2 tấn công *(guide 2.3)*
@@ -124,10 +128,10 @@ flowchart LR
 - Lượt 1 `run-1@20261128-060141` đã trả 20/20 đầu ra. Điểm chính thức chờ thành viên duyệt. [Báo cáo](eval/report.md) · [Phiếu chấm độc lập](eval/review-run-1.csv)
 
 ## §8. Chi phí khi dùng thật *(guide 4.2)*
-Bản thử CP3 dùng GPT-4.1 mini, 10 phiên, 15 lượt hỏi. Với đơn giá token chuẩn, chi phí ước tính là 0,00071 USD/phiên cho phần hỏi đáp văn bản. Tần suất và quy mô người dùng là giả định. Mô phỏng đầy đủ và chi phí trên mỗi tác vụ thành công còn chờ CP4. [Số đo và giả định](cost/cost-estimate.md)
+Bản thử CP3 dùng GPT-4.1 mini, 10 phiên, 15 lượt hỏi, ước tính 0,00071 USD/phiên. Sau CP4, dự toán lấy mẫu 50 phiên từ token đã ghi ở lượt 1 cho kịch bản 10/27/54 người là 0,0376/0,1014/0,2028 USD/tháng cho phần hỏi đáp văn bản. Quy mô, tần suất và tác động là giả định. Mô phỏng gọi API 50 phiên chờ khóa hợp lệ và chi phí theo tác vụ thành công chờ tỷ lệ đạt đã duyệt. [Số đo, kịch bản và cách tái lập](cost/cost-estimate.md)
 
 ## §9. Rủi ro & an toàn
-- Dữ liệu *(thiết kế của wayfinder; đã cài trong mã chạy thử, chưa kiểm trên thiết bị thật)*: không lưu vị trí GPS của người dùng sau khi trả lời; ảnh người dùng gửi để định vị bị xoá ngay sau khi so khớp, chỉ giữ vector và dự đoán; không có tài khoản. Dữ liệu quay (ảnh hành lang, sơ đồ, đồ thị, vector) chỉ quay ở hành lang công cộng, làm mờ khuôn mặt trước khi lưu, và **không nằm trong repo công khai** vì một bộ ảnh đầy đủ của toà nhà là rủi ro an ninh. Từ 28/11/2026 dữ liệu này lưu chung trên project Supabase riêng tư của nhóm (mọi bảng bật RLS, không có policy; chỉ backend dùng khoá service đọc/ghi; khoá và mật khẩu DB chỉ để trong `backend/.env`, không commit). Không đưa dữ liệu cá nhân thật vào model gói miễn phí.
+- Dữ liệu: ảnh gửi để định vị được xử lý trong bộ nhớ. Backend giữ tạm vector và dự đoán để hỗ trợ người dùng xác nhận. Người đi có thể dùng bản đồ và mở sự kiện mà không cần tài khoản, còn quản lý sự kiện có cổng đăng nhập cho ban tổ chức. Dữ liệu thu thập (ảnh hành lang, sơ đồ, đồ thị, vector) lưu riêng, không commit. Khi thu thập cần tránh quay người, chức năng làm mờ mặt còn trong kế hoạch. Backend lấy khóa từ `.env` ở gốc repo, ngoài Git. [Data card](data/DATA_CARD.md)
 - AI **không được** làm gì kể cả khi người dùng yêu cầu: điểm danh hộ, in mọi mã check-in hoặc danh sách sinh viên, đoán vị trí khi chưa chắc (phải hỏi lại / hiện top 3 / xin ảnh thứ hai), bịa địa điểm, lộ trình hoặc giờ không có trong dữ liệu.
 - Ai có thể bị hại nếu AI sai, và nhóm chặn thế nào: người dùng bị dẫn sai chỗ và trễ giờ — chặn bằng độ tin cậy thật, top 3, ảnh thứ hai và gõ số phòng; người cần lối đi không bậc thang chưa được phục vụ (chưa làm chế độ tiếp cận, ghi rõ ở "Không làm"); dữ liệu quay dự kiến chỉ ở chiều cao cầm tay nên chưa kiểm ở tầm ngồi xe lăn.
 
@@ -155,4 +159,5 @@ Bản thử CP3 dùng GPT-4.1 mini, 10 phiên, 15 lượt hỏi. Với đơn gi�
 
 | Thời điểm | Đổi gì | Vì sao |
 |---|---|---|
-|  |  |  |
+| 28/11/2026 · sau CP4 | Giới hạn nhánh hỏi lại bằng lý do có cấu trúc và kiểm tra tòa, tầng, mã phòng trước khi sinh tuyến. Bổ sung test hồi quy và phát lại trace lượt 1. | B13 nêu sai tòa, B14 khẳng định sai vì thiếu dữ liệu, B10 trả mã nội bộ. [Báo cáo](eval/report.md) |
+| 28/11/2026 · sau CP4 | Hoàn thiện canvas bằng khảo sát, thêm dự toán impact và chi phí, ghi chép demo C401, bổ sung slide gốc, video dự phòng và nháp reflection. | Hồ sơ cần nguồn cho từng con số và phân biệt lần chạy thật, đầu ra phát lại và kịch bản ước tính. [Hồ sơ](README.md#bảy-hạng-mục-bắt-buộc--nằm-ở-file-nào) |
