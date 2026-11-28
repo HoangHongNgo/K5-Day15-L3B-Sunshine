@@ -32,9 +32,9 @@ Endpoint đối chiếu ở [`../../backend/app/main.py`](../../backend/app/main
 
 ## Nối dev và môi trường triển khai
 
-Hiện `web/vite.config.ts` không proxy wayfinder vì các luồng đang mock. Khi triển khai adapter, thêm proxy các endpoint wayfinder tới backend FastAPI (xem cấu hình ở `vinuni-wayfinder/frontend/vite.config.js`). Tránh proxy cả `/api` đè lên `/api/mascot/*` của middleware local. Khi chuyển mascot sang backend, có thể thống nhất proxy/API origin.
-
-Không đưa API key vào biến `VITE_*`. Trên điện thoại, camera và cảm biến cần HTTPS; dùng cùng origin qua proxy để tránh mixed content. Static Vercel không chạy FastAPI hoặc middleware Vite. Cấu hình service worker hiện loại `/api/` khỏi navigation fallback, không cache kết quả API.
+- **Dev local:** `vinuni-wayfinder/frontend/vite.config.ts` proxy các endpoint wayfinder và thu thập tới `WAYFINDER_BACKEND` (mặc định `http://127.0.0.1:8000`) mà không đè lên middleware `/api/mascot/*`.
+- **Production (Vercel + Tailscale Funnel):** `vinuni-wayfinder/frontend/vercel.json` rewrite `/api/:path*` và `/maps/:path*` cùng origin tới backend HTTPS cố định `https://minhphuong.tail65ddfe.ts.net` (trỏ vào `127.0.0.1:8010` qua `tailscale funnel --bg 8010` trên máy chủ backend; không dùng URL tạm thời `*.trycloudflare.com`). Cấu hình này được kiểm tra tự động trong `server/wayfinderProxy.test.ts`.
+- Không đưa API key vào biến `VITE_*`. Trên điện thoại, camera và cảm biến cần HTTPS; dùng cùng origin qua proxy để tránh mixed content. Static Vercel không chạy FastAPI hoặc middleware Vite. Cấu hình service worker hiện loại `/api/` và `/maps/` khỏi navigation fallback, không cache kết quả API.
 
 ## CLB và dữ liệu chung — đề xuất, chưa có API
 

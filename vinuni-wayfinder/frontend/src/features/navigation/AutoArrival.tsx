@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState, type RefObject } from 'react'
 import { requestSensorPermission, STEP_LENGTH_M, useCompass, useStepCounter } from '../../shared/lib/sensors.js'
 import { ApiError, type BackendStep } from '../wayfinder/wayfinderApi'
-import { ASK_RATIO, ASK_SNOOZE_RATIO, headingDelta, indoorProgress, trackingModes, type NextTurn } from './indoorProgress'
+import { ASK_RATIO, ASK_SNOOZE_RATIO, hasMotionReading, headingDelta, indoorProgress, trackingModes, type NextTurn } from './indoorProgress'
 import { gpsArrival, hasOutdoorTarget, locateVideoFrame, photoMatchesWaypoint } from './waypointArrival'
 
 /** Số bước đầu chặng dùng để chốt hướng đi gốc (người vừa rẽ xong cần vài bước để đi thẳng lại). */
@@ -24,17 +24,19 @@ type Props = ArrivalTracking & { video?: RefObject<HTMLVideoElement | null>; cam
 export function AutoArrival({ waypoint, finalNode, enabled, onToggle, onArrival, paused, nextTurn = null, video, cameraReady }: Props) {
   const [feedback, setFeedback] = useState('')
   const [visible, setVisible] = useState(() => typeof document === 'undefined' || !document.hidden)
+  const [motionReady, setMotionReady] = useState(false)
   const advance = useEffectEvent(onArrival)
-  const pdrSupported = typeof window !== 'undefined' && 'DeviceMotionEvent' in window
+  const indoorStep = waypoint.mapKind !== 'outdoor' && waypoint.meters > 0
+  const canUseMotion = indoorStep && typeof DeviceMotionEvent !== 'undefined'
   const { gps, pdr, photo } = trackingModes({
     outdoorGps: hasOutdoorTarget(waypoint),
-    indoorStep: waypoint.mapKind !== 'outdoor' && waypoint.meters > 0,
-    motionSensor: pdrSupported,
+    indoorStep,
+    motionSensor: motionReady,
     cameraReady: Boolean(video && cameraReady),
   })
-  const needsMotionPermission = pdr && typeof DeviceMotionEvent !== 'undefined' &&
+  const needsMotionPermission = canUseMotion && !gps && !motionReady &&
     typeof (DeviceMotionEvent as unknown as { requestPermission?: unknown }).requestPermission === 'function'
-  const canTrack = gps || photo || pdr
+  const canTrack = gps || photo || pdr || needsMotionPermission
   const pdrOn = enabled && pdr && visible && !paused
   const [stepCount] = useStepCounter(pdrOn)
   const heading: number | null = useCompass(pdrOn)
@@ -57,6 +59,15 @@ export function AutoArrival({ waypoint, finalNode, enabled, onToggle, onArrival,
     document.addEventListener('visibilitychange', change)
     return () => document.removeEventListener('visibilitychange', change)
   }, [])
+
+  useEffect(() => {
+    if (!enabled || !visible || paused || gps || !canUseMotion || motionReady) return
+    function readMotion(event: DeviceMotionEvent) {
+      if (hasMotionReading(event.accelerationIncludingGravity)) setMotionReady(true)
+    }
+    window.addEventListener('devicemotion', readMotion)
+    return () => window.removeEventListener('devicemotion', readMotion)
+  }, [enabled, visible, paused, gps, canUseMotion, motionReady])
 
   useEffect(() => {
     setFeedback('')
@@ -129,7 +140,7 @@ export function AutoArrival({ waypoint, finalNode, enabled, onToggle, onArrival,
     : `Đã đi khoảng ${Math.round(walked)}/${Math.round(waypoint.meters)} m (ước tính theo bước chân).`
   function toggle(checked: boolean) {
     // iOS chỉ cho xin quyền cảm biến ngay trong lần chạm của người dùng.
-    if (checked && pdr) void requestSensorPermission()
+    if (checked && needsMotionPermission) void requestSensorPermission()
     onToggle(checked)
   }
   if (!canTrack && !enabled) return <p className="arrival-tracking-note">{unavailable}</p>
@@ -137,7 +148,7 @@ export function AutoArrival({ waypoint, finalNode, enabled, onToggle, onArrival,
     <label><input type="checkbox" checked={enabled} onChange={e => toggle(e.target.checked)} /> Tự chuyển chặng</label>
     <small aria-live="polite">{!canTrack ? unavailable : feedback || pdrText || (gps ? 'Dùng GPS ngoài trời. Ở chế độ Camera, app gửi ảnh định kỳ tại mốc cần nhận diện.'
       : pdr ? 'Trong nhà: đếm bước chân và la bàn để biết bạn đã tới mốc.' : 'Gửi ảnh camera định kỳ để nhận diện mốc.')}</small>
-    {pdrOn && stepCount === 0 && needsMotionPermission &&
+    {enabled && needsMotionPermission &&
       <button type="button" className="button button-quiet arrival-grant" onClick={() => void requestSensorPermission()}>Bật đếm bước chân</button>}
     {pdrOn && progress.state === 'ask' && <div className="arrival-ask" role="group" aria-label="Xác nhận mốc">
       <p>Bạn đã tới {label} chưa?</p>

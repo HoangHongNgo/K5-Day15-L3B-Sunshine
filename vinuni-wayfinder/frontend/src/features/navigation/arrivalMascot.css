@@ -1,0 +1,11 @@
+.arrival-mascot { position: relative; display: grid; place-items: center; width: 100%; height: clamp(8rem, 24dvh, 11rem); }
+.arrival-mascot canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.arrival-mascot-fallback { display: grid; place-items: center; width: 100%; height: 100%; }
+.arrival-mascot-fallback img { width: 100%; height: 100%; object-fit: contain; }
+.arrival-mascot-hop { animation: arrival-mascot-hop .8s ease-in-out; }
+.direction-stage .arrival-replay { margin-top: .75rem; }
+
+@keyframes arrival-mascot-hop {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(-1.25rem); }
+}

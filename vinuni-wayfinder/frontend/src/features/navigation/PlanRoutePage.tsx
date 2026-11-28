@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Camera, Check, CheckCheck, ChevronDown, ChevronRight, Footprints, LoaderCircle, LocateFixed, MapPin } from 'lucide-react'
+import { ArrowRight, Camera, Check, CheckCheck, ChevronDown, ChevronRight, Footprints, LoaderCircle, LocateFixed, MapPin, Mic } from 'lucide-react'
 import { BackLink, DemoNote, parseCoord } from '../../shared/ui'
 import { useEventJourney } from '../events/EventContext'
 import { EventJourneyBadge } from '../events/EventsPages'
+import EventVoice from '../events/EventVoice'
 import { Mascot } from '../mascot/Mascot'
 import { findRoute } from '../wayfinder/data'
 import { ApiError, splitRouteSteps, wayfinderApi, type BackendRouteResponse } from '../wayfinder/wayfinderApi'
@@ -17,6 +18,7 @@ export function PlanRoutePage() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const [mode, setMode] = useState(preferredJourneyMode)
+  const [voiceOpen, setVoiceOpen] = useState(false)
   function chooseMode(next: JourneyMode) { setMode(next); rememberJourneyMode(next) }
   const rawFrom = params.get('from') ?? ''
   const fromLabel = params.get('fromLabel') ?? ''
@@ -158,6 +160,10 @@ export function PlanRoutePage() {
               <Footprints size={20} />{!hasGps && from && from === to ? 'Xác nhận đang ở đây' : mode === 'camera' ? 'Bắt đầu với camera' : 'Xem hành trình'}<ArrowRight size={19} />
             </button>
           </form>
+          <button className="button button-quiet full-width walk-voice-toggle" type="button" aria-expanded={voiceOpen} onClick={() => setVoiceOpen(!voiceOpen)}>
+            <Mic size={18} />{voiceOpen ? 'Đóng hỏi đường' : 'Hỏi đường bằng giọng nói'}
+          </button>
+          {voiceOpen && <EventVoice navigation={{ destinationId: to || undefined }} />}
           <DemoNote />
         </section>
         <aside className="journey-preview">

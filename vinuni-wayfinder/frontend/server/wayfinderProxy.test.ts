@@ -76,6 +76,14 @@ describe('Vite dev proxy for VinUni Wayfinder backend', () => {
       expect(locateRes.status).toBe(200)
       expect(await locateRes.json()).toMatchObject({ proxied: true, url: '/api/locate' })
 
+      const voiceUrl = '/api/voice/directions?voice=1'
+      const voiceRes = await fetch(`${base}${voiceUrl}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: 'Từ G101 đến G106?' }),
+      })
+      expect(voiceRes.status).toBe(200)
+      expect(await voiceRes.json()).toMatchObject({ proxied: true, url: voiceUrl })
+
       const correctRes = await fetch(`${base}/api/correct`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

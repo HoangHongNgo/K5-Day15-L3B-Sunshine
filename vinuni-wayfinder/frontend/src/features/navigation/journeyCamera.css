@@ -27,6 +27,7 @@ body:has(.walk-camera) { overflow: hidden; }
 .walk-next svg, .walk-itinerary svg { flex-shrink: 0; }
 .walk-status { color: #3b526e; margin-top: 10px; }
 .walk-actions { margin-top: 14px; }
+.walk-voice-toggle { margin-block: 12px; }
 .walk-confirm { background: #2454a8; color: #fff; padding: 4px 12px; flex: 1; }
 .walk-itinerary { padding: 0; margin: 12px 0 0; list-style: none; }
 .walk-itinerary li { padding: 9px 5px; border-bottom: 1px solid #d9e2ee; font-size: .88rem; }

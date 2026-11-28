@@ -44,6 +44,12 @@ npm run dev                      # chạy dev server (proxy API sang 127.0.0.1:8
 # VinUni Wayfinder — Backend (FastAPI + MegaLoc)
 cd vinuni-wayfinder/backend
 uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Triển khai production (Vercel + Tailscale Funnel cố định)
+# - Frontend: https://vinuni-wayfinder.vercel.app (deploy: cd vinuni-wayfinder/frontend && vercel --prod)
+# - Proxy /api/* và /maps/* trong vinuni-wayfinder/frontend/vercel.json -> https://minhphuong.tail65ddfe.ts.net
+# - Backend host (phuong@minhphuong): systemd user service `vinuni-wayfinder-backend.service` (127.0.0.1:8010)
+#   expose HTTPS cố định qua `tailscale funnel --bg 8010` (đã tắt Cloudflare Quick Tunnel cũ)
 ```
 
 Khung Python chỉ dùng thư viện chuẩn. Thêm thư viện thì ghi vào `requirements.txt` (hoặc `vinuni-wayfinder/backend/requirements.txt` cho backend).
@@ -84,6 +90,7 @@ vinuni-wayfinder/
 ## Luật — agent KHÔNG được làm
 
 - Không viết code tính năng hoặc sửa lỗi trước khi viết và chạy test fail (vi phạm TDD).
+- Không đổi rewrite trong `vinuni-wayfinder/frontend/vercel.json` sang URL tạm thời (`*.trycloudflare.com`); giữ domain cố định qua Tailscale Funnel và đảm bảo `server/wayfinderProxy.test.ts` pass.
 - Không commit `.env`, API key, dữ liệu cá nhân thật, nguyên file data BTC cấp.
 - Không commit ảnh/video hành lang, sơ đồ hay mặt bằng toà nhà, đồ thị đường đi thật và vector nhận diện của wayfinder (repo công khai; xem `data/DATA_CARD.md`). Mã wayfinder nằm trong repo này, ở `vinuni-wayfinder/` (xem `CLAUDE.md` ở gốc repo); `.gitignore` đã chặn `vinuni-wayfinder/maps/`, `backend/data/`, `backend/.venv/`, `backend/.torch/`, `*.npz`, video. Chỉ commit code và doc, không commit dữ liệu.
 - Không sửa `eval/run-*.csv`, `cost/simulate-*.csv`, `traces/*` đã chạy (trừ điền cột `pass`, `ghi_chu`).

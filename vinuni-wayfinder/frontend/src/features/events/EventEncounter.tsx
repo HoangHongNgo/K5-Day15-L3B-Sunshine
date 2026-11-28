@@ -3,6 +3,7 @@ import { ArrowUp, Box, Camera, Download, Footprints, Hand, LocateFixed, MessageC
 import { MotionContext } from '../mascot/Mascot'
 import { isAnchor, type CampusEvent, type EventAnchor, type MascotAsset } from './events'
 import EventVoice from './EventVoice'
+import { locateVideoFrame } from '../navigation/waypointArrival'
 import { ApiError, prepPhotoBlob, wayfinderApi } from '../wayfinder/wayfinderApi'
 import { useWayfinder } from '../wayfinder/WayfinderContext'
 import { matchesIndoorVenue } from './indoorEncounter'
@@ -229,7 +230,7 @@ function Encounter({ event, mascot, anchor, arrived = false, onCameraActiveChang
       {realAr && <button type="button" className="button button-quiet" onClick={openPlainCamera}>Chụp ảnh gửi album CLB</button>}
     </div>}
     {(phase === 'camera' || phase === 'review') && <PhotoDialog onClose={exitCamera} busy={sending}>
-      {phase === 'camera' && <EncounterCamera eventId={event.id} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto}
+      {phase === 'camera' && <EncounterCamera eventId={event.id} destinationId={event.locationId} mascot={mascot} onClose={exitCamera} onCapture={reviewPhoto}
         onRealAr={realAr ? launchRealAr : undefined} realArReady={ar === 'webxr' || ql.ready} />}
       {phase === 'review' && photo && <div className="encounter-review">
         <div className="encounter-review-heading"><h2>Ảnh cùng {mascot.name}</h2>
@@ -269,12 +270,12 @@ function PhotoDialog({ children, onClose, busy }: { children: ReactNode; onClose
 }
 
 type CameraProps = {
-  eventId: string; mascot: MascotAsset; onClose: () => void; onCapture: (image: string) => void
+  eventId: string; destinationId: string; mascot: MascotAsset; onClose: () => void; onCapture: (image: string) => void
   /** Có khi máy hỗ trợ AR thật: nút "AR thật" trên thanh trên của camera. */
   onRealAr?: () => void; realArReady?: boolean
 }
 
-function EncounterCamera({ eventId, mascot, onClose, onCapture, onRealAr, realArReady = false }: CameraProps) {
+function EncounterCamera({ eventId, destinationId, mascot, onClose, onCapture, onRealAr, realArReady = false }: CameraProps) {
   const video = useRef<HTMLVideoElement>(null)
   const overlay = useRef<HTMLCanvasElement>(null)
   const [zoomPercent, setZoomPercent] = useState(100)
@@ -455,7 +456,10 @@ function EncounterCamera({ eventId, mascot, onClose, onCapture, onRealAr, realAr
       ? <button type="button" className="encounter-hint encounter-grant" onClick={() => void ground.grant()}>{hint.text}</button>
       : <p className="encounter-hint" role={hint.role}>{hint.text}</p>)}
     {panel === 'voice' && status === 'ready' && <div className="encounter-tools">
-      <EventVoice eventId={eventId} onSpeakingChange={onSpeakingChange} />
+      <EventVoice eventId={eventId} navigation={{ destinationId, locatePhoto: selfie || facing === 'user' ? undefined : signal => {
+        if (!video.current) throw new Error('Camera chưa có hình.')
+        return locateVideoFrame(video.current, signal)
+      } }} onSpeakingChange={onSpeakingChange} />
     </div>}
     {panel === 'tools' && status === 'ready' && <div className="encounter-tools">
       <label className="encounter-size">Kích thước mascot <span aria-hidden="true">{zoomPercent}%</span>

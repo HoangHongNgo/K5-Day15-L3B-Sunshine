@@ -21,14 +21,33 @@ python -m venv .venv
 # 2) Frontend (terminal khác)
 cd frontend
 npm install
-npm run dev          # HTTPS tự ký, mở được từ điện thoại cùng Wi-Fi
+npm run dev          # HTTP tại localhost:5173
 ```
 
-Trên điện thoại mở `https://<IP-laptop>:5173`, bấm "Nâng cao → Vẫn tiếp tục" qua cảnh báo chứng chỉ (chỉ lần đầu).
-Laptop có thể phải cho phép cổng 5173 qua Windows Firewall. Wi-Fi trường có thể chặn kết nối giữa hai máy; khi đó dùng
-điểm phát Wi-Fi từ điện thoại.
+Mở `http://localhost:5173` trên máy chạy Vite. Để dùng camera và micro từ điện thoại, mở ứng dụng qua HTTPS, chẳng hạn qua reverse proxy hoặc tunnel HTTPS trỏ đến Vite.
 
-`npm run dev:http` chỉ để thử trên laptop (không có camera/cảm biến).
+## Triển khai production (Vercel + Tailscale Funnel)
+
+- **Frontend (Vercel):** `https://vinuni-wayfinder.vercel.app`, deploy từ `vinuni-wayfinder/frontend/` (`vercel --prod`). File `vinuni-wayfinder/frontend/vercel.json` rewrite `/api/:path*` và `/maps/:path*` tới backend HTTPS cố định `https://minhphuong.tail65ddfe.ts.net` (cùng origin nên không bị CORS hoặc mixed content trên điện thoại).
+- **Backend (`phuong@minhphuong`):** chạy bằng systemd user service `vinuni-wayfinder-backend.service` (`127.0.0.1:8010`) và mở HTTPS cố định bằng `tailscale funnel --bg 8010` (tự khôi phục sau khi khởi động lại máy, thay thế Cloudflare Quick Tunnel cũ).
+- Kiểm tra nhanh sức khoẻ production: `curl https://vinuni-wayfinder.vercel.app/api/health`.
+
+## Nói chuyện với mascot sự kiện
+
+Điền các biến sau vào `.env` ở gốc repo rồi khởi động lại backend. Các khóa dùng ở máy chủ.
+
+- `AZURE_SPEECH_KEY` và `AZURE_SPEECH_REGION` lấy từ tài nguyên Azure Speech. Dùng mã vùng của tài nguyên, ví dụ `southeastasia`. [Tài liệu Azure Speech](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/get-started-speech-to-text)
+- `OPENAI_API_KEY` dùng để gọi `gpt-6-luna` qua OpenAI Responses API. Backend cung cấp nội dung công bố, lịch, địa điểm và các trạm của sự kiện đang mở.
+
+Mở sự kiện đã công bố, vào camera AR rồi bấm **Nói chuyện** trên thanh điều khiển. Ở chế độ dev có thể chọn **Dùng vị trí mô phỏng** để vào AR. Bấm **Nói**, cấp quyền micro, nói câu hỏi tiếng Việt rồi bấm **Dừng và hỏi**. Mỗi lượt ghi âm dài tối đa 30 giây.
+
+Azure Speech nhận diện câu hỏi tiếng Việt từ micro. GPT-6 Luna soạn câu trả lời dạng chữ dựa trên dữ liệu sự kiện, sau đó Azure Speech đọc bằng giọng Hoài My (`vi-VN`). Người dùng có thể nhập câu hỏi bằng bàn phím, bấm **Nghe lại** hoặc đọc câu trả lời trên màn hình.
+
+## Hỏi đường bằng giọng nói
+
+Trong trang **Dẫn đường**, chọn **Hỏi đường bằng giọng nói**. Trong camera sự kiện, chọn **Nói chuyện**, rồi chọn **Chỉ đường**. Ví dụ, hỏi “Mình đứng trước phòng G101, đi G106 thế nào?”. Bạn có thể nói hoặc nhập tên phòng, tòa, tầng hay mốc thấy trên biển chỉ dẫn.
+
+Trong màn hình camera, **Dùng ảnh xung quanh** lấy một khung hình để MegaLoc đối chiếu với kho vector ảnh. Backend dùng vị trí nhận diện đủ chắc chắn hoặc mốc khớp với danh mục để tính tuyến trên đồ thị đường đi. Tia đọc phần đầu của tuyến bằng giọng Việt và nút **Mở lộ trình** hiển thị các chặng còn lại.
 
 ## Dữ liệu chung của nhóm (Supabase)
 

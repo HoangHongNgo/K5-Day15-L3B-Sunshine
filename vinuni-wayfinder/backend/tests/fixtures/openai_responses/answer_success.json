@@ -1,0 +1,27 @@
+{
+  "id": "resp_01j9exampleluna0001",
+  "object": "response",
+  "created_at": 1764300000,
+  "status": "completed",
+  "model": "gpt-6-luna",
+  "output": [
+    {
+      "id": "msg_01j9exampleluna0001",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"answer\":\"Trạm đầu tiên là Gấp diều tại Sân hoa, bạn có thể nhận giấy & xem <mẫu> ở đó.\",\"facts\":[\"stop1\"]}",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 214,
+    "output_tokens": 39,
+    "total_tokens": 253
+  }
+}

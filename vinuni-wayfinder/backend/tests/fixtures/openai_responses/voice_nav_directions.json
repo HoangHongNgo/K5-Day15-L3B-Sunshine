@@ -1,0 +1,27 @@
+{
+  "id": "resp_01j9voicenav0001",
+  "object": "response",
+  "created_at": 1764300100,
+  "status": "completed",
+  "model": "gpt-6-luna",
+  "output": [
+    {
+      "id": "msg_01j9voicenav0001",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"intent\":\"directions\",\"startClue\":\"phòng C 301\",\"destinationClue\":\"Thư viện\"}",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 182,
+    "output_tokens": 28,
+    "total_tokens": 210
+  }
+}
